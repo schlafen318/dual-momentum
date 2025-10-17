@@ -216,7 +216,7 @@ class BacktestEngine:
             Tuple of (aligned_data_dict, common_date_index)
         """
         # Extract DataFrames
-        data_dict = {symbol: pd.data for symbol, pd in price_data.items()}
+        data_dict = {symbol: pdata.data for symbol, pdata in price_data.items()}
         
         # Find common date range
         all_indices = [df.index for df in data_dict.values()]
@@ -226,10 +226,22 @@ class BacktestEngine:
         for idx in all_indices[1:]:
             common_dates = common_dates.intersection(idx)
         
-        # Apply date filters
+        # Apply date filters (handle timezone-aware vs naive)
         if start_date:
+            # Make start_date timezone-aware if common_dates is timezone-aware
+            if common_dates.tz is not None and start_date.tzinfo is None:
+                import pytz
+                start_date = common_dates.tz.localize(start_date)
+            elif common_dates.tz is None and start_date.tzinfo is not None:
+                start_date = start_date.replace(tzinfo=None)
             common_dates = common_dates[common_dates >= start_date]
         if end_date:
+            # Make end_date timezone-aware if common_dates is timezone-aware
+            if common_dates.tz is not None and end_date.tzinfo is None:
+                import pytz
+                end_date = common_dates.tz.localize(end_date)
+            elif common_dates.tz is None and end_date.tzinfo is not None:
+                end_date = end_date.replace(tzinfo=None)
             common_dates = common_dates[common_dates <= end_date]
         
         # Align all data to common dates
