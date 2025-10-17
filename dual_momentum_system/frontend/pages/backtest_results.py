@@ -146,7 +146,7 @@ def render_overview(results):
                 f"{metrics.get('positive_months', 0):.0f}%"
             ]
         })
-        st.dataframe(metrics_df, hide_index=True, use_container_width=True)
+        st.dataframe(metrics_df, hide_index=True, width='stretch')
     
     with col2:
         st.markdown("#### ⚖️ Risk Metrics")
@@ -168,7 +168,7 @@ def render_overview(results):
                 f"{metrics.get('avg_drawdown', 0)*100:.2f}%"
             ]
         })
-        st.dataframe(risk_df, hide_index=True, use_container_width=True)
+        st.dataframe(risk_df, hide_index=True, width='stretch')
     
     render_section_divider()
     
@@ -195,16 +195,16 @@ def render_overview(results):
     
     with col1:
         strategy_name = f"{st.session_state.get('strategy_type', 'Strategy')} - {datetime.now().strftime('%H:%M:%S')}"
-        if st.button("➕ Add to Comparison", use_container_width=True):
+        if st.button("➕ Add to Comparison", width='stretch'):
             add_to_comparison(results, strategy_name)
             st.success(f"Added to comparison list!")
     
     with col2:
-        if st.button("🔄 Run New Backtest", use_container_width=True):
+        if st.button("🔄 Run New Backtest", width='stretch'):
             st.info("Navigate to Strategy Builder to configure a new backtest")
     
     with col3:
-        if st.button("📥 Download Report", use_container_width=True):
+        if st.button("📥 Download Report", width='stretch'):
             st.info("See Export tab for download options")
 
 
@@ -251,7 +251,7 @@ def render_charts(results):
             showlegend=True
         )
         
-        st.plotly_chart(fig, use_container_width=True)
+        st.plotly_chart(fig, width='stretch')
     
     # Drawdown chart
     st.markdown("#### Drawdown Analysis")
@@ -285,7 +285,7 @@ def render_charts(results):
             height=300
         )
         
-        st.plotly_chart(fig, use_container_width=True)
+        st.plotly_chart(fig, width='stretch')
     
     render_section_divider()
     
@@ -326,7 +326,7 @@ def render_charts(results):
                 height=400
             )
             
-            st.plotly_chart(fig, use_container_width=True)
+            st.plotly_chart(fig, width='stretch')
         except:
             st.info("Insufficient data for monthly returns heatmap")
     
@@ -355,7 +355,7 @@ def render_charts(results):
                 showlegend=False
             )
             
-            st.plotly_chart(fig, use_container_width=True)
+            st.plotly_chart(fig, width='stretch')
     
     with col2:
         st.markdown("#### Trade P&L Distribution")
@@ -379,7 +379,7 @@ def render_charts(results):
                 showlegend=False
             )
             
-            st.plotly_chart(fig, use_container_width=True)
+            st.plotly_chart(fig, width='stretch')
 
 
 def render_trades(results):
@@ -438,7 +438,7 @@ def render_trades(results):
     # Display trades table
     st.dataframe(
         display_df,
-        use_container_width=True,
+        width='stretch',
         height=400
     )
     
@@ -473,7 +473,7 @@ def render_trades(results):
         data=csv,
         file_name=f"trades_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv",
         mime="text/csv",
-        use_container_width=True
+        width='stretch'
     )
 
 
@@ -527,7 +527,7 @@ def render_rolling_metrics(results):
         height=300
     )
     
-    st.plotly_chart(fig, use_container_width=True)
+    st.plotly_chart(fig, width='stretch')
     
     # Rolling Volatility
     st.markdown("#### Rolling Volatility")
@@ -555,7 +555,7 @@ def render_rolling_metrics(results):
         height=300
     )
     
-    st.plotly_chart(fig, use_container_width=True)
+    st.plotly_chart(fig, width='stretch')
 
 
 def render_export_options(results):
@@ -580,7 +580,7 @@ def render_export_options(results):
                 data=trades_csv,
                 file_name=f"trades_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv",
                 mime="text/csv",
-                use_container_width=True
+                width='stretch'
             )
         
         # Export equity curve
@@ -591,7 +591,7 @@ def render_export_options(results):
                 data=equity_csv,
                 file_name=f"equity_curve_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv",
                 mime="text/csv",
-                use_container_width=True
+                width='stretch'
             )
         
         # Export positions
@@ -602,7 +602,7 @@ def render_export_options(results):
                 data=positions_csv,
                 file_name=f"positions_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv",
                 mime="text/csv",
-                use_container_width=True
+                width='stretch'
             )
     
     with col2:
@@ -615,7 +615,7 @@ def render_export_options(results):
             data=metrics_json,
             file_name=f"metrics_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json",
             mime="application/json",
-            use_container_width=True
+            width='stretch'
         )
         
         # Full report
@@ -632,7 +632,7 @@ def render_export_options(results):
             }, indent=2, default=str),
             file_name=f"full_report_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json",
             mime="application/json",
-            use_container_width=True
+            width='stretch'
         )
     
     render_section_divider()
@@ -651,5 +651,5 @@ def render_export_options(results):
             data=config_json,
             file_name=f"config_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json",
             mime="application/json",
-            use_container_width=True
+            width='stretch'
         )

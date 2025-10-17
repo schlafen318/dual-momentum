@@ -83,12 +83,12 @@ def render_comparison_controls():
         st.markdown(f"**{len(st.session_state.comparison_results)} strategies** in comparison")
     
     with col2:
-        if st.button("🗑️ Clear All", use_container_width=True):
+        if st.button("🗑️ Clear All", width='stretch'):
             clear_comparison()
             st.rerun()
     
     with col3:
-        if st.button("➕ Add Current", use_container_width=True):
+        if st.button("➕ Add Current", width='stretch'):
             if 'backtest_results' in st.session_state and st.session_state.backtest_results:
                 from datetime import datetime
                 from frontend.utils.state import add_to_comparison
@@ -147,7 +147,7 @@ def render_metrics_comparison():
     
     # Display as table
     comparison_df = pd.DataFrame(comparison_data)
-    st.dataframe(comparison_df, use_container_width=True, hide_index=True)
+    st.dataframe(comparison_df, width='stretch', hide_index=True)
     
     render_section_divider()
     
@@ -187,7 +187,7 @@ def render_metrics_comparison():
         )
         fig.update_traces(texttemplate='%{text:.1f}%', textposition='outside')
         fig.update_layout(height=400, showlegend=False)
-        st.plotly_chart(fig, use_container_width=True)
+        st.plotly_chart(fig, width='stretch')
     
     with col2:
         # Sharpe Ratio comparison
@@ -202,7 +202,7 @@ def render_metrics_comparison():
         )
         fig.update_traces(texttemplate='%{text:.2f}', textposition='outside')
         fig.update_layout(height=400, showlegend=False)
-        st.plotly_chart(fig, use_container_width=True)
+        st.plotly_chart(fig, width='stretch')
     
     col3, col4 = st.columns(2)
     
@@ -219,7 +219,7 @@ def render_metrics_comparison():
         )
         fig.update_traces(texttemplate='%{text:.1f}%', textposition='outside')
         fig.update_layout(height=400, showlegend=False)
-        st.plotly_chart(fig, use_container_width=True)
+        st.plotly_chart(fig, width='stretch')
     
     with col4:
         # Win Rate comparison
@@ -234,7 +234,7 @@ def render_metrics_comparison():
         )
         fig.update_traces(texttemplate='%{text:.1f}%', textposition='outside')
         fig.update_layout(height=400, showlegend=False)
-        st.plotly_chart(fig, use_container_width=True)
+        st.plotly_chart(fig, width='stretch')
 
 
 def render_equity_comparison():
@@ -295,7 +295,7 @@ def render_equity_comparison():
         )
     )
     
-    st.plotly_chart(fig, use_container_width=True)
+    st.plotly_chart(fig, width='stretch')
     
     # Drawdown comparison
     render_section_divider()
@@ -331,7 +331,7 @@ def render_equity_comparison():
         height=400
     )
     
-    st.plotly_chart(fig, use_container_width=True)
+    st.plotly_chart(fig, width='stretch')
 
 
 def render_risk_return_analysis():
@@ -381,7 +381,7 @@ def render_risk_return_analysis():
     fig.update_traces(textposition='top center')
     fig.update_layout(height=500)
     
-    st.plotly_chart(fig, use_container_width=True)
+    st.plotly_chart(fig, width='stretch')
     
     render_section_divider()
     
@@ -400,7 +400,7 @@ def render_risk_return_analysis():
     display_df['Sharpe'] = display_df['Sharpe'].apply(lambda x: f"{x:.2f}")
     display_df['Max DD'] = display_df['Max DD'].apply(lambda x: f"{x:.2f}%")
     
-    st.dataframe(display_df, use_container_width=True, hide_index=True)
+    st.dataframe(display_df, width='stretch', hide_index=True)
     
     # Best strategy recommendation
     best_sharpe = df.loc[df['Sharpe'].idxmax(), 'Strategy']
@@ -490,7 +490,7 @@ def render_correlation_analysis():
         xaxis=dict(side='bottom')
     )
     
-    st.plotly_chart(fig, use_container_width=True)
+    st.plotly_chart(fig, width='stretch')
     
     render_section_divider()
     
