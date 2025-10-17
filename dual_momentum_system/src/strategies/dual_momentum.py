@@ -151,6 +151,11 @@ class DualMomentumStrategy(BaseStrategy):
         # Calculate momentum for all assets
         momentum_dict = self.calculate_momentum(price_data)
         
+        logger.debug(f"Calculated momentum for {len(momentum_dict)} assets")
+        for symbol, momentum_series in momentum_dict.items():
+            logger.debug(f"  {symbol}: {len(momentum_series)} momentum values, "
+                        f"{momentum_series.notna().sum()} non-NaN")
+        
         # Get latest momentum scores
         latest_momentum = {}
         latest_timestamp = None
@@ -160,12 +165,20 @@ class DualMomentumStrategy(BaseStrategy):
                 latest_momentum[symbol] = momentum_series.iloc[-1]
                 if latest_timestamp is None:
                     latest_timestamp = momentum_series.index[-1]
+                logger.debug(f"  {symbol} latest momentum: {momentum_series.iloc[-1]}")
         
         if not latest_momentum or latest_timestamp is None:
             logger.warning("No valid momentum scores available")
             return signals
         
         # Step 1: Apply absolute momentum filter
+        # Log momentum scores for debugging
+        logger.debug(f"Latest momentum scores at {latest_timestamp}:")
+        for symbol, score in latest_momentum.items():
+            status = "PASS" if (not pd.isna(score) and score > self.absolute_threshold) else "FAIL"
+            score_str = f"{score:.4f} ({score*100:.2f}%)" if not pd.isna(score) else "NaN"
+            logger.debug(f"  {symbol}: {score_str} - {status}")
+        
         filtered_momentum = {
             symbol: score
             for symbol, score in latest_momentum.items()

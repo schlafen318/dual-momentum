@@ -108,9 +108,13 @@ class BacktestEngine:
         
         # Check if strategy has enough data
         if not strategy.backtest_ready(price_data):
+            required_history = strategy.get_required_history()
+            min_bars = min(len(pdata.data) for pdata in price_data.values())
             raise ValueError(
                 f"Insufficient data for strategy. "
-                f"Required: {strategy.get_required_history()} bars"
+                f"Required: {required_history} bars, but only {min_bars} bars available. "
+                f"\n\nTip: When fetching data, start from an earlier date to allow for warm-up period. "
+                f"For a lookback of {required_history} days, fetch data starting at least {int(required_history * 1.5)} days before your desired backtest start date."
             )
         
         # Align data and get common date range
@@ -123,6 +127,30 @@ class BacktestEngine:
             f"Backtesting from {date_index[0]} to {date_index[-1]} "
             f"({len(date_index)} periods)"
         )
+        
+        # Log when first rebalancing will occur
+        required_history = strategy.get_required_history()
+        if len(date_index) > required_history:
+            first_rebalance_idx = required_history
+            # Find first month-end (for monthly rebalancing) after required history
+            last_rebalance_check = None
+            for i in range(required_history, min(required_history + 30, len(date_index))):
+                should_rebal = (
+                    last_rebalance_check is None or
+                    strategy.should_rebalance(date_index[i], last_rebalance_check)
+                )
+                if should_rebal:
+                    logger.info(
+                        f"First rebalancing expected on or after {date_index[i]} "
+                        f"(after {i} periods of warm-up data)"
+                    )
+                    break
+                last_rebalance_check = date_index[i]
+        else:
+            logger.warning(
+                f"Insufficient data for any rebalancing! "
+                f"Have {len(date_index)} periods, need {required_history}"
+            )
         
         # Track last rebalance date
         last_rebalance = None
@@ -146,6 +174,25 @@ class BacktestEngine:
             )
             
             if should_rebalance and i >= strategy.get_required_history():
+                # Verify we have enough actual data (not just index position)
+                # Check that each asset has sufficient bars before this date
+                sufficient_data = True
+                required_history = strategy.get_required_history()
+                
+                for symbol, df in aligned_data.items():
+                    date_loc = df.index.get_loc(current_date)
+                    if date_loc < required_history:
+                        sufficient_data = False
+                        logger.debug(
+                            f"Insufficient data for {symbol}: only {date_loc} bars available, "
+                            f"need {required_history}"
+                        )
+                        break
+                
+                if not sufficient_data:
+                    # Skip rebalancing - not enough historical data yet
+                    continue
+                
                 # Log rebalancing start
                 logger.info(f"🔄 REBALANCING on {current_date.strftime('%Y-%m-%d')}")
                 logger.info(f"   Portfolio Value: ${portfolio_value:,.2f}")
@@ -308,8 +355,10 @@ class BacktestEngine:
         
         for symbol, df in aligned_data.items():
             # Get slice up to current date
+            # Note: pct_change(N) needs N+1 bars to calculate the change from bar 0 to bar N
+            # So we need to fetch lookback+1 bars to have enough data for the calculation
             date_loc = df.index.get_loc(current_date)
-            start_loc = max(0, date_loc - lookback + 1)
+            start_loc = max(0, date_loc - lookback)  # Changed from (date_loc - lookback + 1)
             slice_df = df.iloc[start_loc:date_loc + 1]
             
             # Create PriceData object (simplified metadata)
