@@ -416,6 +416,35 @@ class VectorizedBacktestEngine:
         # Extract trades
         trades_df = portfolio.trades.records_readable
         
+        # Normalize column names to match standard engine format
+        # VectorBT uses capitalized column names (e.g., "Exit Timestamp", "Entry Price")
+        # but the rest of the codebase expects lowercase with underscores (e.g., "exit_timestamp", "entry_price")
+        # This ensures consistency between vectorized and standard engines
+        column_mapping = {
+            'Entry Timestamp': 'entry_timestamp',
+            'Exit Timestamp': 'exit_timestamp',
+            'Entry Price': 'entry_price',
+            'Exit Price': 'exit_price',
+            'Entry Fees': 'entry_fees',
+            'Exit Fees': 'exit_fees',
+            'PnL': 'pnl',
+            'Return': 'pnl_pct',
+            'Direction': 'direction',
+            'Status': 'status',
+            'Size': 'quantity',
+            'Duration': 'duration',
+            'Column': 'symbol'
+        }
+        
+        # Rename columns if they exist
+        trades_df = trades_df.rename(columns={k: v for k, v in column_mapping.items() if k in trades_df.columns})
+        
+        # Ensure pnl_pct is in percentage format (0-100) if it's in decimal format (0-1)
+        if 'pnl_pct' in trades_df.columns and not trades_df.empty:
+            # Check if values are likely in decimal format (between -1 and 1)
+            if trades_df['pnl_pct'].abs().max() <= 1:
+                trades_df['pnl_pct'] = trades_df['pnl_pct'] * 100
+        
         # Calculate comprehensive metrics
         try:
             from .vectorized_metrics import VectorizedMetricsCalculator

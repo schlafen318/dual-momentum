@@ -396,10 +396,20 @@ def render_trades(results):
     # Format columns for display
     display_df = trades_df.copy()
     
-    # Format dates
-    for col in ['entry_timestamp', 'exit_timestamp']:
+    # Format dates - handle different column name conventions
+    timestamp_cols = [
+        ('entry_timestamp', 'entry_timestamp'),
+        ('exit_timestamp', 'exit_timestamp'),
+        ('Entry Timestamp', 'Entry Timestamp'),
+        ('Exit Timestamp', 'Exit Timestamp')
+    ]
+    
+    for col, _ in timestamp_cols:
         if col in display_df.columns:
-            display_df[col] = pd.to_datetime(display_df[col]).dt.strftime('%Y-%m-%d')
+            try:
+                display_df[col] = pd.to_datetime(display_df[col]).dt.strftime('%Y-%m-%d')
+            except Exception:
+                pass  # Keep original format if conversion fails
     
     # Format currency columns
     for col in ['entry_price', 'exit_price', 'pnl']:
@@ -456,8 +466,30 @@ def render_trades(results):
         st.metric("Avg Loss", f"{avg_loss:.2f}%")
     
     with col3:
-        avg_duration = (trades_df['exit_timestamp'] - trades_df['entry_timestamp']).mean()
-        st.metric("Avg Duration", f"{avg_duration.days} days")
+        # Calculate average trade duration - handle different column name conventions
+        avg_duration_days = 0
+        if 'exit_timestamp' in trades_df.columns and 'entry_timestamp' in trades_df.columns:
+            avg_duration = (trades_df['exit_timestamp'] - trades_df['entry_timestamp']).mean()
+            avg_duration_days = avg_duration.days if pd.notna(avg_duration) else 0
+        elif 'Exit Timestamp' in trades_df.columns and 'Entry Timestamp' in trades_df.columns:
+            avg_duration = (trades_df['Exit Timestamp'] - trades_df['Entry Timestamp']).mean()
+            avg_duration_days = avg_duration.days if pd.notna(avg_duration) else 0
+        elif 'duration' in trades_df.columns:
+            # Duration column might already be calculated
+            duration_col = trades_df['duration']
+            if pd.api.types.is_timedelta64_dtype(duration_col):
+                avg_duration_days = int(duration_col.mean().total_seconds() / 86400)
+            else:
+                avg_duration_days = int(duration_col.mean())
+        elif 'Duration' in trades_df.columns:
+            # VectorBT format
+            duration_col = trades_df['Duration']
+            if pd.api.types.is_timedelta64_dtype(duration_col):
+                avg_duration_days = int(duration_col.mean().total_seconds() / 86400)
+            else:
+                avg_duration_days = int(duration_col.mean())
+        
+        st.metric("Avg Duration", f"{avg_duration_days} days")
     
     with col4:
         profit_factor = abs(trades_df[trades_df['pnl'] > 0]['pnl'].sum() / 
