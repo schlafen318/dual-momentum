@@ -1,0 +1,103 @@
+#!/bin/bash
+
+echo "=================================="
+echo "Deployment Helper Script"
+echo "=================================="
+echo ""
+
+echo "You have a Streamlit app that cannot be deployed to Vercel."
+echo "Vercel returned: 404 NOT_FOUND"
+echo ""
+echo "Choose a deployment option:"
+echo ""
+echo "1) Streamlit Cloud (RECOMMENDED - Free & Easy)"
+echo "2) Railway (Easy - $5/month free credit)"
+echo "3) Heroku (Traditional PaaS)"
+echo "4) Show me why Vercel doesn't work"
+echo ""
+
+read -p "Enter choice (1-4): " choice
+
+case $choice in
+    1)
+        echo ""
+        echo "✅ STREAMLIT CLOUD DEPLOYMENT"
+        echo "================================"
+        echo ""
+        echo "Steps:"
+        echo "1. Push your code to GitHub:"
+        echo "   git add ."
+        echo "   git commit -m 'Deploy to Streamlit Cloud'"
+        echo "   git push origin main"
+        echo ""
+        echo "2. Go to: https://share.streamlit.io"
+        echo "3. Click 'New app'"
+        echo "4. Select your repository"
+        echo "5. Set main file: frontend/app.py"
+        echo "6. Click 'Deploy'"
+        echo ""
+        echo "Your app will be live at: https://your-app-name.streamlit.app"
+        ;;
+    2)
+        echo ""
+        echo "✅ RAILWAY DEPLOYMENT"
+        echo "================================"
+        echo ""
+        echo "Steps:"
+        echo "1. Push to GitHub (if not already):"
+        echo "   git add ."
+        echo "   git commit -m 'Deploy to Railway'"
+        echo "   git push origin main"
+        echo ""
+        echo "2. Go to: https://railway.app"
+        echo "3. Click 'Start a New Project'"
+        echo "4. Select 'Deploy from GitHub repo'"
+        echo "5. Choose your repository"
+        echo ""
+        echo "Railway will auto-detect Python and deploy!"
+        ;;
+    3)
+        echo ""
+        echo "✅ HEROKU DEPLOYMENT"
+        echo "================================"
+        echo ""
+        echo "Required files created: ✓ Procfile, ✓ runtime.txt"
+        echo ""
+        echo "Steps:"
+        echo "1. Install Heroku CLI: https://devcenter.heroku.com/articles/heroku-cli"
+        echo "2. Login: heroku login"
+        echo "3. Create app: heroku create your-app-name"
+        echo "4. Deploy: git push heroku main"
+        echo ""
+        echo "Your app will be live at: https://your-app-name.herokuapp.com"
+        ;;
+    4)
+        echo ""
+        echo "❌ WHY VERCEL DOESN'T WORK"
+        echo "================================"
+        echo ""
+        echo "Your app: Streamlit (Python web server)"
+        echo "Vercel supports: Static sites + Serverless functions"
+        echo ""
+        echo "Vercel is designed for:"
+        echo "  ✓ Next.js/React apps"
+        echo "  ✓ Static HTML/CSS/JS"
+        echo "  ✓ Serverless API functions"
+        echo ""
+        echo "Your Streamlit app needs:"
+        echo "  ✗ Continuous Python server"
+        echo "  ✗ WebSocket support"
+        echo "  ✗ Stateful connections"
+        echo ""
+        echo "Result: 404 NOT_FOUND error"
+        echo ""
+        echo "Solution: Use Streamlit Cloud, Railway, or Heroku"
+        ;;
+    *)
+        echo "Invalid choice"
+        ;;
+esac
+
+echo ""
+echo "For detailed instructions, see: DEPLOYMENT_GUIDE.md"
+echo "For quick fix, see: VERCEL_FIX.md"
