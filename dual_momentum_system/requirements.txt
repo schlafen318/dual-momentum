@@ -1,0 +1,54 @@
+# Core Dependencies
+python-dateutil>=2.8.2
+pytz>=2023.3
+
+# Data Processing
+numpy>=1.24.0
+pandas>=2.0.0
+scipy>=1.10.0
+
+# Backtesting & Financial Analysis
+vectorbt>=0.26.0
+quantstats>=0.0.62
+empyrical>=0.5.5
+
+# Data Sources
+yfinance>=0.2.28
+ccxt>=4.0.0
+requests>=2.31.0
+
+# Visualization
+plotly>=5.17.0
+matplotlib>=3.7.0
+seaborn>=0.12.0
+
+# Frontend
+streamlit>=1.28.0
+streamlit-aggrid>=0.3.4
+
+# Configuration
+pyyaml>=6.0.1
+toml>=0.10.2
+python-dotenv>=1.0.0
+
+# Type Checking & Code Quality
+mypy>=1.5.0
+types-PyYAML>=6.0.12
+types-toml>=0.10.8
+types-requests>=2.31.0
+
+# Testing
+pytest>=7.4.0
+pytest-cov>=4.1.0
+pytest-asyncio>=0.21.0
+pytest-mock>=3.11.0
+
+# Utilities
+tqdm>=4.66.0
+loguru>=0.7.0
+click>=8.1.7
+
+# Development
+black>=23.7.0
+ruff>=0.0.290
+pre-commit>=3.4.0
