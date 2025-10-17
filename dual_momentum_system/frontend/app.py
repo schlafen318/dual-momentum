@@ -55,7 +55,7 @@ def main():
     # Sidebar navigation
     with st.sidebar:
         st.image("https://via.placeholder.com/200x80/1f77b4/ffffff?text=Dual+Momentum", 
-                 use_container_width=True)
+                 width='stretch')
         
         st.markdown("---")
         

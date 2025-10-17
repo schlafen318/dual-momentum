@@ -128,7 +128,7 @@ def render_universe_details(name: str, data: Dict[str, Any]):
         col1, col2 = st.columns(2)
         
         with col1:
-            if st.button("💾 Save Changes", key=f"save_{name}", use_container_width=True):
+            if st.button("💾 Save Changes", key=f"save_{name}", width='stretch'):
                 # Update universe
                 symbols_list = [s.strip() for s in new_symbols.replace(',', '\n').split('\n') if s.strip()]
                 
@@ -144,7 +144,7 @@ def render_universe_details(name: str, data: Dict[str, Any]):
                 st.rerun()
         
         with col2:
-            if st.button("❌ Cancel", key=f"cancel_{name}", use_container_width=True):
+            if st.button("❌ Cancel", key=f"cancel_{name}", width='stretch'):
                 del st.session_state.editing_universe
                 st.rerun()
 
@@ -240,7 +240,7 @@ def render_create_universe():
             st.code(", ".join(symbols_list[:10]) + ("..." if len(symbols_list) > 10 else ""))
         
         # Submit button
-        submitted = st.form_submit_button("✅ Create Universe", use_container_width=True)
+        submitted = st.form_submit_button("✅ Create Universe", width='stretch')
         
         if submitted:
             # Validation
@@ -320,7 +320,7 @@ def render_import_export():
                         help="Choose how to handle existing universes"
                     )
                     
-                    if st.button("🔄 Import", use_container_width=True):
+                    if st.button("🔄 Import", width='stretch'):
                         if merge_option == "Merge with existing":
                             st.session_state.asset_universes.update(imported_universes)
                         else:
@@ -367,7 +367,7 @@ def render_import_export():
                     data=json_data,
                     file_name=f"asset_universes_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json",
                     mime="application/json",
-                    use_container_width=True
+                    width='stretch'
                 )
             
             else:  # CSV export
@@ -392,7 +392,7 @@ def render_import_export():
                     data=csv_string,
                     file_name=f"asset_universes_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv",
                     mime="text/csv",
-                    use_container_width=True
+                    width='stretch'
                 )
     
     render_section_divider()
@@ -453,7 +453,7 @@ def render_import_export():
             st.code(", ".join(template_data['symbols']))
         
         with col2:
-            if st.button("➕ Add Template", use_container_width=True):
+            if st.button("➕ Add Template", width='stretch'):
                 # Generate unique name if already exists
                 template_name = selected_template
                 counter = 1

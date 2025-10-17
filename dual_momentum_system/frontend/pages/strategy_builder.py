@@ -28,7 +28,7 @@ from src.asset_classes import (
     EquityAsset, CryptoAsset, CommodityAsset, BondAsset, FXAsset
 )
 from src.backtesting.engine import BacktestEngine
-from src.backtesting.performance import PerformanceAnalyzer
+from src.backtesting.performance import PerformanceCalculator
 from src.core.types import PriceData, AssetMetadata
 from src.core import get_plugin_manager
 
@@ -107,7 +107,7 @@ def render_strategy_configuration():
         )
     
     with col2:
-        if st.button("📂 Manage", use_container_width=True):
+        if st.button("📂 Manage", width='stretch'):
             st.info("Navigate to Asset Universe Manager to create/edit universes")
     
     # Asset symbols input
@@ -385,11 +385,11 @@ def render_backtest_controls():
         st.caption("Review your configuration above, then click the button to start.")
     
     with col2:
-        if st.button("▶️ Run Backtest", type="primary", use_container_width=True):
+        if st.button("▶️ Run Backtest", type="primary", width='stretch'):
             run_backtest()
     
     with col3:
-        if st.button("💾 Save Config", use_container_width=True):
+        if st.button("💾 Save Config", width='stretch'):
             save_configuration()
 
 
@@ -463,8 +463,8 @@ def run_backtest():
         status_text.text("📈 Calculating performance metrics...")
         progress_bar.progress(90)
         
-        analyzer = PerformanceAnalyzer()
-        detailed_metrics = analyzer.calculate_metrics(results)
+        analyzer = PerformanceCalculator()
+        detailed_metrics = analyzer.calculate_metrics(results.returns, results.equity_curve)
         
         # Store results
         progress_bar.progress(100)
@@ -483,10 +483,10 @@ def run_backtest():
         # Option to add to comparison
         col1, col2 = st.columns(2)
         with col1:
-            if st.button("📊 View Results", use_container_width=True):
+            if st.button("📊 View Results", width='stretch'):
                 st.info("Navigate to Backtest Results page using the sidebar")
         with col2:
-            if st.button("➕ Add to Comparison", use_container_width=True):
+            if st.button("➕ Add to Comparison", width='stretch'):
                 strategy_name = f"{st.session_state.strategy_type} - {datetime.now().strftime('%H:%M:%S')}"
                 add_to_comparison(results, strategy_name)
                 st.success(f"Added '{strategy_name}' to comparison!")
