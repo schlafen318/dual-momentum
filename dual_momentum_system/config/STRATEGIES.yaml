@@ -1,0 +1,610 @@
+# Strategy Registry with Default Parameter Sets
+# This file defines all available strategies and their default configurations
+# Users can reference these strategies by name and customize parameters
+
+# ============================================================================
+# STRATEGY REGISTRY
+# ============================================================================
+
+strategies:
+  
+  # --------------------------------------------------------------------------
+  # DUAL MOMENTUM STRATEGIES
+  # --------------------------------------------------------------------------
+  
+  dual_momentum_classic:
+    name: "Dual Momentum - Classic"
+    description: "Gary Antonacci's classic dual momentum strategy with 12-month lookback"
+    class: "DualMomentumStrategy"
+    module: "src.strategies.dual_momentum"
+    version: "1.0.0"
+    category: "momentum"
+    parameters:
+      lookback_period: 252  # 12 months of trading days
+      rebalance_frequency: monthly
+      position_count: 1  # Hold only the top-ranked asset
+      absolute_threshold: 0.0  # Positive momentum required
+      use_volatility_adjustment: false
+      safe_asset: SHY  # Short-term Treasury ETF
+      signal_threshold: 0.0
+    recommended_universes:
+      - gem_classic
+      - gem_extended
+      - multi_asset_balanced
+    min_assets: 2
+    tags:
+      - momentum
+      - dual_momentum
+      - antonacci
+      - tactical
+  
+  dual_momentum_aggressive:
+    name: "Dual Momentum - Aggressive"
+    description: "Aggressive variant holding top 3 momentum assets"
+    class: "DualMomentumStrategy"
+    module: "src.strategies.dual_momentum"
+    version: "1.0.0"
+    category: "momentum"
+    parameters:
+      lookback_period: 126  # 6 months for faster signals
+      rebalance_frequency: monthly
+      position_count: 3  # Hold top 3 assets
+      absolute_threshold: 0.0
+      use_volatility_adjustment: false
+      safe_asset: SHY
+      signal_threshold: 0.0
+    recommended_universes:
+      - global_sectors_us
+      - global_sectors_intl
+      - multi_asset_aggressive
+    min_assets: 4
+    tags:
+      - momentum
+      - aggressive
+      - multi_position
+  
+  dual_momentum_defensive:
+    name: "Dual Momentum - Defensive"
+    description: "Conservative dual momentum with higher absolute threshold"
+    class: "DualMomentumStrategy"
+    module: "src.strategies.dual_momentum"
+    version: "1.0.0"
+    category: "momentum"
+    parameters:
+      lookback_period: 252
+      rebalance_frequency: monthly
+      position_count: 1
+      absolute_threshold: 0.05  # 5% minimum return required
+      use_volatility_adjustment: false
+      safe_asset: SHY
+      signal_threshold: 0.0
+    recommended_universes:
+      - multi_asset_conservative
+      - low_volatility
+      - bonds_treasury_ladder
+    min_assets: 2
+    tags:
+      - momentum
+      - defensive
+      - conservative
+  
+  dual_momentum_vol_adjusted:
+    name: "Dual Momentum - Risk-Adjusted"
+    description: "Dual momentum with volatility-adjusted rankings"
+    class: "DualMomentumStrategy"
+    module: "src.strategies.dual_momentum"
+    version: "1.0.0"
+    category: "momentum"
+    parameters:
+      lookback_period: 252
+      rebalance_frequency: monthly
+      position_count: 2
+      absolute_threshold: 0.0
+      use_volatility_adjustment: true  # Adjust for risk
+      safe_asset: SHY
+      signal_threshold: 0.0
+    recommended_universes:
+      - gem_extended
+      - multi_asset_balanced
+      - all_weather
+    min_assets: 3
+    tags:
+      - momentum
+      - risk_adjusted
+      - sharpe_optimization
+  
+  # --------------------------------------------------------------------------
+  # ABSOLUTE MOMENTUM STRATEGIES
+  # --------------------------------------------------------------------------
+  
+  absolute_momentum_classic:
+    name: "Absolute Momentum - Classic"
+    description: "Time-series momentum with 12-month lookback"
+    class: "AbsoluteMomentumStrategy"
+    module: "src.strategies.absolute_momentum"
+    version: "1.0.0"
+    category: "momentum"
+    parameters:
+      lookback_period: 252
+      threshold: 0.0
+      rebalance_frequency: monthly
+      safe_asset: SHY
+      use_moving_average: false
+      fast_ma: 50
+      slow_ma: 200
+      signal_threshold: 0.0
+    recommended_universes:
+      - us_market_cap
+      - global_sectors_us
+      - commodities_broad
+    min_assets: 1
+    tags:
+      - momentum
+      - absolute_momentum
+      - trend_following
+  
+  absolute_momentum_ma_crossover:
+    name: "Absolute Momentum - MA Crossover"
+    description: "Moving average crossover (50/200 SMA)"
+    class: "AbsoluteMomentumStrategy"
+    module: "src.strategies.absolute_momentum"
+    version: "1.0.0"
+    category: "momentum"
+    parameters:
+      lookback_period: 252
+      threshold: 0.0
+      rebalance_frequency: weekly
+      safe_asset: SHY
+      use_moving_average: true
+      fast_ma: 50
+      slow_ma: 200
+      signal_threshold: 0.0
+    recommended_universes:
+      - us_market_cap
+      - factor_momentum
+      - tech_innovation
+    min_assets: 1
+    tags:
+      - momentum
+      - moving_average
+      - golden_cross
+  
+  absolute_momentum_fast:
+    name: "Absolute Momentum - Fast"
+    description: "Short-term absolute momentum (3-month lookback)"
+    class: "AbsoluteMomentumStrategy"
+    module: "src.strategies.absolute_momentum"
+    version: "1.0.0"
+    category: "momentum"
+    parameters:
+      lookback_period: 63  # 3 months
+      threshold: 0.0
+      rebalance_frequency: weekly
+      safe_asset: SHY
+      use_moving_average: false
+      fast_ma: 20
+      slow_ma: 50
+      signal_threshold: 0.0
+    recommended_universes:
+      - crypto_major
+      - tech_innovation
+      - global_sectors_us
+    min_assets: 1
+    tags:
+      - momentum
+      - short_term
+      - tactical
+  
+  # --------------------------------------------------------------------------
+  # SECTOR ROTATION STRATEGIES
+  # --------------------------------------------------------------------------
+  
+  sector_rotation_monthly:
+    name: "Sector Rotation - Monthly"
+    description: "Monthly sector rotation based on 6-month momentum"
+    class: "DualMomentumStrategy"
+    module: "src.strategies.dual_momentum"
+    version: "1.0.0"
+    category: "sector_rotation"
+    parameters:
+      lookback_period: 126  # 6 months
+      rebalance_frequency: monthly
+      position_count: 2  # Top 2 sectors
+      absolute_threshold: 0.0
+      use_volatility_adjustment: false
+      safe_asset: SHY
+      signal_threshold: 0.0
+    recommended_universes:
+      - global_sectors_us
+      - global_sectors_intl
+    min_assets: 6
+    tags:
+      - sector_rotation
+      - tactical
+      - momentum
+  
+  sector_rotation_defensive:
+    name: "Sector Rotation - Defensive"
+    description: "Defensive sector rotation focusing on low-volatility sectors"
+    class: "DualMomentumStrategy"
+    module: "src.strategies.dual_momentum"
+    version: "1.0.0"
+    category: "sector_rotation"
+    parameters:
+      lookback_period: 252
+      rebalance_frequency: monthly
+      position_count: 3
+      absolute_threshold: 0.02
+      use_volatility_adjustment: true
+      safe_asset: SHY
+      signal_threshold: 0.0
+    recommended_universes:
+      - global_sectors_us
+      - low_volatility
+    min_assets: 6
+    tags:
+      - sector_rotation
+      - defensive
+      - risk_adjusted
+  
+  # --------------------------------------------------------------------------
+  # CRYPTO STRATEGIES
+  # --------------------------------------------------------------------------
+  
+  crypto_momentum_weekly:
+    name: "Crypto Momentum - Weekly"
+    description: "High-frequency crypto momentum with weekly rebalancing"
+    class: "DualMomentumStrategy"
+    module: "src.strategies.dual_momentum"
+    version: "1.0.0"
+    category: "crypto"
+    parameters:
+      lookback_period: 30  # 30 days for crypto
+      rebalance_frequency: weekly
+      position_count: 2
+      absolute_threshold: 0.0
+      use_volatility_adjustment: true  # Important for crypto
+      safe_asset: USDT  # Stablecoin
+      signal_threshold: 0.0
+    recommended_universes:
+      - crypto_major
+      - crypto_extended
+    min_assets: 3
+    tags:
+      - crypto
+      - high_frequency
+      - momentum
+    notes: "Designed for high-volatility crypto markets"
+  
+  crypto_absolute_daily:
+    name: "Crypto Absolute - Daily"
+    description: "Daily absolute momentum for cryptocurrencies"
+    class: "AbsoluteMomentumStrategy"
+    module: "src.strategies.absolute_momentum"
+    version: "1.0.0"
+    category: "crypto"
+    parameters:
+      lookback_period: 14  # 2 weeks
+      threshold: 0.0
+      rebalance_frequency: daily
+      safe_asset: USDT
+      use_moving_average: false
+      fast_ma: 7
+      slow_ma: 21
+      signal_threshold: 0.0
+    recommended_universes:
+      - crypto_major
+      - crypto_extended
+    min_assets: 1
+    tags:
+      - crypto
+      - absolute_momentum
+      - daily_rebalance
+  
+  # --------------------------------------------------------------------------
+  # MULTI-ASSET STRATEGIES
+  # --------------------------------------------------------------------------
+  
+  multi_asset_tactical:
+    name: "Multi-Asset Tactical"
+    description: "Tactical allocation across asset classes"
+    class: "DualMomentumStrategy"
+    module: "src.strategies.dual_momentum"
+    version: "1.0.0"
+    category: "multi_asset"
+    parameters:
+      lookback_period: 252
+      rebalance_frequency: monthly
+      position_count: 4  # Hold top 4 asset classes
+      absolute_threshold: 0.0
+      use_volatility_adjustment: false
+      safe_asset: SHY
+      signal_threshold: 0.0
+    recommended_universes:
+      - multi_asset_balanced
+      - multi_asset_aggressive
+      - all_weather
+    min_assets: 6
+    tags:
+      - multi_asset
+      - tactical
+      - asset_allocation
+  
+  all_weather_momentum:
+    name: "All-Weather Momentum"
+    description: "Risk-parity inspired with momentum overlay"
+    class: "DualMomentumStrategy"
+    module: "src.strategies.dual_momentum"
+    version: "1.0.0"
+    category: "multi_asset"
+    parameters:
+      lookback_period: 252
+      rebalance_frequency: quarterly
+      position_count: 5
+      absolute_threshold: -0.05  # Allow slight negative momentum
+      use_volatility_adjustment: true
+      safe_asset: SHY
+      signal_threshold: 0.0
+    recommended_universes:
+      - all_weather
+      - multi_asset_balanced
+    min_assets: 5
+    tags:
+      - all_weather
+      - risk_parity
+      - multi_asset
+  
+  # --------------------------------------------------------------------------
+  # FACTOR-BASED STRATEGIES
+  # --------------------------------------------------------------------------
+  
+  momentum_factor_long_only:
+    name: "Momentum Factor - Long Only"
+    description: "Pure momentum factor exposure"
+    class: "DualMomentumStrategy"
+    module: "src.strategies.dual_momentum"
+    version: "1.0.0"
+    category: "factor"
+    parameters:
+      lookback_period: 252
+      rebalance_frequency: monthly
+      position_count: 3
+      absolute_threshold: 0.0
+      use_volatility_adjustment: false
+      safe_asset: SHY
+      signal_threshold: 0.0
+    recommended_universes:
+      - factor_momentum
+      - global_sectors_us
+    min_assets: 5
+    tags:
+      - factor
+      - momentum
+      - long_only
+  
+  # --------------------------------------------------------------------------
+  # INCOME STRATEGIES
+  # --------------------------------------------------------------------------
+  
+  dividend_momentum:
+    name: "Dividend Momentum"
+    description: "Momentum applied to dividend-paying securities"
+    class: "DualMomentumStrategy"
+    module: "src.strategies.dual_momentum"
+    version: "1.0.0"
+    category: "income"
+    parameters:
+      lookback_period: 252
+      rebalance_frequency: quarterly  # Lower turnover for income
+      position_count: 3
+      absolute_threshold: 0.0
+      use_volatility_adjustment: false
+      safe_asset: SHY
+      signal_threshold: 0.0
+    recommended_universes:
+      - dividend_aristocrats
+      - global_income
+    min_assets: 4
+    tags:
+      - income
+      - dividend
+      - momentum
+  
+  # --------------------------------------------------------------------------
+  # COMMODITY STRATEGIES
+  # --------------------------------------------------------------------------
+  
+  commodity_trend:
+    name: "Commodity Trend Following"
+    description: "Trend following for commodities"
+    class: "AbsoluteMomentumStrategy"
+    module: "src.strategies.absolute_momentum"
+    version: "1.0.0"
+    category: "commodity"
+    parameters:
+      lookback_period: 126  # 6 months
+      threshold: 0.0
+      rebalance_frequency: monthly
+      safe_asset: SHY
+      use_moving_average: false
+      fast_ma: 50
+      slow_ma: 200
+      signal_threshold: 0.0
+    recommended_universes:
+      - commodities_broad
+      - precious_metals
+    min_assets: 1
+    tags:
+      - commodity
+      - trend_following
+      - absolute_momentum
+
+# ============================================================================
+# STRATEGY PARAMETER TEMPLATES
+# Templates for common parameter configurations
+# ============================================================================
+
+parameter_templates:
+  
+  conservative:
+    description: "Conservative risk parameters"
+    lookback_period: 252
+    rebalance_frequency: quarterly
+    absolute_threshold: 0.05
+    use_volatility_adjustment: true
+    position_count: 1
+  
+  moderate:
+    description: "Moderate risk parameters"
+    lookback_period: 252
+    rebalance_frequency: monthly
+    absolute_threshold: 0.0
+    use_volatility_adjustment: false
+    position_count: 2
+  
+  aggressive:
+    description: "Aggressive risk parameters"
+    lookback_period: 126
+    rebalance_frequency: weekly
+    absolute_threshold: 0.0
+    use_volatility_adjustment: false
+    position_count: 3
+  
+  high_frequency:
+    description: "High-frequency trading parameters"
+    lookback_period: 30
+    rebalance_frequency: daily
+    absolute_threshold: 0.0
+    use_volatility_adjustment: true
+    position_count: 2
+
+# ============================================================================
+# REBALANCING FREQUENCIES
+# ============================================================================
+
+rebalancing:
+  daily:
+    description: "Daily rebalancing"
+    days: 1
+    use_cases:
+      - High-frequency crypto strategies
+      - Day trading systems
+    considerations: "High transaction costs, requires liquid markets"
+  
+  weekly:
+    description: "Weekly rebalancing"
+    days: 7
+    use_cases:
+      - Crypto momentum
+      - Short-term tactical strategies
+    considerations: "Moderate transaction costs"
+  
+  monthly:
+    description: "Monthly rebalancing"
+    days: 30
+    use_cases:
+      - Classic momentum strategies
+      - Sector rotation
+      - Most tactical strategies
+    considerations: "Standard for most momentum strategies"
+  
+  quarterly:
+    description: "Quarterly rebalancing"
+    days: 90
+    use_cases:
+      - Long-term allocation
+      - Dividend strategies
+      - Tax-efficient strategies
+    considerations: "Lower transaction costs, more tax efficient"
+  
+  yearly:
+    description: "Annual rebalancing"
+    days: 365
+    use_cases:
+      - Buy-and-hold with rebalancing
+      - Strategic allocation
+    considerations: "Minimal transaction costs, very tax efficient"
+
+# ============================================================================
+# SAFE ASSETS
+# Default safe assets for defensive positioning
+# ============================================================================
+
+safe_assets:
+  SHY:
+    name: "iShares 1-3 Year Treasury Bond ETF"
+    description: "Short-term US Treasuries, low volatility"
+    asset_class: bond
+    maturity: "1-3 years"
+    credit_rating: AAA
+    typical_yield: "2-5%"
+  
+  BIL:
+    name: "SPDR Bloomberg 1-3 Month T-Bill ETF"
+    description: "Ultra-short term T-Bills, cash equivalent"
+    asset_class: bond
+    maturity: "1-3 months"
+    credit_rating: AAA
+    typical_yield: "1-4%"
+  
+  AGG:
+    name: "iShares Core US Aggregate Bond ETF"
+    description: "Broad US investment-grade bonds"
+    asset_class: bond
+    maturity: "Mixed"
+    credit_rating: "Investment Grade"
+    typical_yield: "3-5%"
+  
+  TLT:
+    name: "iShares 20+ Year Treasury Bond ETF"
+    description: "Long-term Treasuries, higher volatility but defensive"
+    asset_class: bond
+    maturity: "20+ years"
+    credit_rating: AAA
+    typical_yield: "3-6%"
+  
+  USDT:
+    name: "Tether (USDT)"
+    description: "Stablecoin for crypto strategies"
+    asset_class: crypto
+    type: stablecoin
+    pegged_to: USD
+    typical_yield: "0-5%"
+
+# ============================================================================
+# METADATA
+# ============================================================================
+
+metadata:
+  version: "1.0.0"
+  last_updated: "2025-10-17"
+  total_strategies: 20
+  categories:
+    - momentum
+    - sector_rotation
+    - crypto
+    - multi_asset
+    - factor
+    - income
+    - commodity
+  
+  compatibility:
+    min_python_version: "3.8"
+    required_packages:
+      - pandas
+      - numpy
+      - pyyaml
+      - loguru
+  
+  notes: |
+    This strategy registry provides pre-configured strategies with battle-tested parameters.
+    Users can:
+    1. Use strategies as-is by referencing their name
+    2. Clone and customize parameters
+    3. Create new strategies following the template structure
+    
+    All strategies support:
+    - Custom asset universes
+    - Parameter overrides
+    - Backtesting with historical data
+    - Real-time signal generation
