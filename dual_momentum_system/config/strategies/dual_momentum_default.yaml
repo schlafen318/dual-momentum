@@ -1,0 +1,41 @@
+# Default configuration for Dual Momentum Strategy
+
+# Momentum calculation period (trading days)
+# Standard is 252 days (1 year), but can be adjusted
+lookback_period: 252
+
+# How often to rebalance the portfolio
+# Options: 'daily', 'weekly', 'monthly', 'quarterly', 'yearly'
+rebalance_frequency: monthly
+
+# Number of top-ranked assets to hold
+# Standard dual momentum uses 1, but can hold multiple
+position_count: 1
+
+# Absolute momentum threshold
+# Only invest in assets with momentum > threshold
+# 0.0 means only positive momentum assets
+absolute_threshold: 0.0
+
+# Use volatility-adjusted momentum scores
+# Divides raw momentum by volatility for risk-adjusted ranking
+use_volatility_adjustment: false
+
+# Safe asset to hold when all risky assets fail absolute momentum filter
+# Common choices: 'SHY' (short-term bonds), 'AGG' (aggregate bonds), 'BIL' (T-bills)
+safe_asset: SHY
+
+# Minimum signal strength to generate trade
+# Range: 0.0 to 1.0
+signal_threshold: 0.0
+
+# Asset universe for the strategy
+# Leave empty or null to use all available assets
+universe:
+  - SPY   # S&P 500
+  - EFA   # International Developed Markets
+  - EEM   # Emerging Markets
+  - AGG   # U.S. Aggregate Bonds
+  - TLT   # Long-term Treasuries
+  - GLD   # Gold
+  - DBC   # Commodities
