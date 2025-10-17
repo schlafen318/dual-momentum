@@ -529,8 +529,8 @@ class BacktestEngine:
             trades_df = pd.DataFrame([
                 {
                     'symbol': t.symbol,
-                    'entry_date': t.entry_timestamp,
-                    'exit_date': t.exit_timestamp,
+                    'entry_timestamp': t.entry_timestamp,
+                    'exit_timestamp': t.exit_timestamp,
                     'entry_price': t.entry_price,
                     'exit_price': t.exit_price,
                     'quantity': t.quantity,
