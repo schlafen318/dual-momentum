@@ -88,6 +88,7 @@ def apply_custom_css():
             padding: 1rem;
             border-radius: 4px;
             margin: 1rem 0;
+            color: #1565c0;
         }
         
         .warning-box {
@@ -96,6 +97,7 @@ def apply_custom_css():
             padding: 1rem;
             border-radius: 4px;
             margin: 1rem 0;
+            color: #e65100;
         }
         
         .success-box {
@@ -104,6 +106,7 @@ def apply_custom_css():
             padding: 1rem;
             border-radius: 4px;
             margin: 1rem 0;
+            color: #2e7d32;
         }
         
         .error-box {
@@ -112,6 +115,7 @@ def apply_custom_css():
             padding: 1rem;
             border-radius: 4px;
             margin: 1rem 0;
+            color: #c62828;
         }
         
         /* Buttons */
@@ -201,6 +205,22 @@ def apply_custom_css():
             border-radius: 8px;
             box-shadow: 0 2px 4px rgba(0,0,0,0.1);
             margin-bottom: 1rem;
+            color: #333;
+        }
+        
+        .card h3 {
+            color: #1f77b4;
+        }
+        
+        .card p, .card ul, .card li {
+            color: #333;
+        }
+        
+        /* Footer styling */
+        .sidebar-footer {
+            text-align: center;
+            color: #888;
+            font-size: 0.8em;
         }
         
         /* Section divider */
@@ -236,6 +256,312 @@ def apply_custom_css():
         .badge-info {
             background-color: #2196f3;
             color: white;
+        }
+        
+        /* Colored highlight cards */
+        .card-success {
+            background: #e8f5e9;
+            color: #2e7d32;
+        }
+        
+        .card-success h4 {
+            color: #1b5e20;
+        }
+        
+        .card-success p {
+            color: #2ca02c;
+        }
+        
+        .card-info {
+            background: #e3f2fd;
+            color: #1565c0;
+        }
+        
+        .card-info h4 {
+            color: #0d47a1;
+        }
+        
+        .card-info p {
+            color: #1f77b4;
+        }
+        
+        .card-warning {
+            background: #fff3e0;
+            color: #e65100;
+        }
+        
+        .card-warning h4 {
+            color: #bf360c;
+        }
+        
+        .card-warning p {
+            color: #ff9800;
+        }
+        
+        /* Dark mode support */
+        @media (prefers-color-scheme: dark) {
+            /* Card containers in dark mode */
+            .card {
+                background: #1e1e1e !important;
+                box-shadow: 0 2px 8px rgba(0,0,0,0.4);
+                color: #e0e0e0 !important;
+            }
+            
+            .card h3 {
+                color: #4fc3f7 !important;
+            }
+            
+            .card p, .card ul, .card li {
+                color: #e0e0e0 !important;
+            }
+            
+            /* Metric cards in dark mode */
+            .metric-card {
+                background: #1e1e1e !important;
+                box-shadow: 0 2px 8px rgba(0,0,0,0.4);
+            }
+            
+            .metric-card h3 {
+                color: #b0b0b0 !important;
+            }
+            
+            .metric-card .value {
+                color: #4fc3f7 !important;
+            }
+            
+            .metric-card.positive .value {
+                color: #66bb6a !important;
+            }
+            
+            .metric-card.negative .value {
+                color: #ef5350 !important;
+            }
+            
+            /* Info boxes in dark mode */
+            .info-box {
+                background: #1a237e !important;
+                color: #90caf9 !important;
+                border-left-color: #42a5f5;
+            }
+            
+            .warning-box {
+                background: #4a2c00 !important;
+                color: #ffb74d !important;
+                border-left-color: #ffa726;
+            }
+            
+            .success-box {
+                background: #1b5e20 !important;
+                color: #81c784 !important;
+                border-left-color: #66bb6a;
+            }
+            
+            .error-box {
+                background: #4a0000 !important;
+                color: #ef9a9a !important;
+                border-left-color: #ef5350;
+            }
+            
+            /* Data tables in dark mode */
+            .dataframe th {
+                background-color: #1565c0 !important;
+            }
+            
+            .dataframe td {
+                border-bottom-color: #424242 !important;
+                color: #e0e0e0 !important;
+            }
+            
+            .dataframe tr:hover {
+                background-color: #2a2a2a !important;
+            }
+            
+            /* Expander in dark mode */
+            .streamlit-expanderHeader {
+                background-color: #2a2a2a !important;
+                color: #e0e0e0 !important;
+            }
+            
+            /* Section divider in dark mode */
+            .section-divider {
+                border-top-color: #424242;
+            }
+            
+            /* Footer in dark mode */
+            .sidebar-footer {
+                color: #b0b0b0 !important;
+            }
+            
+            /* Colored highlight cards in dark mode */
+            .card-success {
+                background: #1b5e20 !important;
+                color: #a5d6a7 !important;
+            }
+            
+            .card-success h4 {
+                color: #c8e6c9 !important;
+            }
+            
+            .card-success p {
+                color: #66bb6a !important;
+            }
+            
+            .card-info {
+                background: #1a237e !important;
+                color: #90caf9 !important;
+            }
+            
+            .card-info h4 {
+                color: #bbdefb !important;
+            }
+            
+            .card-info p {
+                color: #42a5f5 !important;
+            }
+            
+            .card-warning {
+                background: #4a2c00 !important;
+                color: #ffcc80 !important;
+            }
+            
+            .card-warning h4 {
+                color: #ffe0b2 !important;
+            }
+            
+            .card-warning p {
+                color: #ffa726 !important;
+            }
+        }
+        
+        /* Force dark mode for Streamlit dark theme */
+        [data-testid="stAppViewContainer"][data-theme="dark"] .card,
+        .stApp[data-theme="dark"] .card {
+            background: #1e1e1e !important;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.4);
+            color: #e0e0e0 !important;
+        }
+        
+        [data-testid="stAppViewContainer"][data-theme="dark"] .card h3,
+        .stApp[data-theme="dark"] .card h3 {
+            color: #4fc3f7 !important;
+        }
+        
+        [data-testid="stAppViewContainer"][data-theme="dark"] .card p,
+        [data-testid="stAppViewContainer"][data-theme="dark"] .card ul,
+        [data-testid="stAppViewContainer"][data-theme="dark"] .card li,
+        .stApp[data-theme="dark"] .card p,
+        .stApp[data-theme="dark"] .card ul,
+        .stApp[data-theme="dark"] .card li {
+            color: #e0e0e0 !important;
+        }
+        
+        [data-testid="stAppViewContainer"][data-theme="dark"] .metric-card,
+        .stApp[data-theme="dark"] .metric-card {
+            background: #1e1e1e !important;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.4);
+        }
+        
+        [data-testid="stAppViewContainer"][data-theme="dark"] .metric-card h3,
+        .stApp[data-theme="dark"] .metric-card h3 {
+            color: #b0b0b0 !important;
+        }
+        
+        [data-testid="stAppViewContainer"][data-theme="dark"] .metric-card .value,
+        .stApp[data-theme="dark"] .metric-card .value {
+            color: #4fc3f7 !important;
+        }
+        
+        [data-testid="stAppViewContainer"][data-theme="dark"] .metric-card.positive .value,
+        .stApp[data-theme="dark"] .metric-card.positive .value {
+            color: #66bb6a !important;
+        }
+        
+        [data-testid="stAppViewContainer"][data-theme="dark"] .metric-card.negative .value,
+        .stApp[data-theme="dark"] .metric-card.negative .value {
+            color: #ef5350 !important;
+        }
+        
+        [data-testid="stAppViewContainer"][data-theme="dark"] .info-box,
+        .stApp[data-theme="dark"] .info-box {
+            background: #1a237e !important;
+            color: #90caf9 !important;
+            border-left-color: #42a5f5;
+        }
+        
+        [data-testid="stAppViewContainer"][data-theme="dark"] .warning-box,
+        .stApp[data-theme="dark"] .warning-box {
+            background: #4a2c00 !important;
+            color: #ffb74d !important;
+            border-left-color: #ffa726;
+        }
+        
+        [data-testid="stAppViewContainer"][data-theme="dark"] .success-box,
+        .stApp[data-theme="dark"] .success-box {
+            background: #1b5e20 !important;
+            color: #81c784 !important;
+            border-left-color: #66bb6a;
+        }
+        
+        [data-testid="stAppViewContainer"][data-theme="dark"] .error-box,
+        .stApp[data-theme="dark"] .error-box {
+            background: #4a0000 !important;
+            color: #ef9a9a !important;
+            border-left-color: #ef5350;
+        }
+        
+        /* Colored highlight cards in Streamlit dark theme */
+        [data-testid="stAppViewContainer"][data-theme="dark"] .card-success,
+        .stApp[data-theme="dark"] .card-success {
+            background: #1b5e20 !important;
+            color: #a5d6a7 !important;
+        }
+        
+        [data-testid="stAppViewContainer"][data-theme="dark"] .card-success h4,
+        .stApp[data-theme="dark"] .card-success h4 {
+            color: #c8e6c9 !important;
+        }
+        
+        [data-testid="stAppViewContainer"][data-theme="dark"] .card-success p,
+        .stApp[data-theme="dark"] .card-success p {
+            color: #66bb6a !important;
+        }
+        
+        [data-testid="stAppViewContainer"][data-theme="dark"] .card-info,
+        .stApp[data-theme="dark"] .card-info {
+            background: #1a237e !important;
+            color: #90caf9 !important;
+        }
+        
+        [data-testid="stAppViewContainer"][data-theme="dark"] .card-info h4,
+        .stApp[data-theme="dark"] .card-info h4 {
+            color: #bbdefb !important;
+        }
+        
+        [data-testid="stAppViewContainer"][data-theme="dark"] .card-info p,
+        .stApp[data-theme="dark"] .card-info p {
+            color: #42a5f5 !important;
+        }
+        
+        [data-testid="stAppViewContainer"][data-theme="dark"] .card-warning,
+        .stApp[data-theme="dark"] .card-warning {
+            background: #4a2c00 !important;
+            color: #ffcc80 !important;
+        }
+        
+        [data-testid="stAppViewContainer"][data-theme="dark"] .card-warning h4,
+        .stApp[data-theme="dark"] .card-warning h4 {
+            color: #ffe0b2 !important;
+        }
+        
+        [data-testid="stAppViewContainer"][data-theme="dark"] .card-warning p,
+        .stApp[data-theme="dark"] .card-warning p {
+            color: #ffa726 !important;
+        }
+        
+        /* Footer in Streamlit dark theme */
+        [data-testid="stAppViewContainer"][data-theme="dark"] .sidebar-footer,
+        .stApp[data-theme="dark"] .sidebar-footer {
+            color: #b0b0b0 !important;
         }
     </style>
     """, unsafe_allow_html=True)

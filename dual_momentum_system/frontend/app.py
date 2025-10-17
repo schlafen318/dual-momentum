@@ -92,7 +92,7 @@ def main():
         
         # Footer
         st.markdown("""
-        <div style='text-align: center; color: #888; font-size: 0.8em;'>
+        <div class='sidebar-footer'>
             <p>© 2025 Dual Momentum Framework</p>
             <p>v1.0.0</p>
         </div>

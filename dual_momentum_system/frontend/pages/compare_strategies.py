@@ -411,9 +411,9 @@ def render_risk_return_analysis():
     
     with col1:
         st.markdown(f"""
-        <div class="card" style="background: #e8f5e9;">
+        <div class="card card-success">
             <h4>🏆 Best Risk-Adjusted</h4>
-            <p style="font-size: 1.2rem; font-weight: bold; color: #2ca02c;">
+            <p style="font-size: 1.2rem; font-weight: bold;">
                 {best_sharpe}
             </p>
             <small>Highest Sharpe Ratio</small>
@@ -422,9 +422,9 @@ def render_risk_return_analysis():
     
     with col2:
         st.markdown(f"""
-        <div class="card" style="background: #e3f2fd;">
+        <div class="card card-info">
             <h4>📈 Highest Return</h4>
-            <p style="font-size: 1.2rem; font-weight: bold; color: #1f77b4;">
+            <p style="font-size: 1.2rem; font-weight: bold;">
                 {best_return}
             </p>
             <small>Maximum Annualized Return</small>
@@ -433,9 +433,9 @@ def render_risk_return_analysis():
     
     with col3:
         st.markdown(f"""
-        <div class="card" style="background: #fff3e0;">
+        <div class="card card-warning">
             <h4>🛡️ Lowest Risk</h4>
-            <p style="font-size: 1.2rem; font-weight: bold; color: #ff9800;">
+            <p style="font-size: 1.2rem; font-weight: bold;">
                 {lowest_risk}
             </p>
             <small>Minimum Volatility</small>

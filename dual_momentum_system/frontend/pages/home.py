@@ -207,9 +207,9 @@ def render():
     col1, col2, col3 = st.columns([1, 2, 1])
     with col2:
         st.markdown("""
-        <div style='text-align: center; padding: 2rem; background: linear-gradient(90deg, #1f77b4 0%, #2ca02c 100%); border-radius: 10px;'>
-            <h2 style='color: white; margin-bottom: 1rem;'>Ready to Get Started?</h2>
-            <p style='color: rgba(255,255,255,0.9); font-size: 1.1rem;'>
+        <div class="cta-box" style='text-align: center; padding: 2rem; background: linear-gradient(90deg, #1f77b4 0%, #2ca02c 100%); border-radius: 10px;'>
+            <h2 style='color: white !important; margin-bottom: 1rem;'>Ready to Get Started?</h2>
+            <p style='color: rgba(255,255,255,0.95) !important; font-size: 1.1rem;'>
                 Navigate to the Strategy Builder to create your first backtest!
             </p>
         </div>
