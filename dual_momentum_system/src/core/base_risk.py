@@ -518,25 +518,25 @@ class BaseRiskManager(ABC):
         # Validate max_position_size
         if 'max_position_size' in self.config:
             max_pos = self.config['max_position_size']
-            if not 0.0 < max_pos <= 1.0:
+            if max_pos is not None and not 0.0 < max_pos <= 1.0:
                 raise ValueError("max_position_size must be between 0.0 and 1.0")
         
         # Validate max_leverage
         if 'max_leverage' in self.config:
             max_lev = self.config['max_leverage']
-            if max_lev < 1.0:
+            if max_lev is not None and max_lev < 1.0:
                 raise ValueError("max_leverage must be >= 1.0")
         
         # Validate max_drawdown
         if 'max_drawdown' in self.config:
             max_dd = self.config['max_drawdown']
-            if not 0.0 < max_dd <= 1.0:
+            if max_dd is not None and not 0.0 < max_dd <= 1.0:
                 raise ValueError("max_drawdown must be between 0.0 and 1.0")
         
         # Validate target_volatility
         if 'target_volatility' in self.config:
             target_vol = self.config['target_volatility']
-            if target_vol <= 0.0:
+            if target_vol is not None and target_vol <= 0.0:
                 raise ValueError("target_volatility must be positive")
     
     @classmethod

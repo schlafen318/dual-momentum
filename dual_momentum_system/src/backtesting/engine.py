@@ -146,6 +146,22 @@ class BacktestEngine:
             )
             
             if should_rebalance and i >= strategy.get_required_history():
+                # Log rebalancing start
+                logger.info(f"🔄 REBALANCING on {current_date.strftime('%Y-%m-%d')}")
+                logger.info(f"   Portfolio Value: ${portfolio_value:,.2f}")
+                logger.info(f"   Available Cash: ${self.cash:,.2f}")
+                
+                # Log current positions before rebalancing
+                if self.positions:
+                    logger.info("   Current Positions:")
+                    for symbol, pos in self.positions.items():
+                        market_value = pos.quantity * pos.current_price
+                        pnl = (pos.current_price - pos.entry_price) * pos.quantity
+                        logger.info(f"     {symbol}: {pos.quantity:.2f} shares @ ${pos.current_price:.2f} "
+                                  f"(Value: ${market_value:,.2f}, P&L: ${pnl:,.2f})")
+                else:
+                    logger.info("   Current Positions: None")
+                
                 # Get current data slice for signal generation
                 current_price_data = self._get_current_data(
                     aligned_data,
@@ -157,9 +173,13 @@ class BacktestEngine:
                 signals = strategy.generate_signals(current_price_data)
                 
                 if signals:
-                    logger.debug(
-                        f"{current_date}: Generated {len(signals)} signals"
-                    )
+                    logger.info(f"   Generated {len(signals)} signals:")
+                    for signal in signals:
+                        direction_str = "LONG" if signal.direction > 0 else "SHORT" if signal.direction < 0 else "EXIT"
+                        logger.info(f"     {signal.symbol}: {direction_str} (strength: {signal.strength:.2f})")
+                    
+                    # Store positions before execution for comparison
+                    positions_before = dict(self.positions)
                     
                     # Execute trades based on signals
                     self._execute_signals(
@@ -170,7 +190,22 @@ class BacktestEngine:
                         risk_manager
                     )
                     
-                    last_rebalance = current_date
+                    # Log position changes after execution
+                    positions_after = dict(self.positions)
+                    self._log_position_changes(positions_before, positions_after, current_date)
+                    
+                    # Log portfolio state after rebalancing
+                    new_portfolio_value = self._calculate_portfolio_value(current_date, aligned_data)
+                    logger.info(f"   After Rebalancing:")
+                    logger.info(f"     Portfolio Value: ${new_portfolio_value:,.2f}")
+                    logger.info(f"     Available Cash: ${self.cash:,.2f}")
+                    logger.info(f"     Change: ${new_portfolio_value - portfolio_value:,.2f}")
+                else:
+                    logger.info("   No signals generated - maintaining current positions")
+                
+                # Update last rebalance date
+                last_rebalance = current_date
+                logger.info("   ✅ Rebalancing complete")
         
         # Close all remaining positions at end
         final_date = date_index[-1]
@@ -311,7 +346,7 @@ class BacktestEngine:
     ) -> float:
         """Calculate total portfolio value."""
         positions_value = sum(
-            pos.market_value for pos in self.positions.values()
+            pos.quantity * pos.current_price for pos in self.positions.values()
         )
         return self.cash + positions_value
     
@@ -376,12 +411,40 @@ class BacktestEngine:
             commission_cost = position_size_dollars * self.commission
             total_cost = position_size_dollars + commission_cost
             
-            # Check if we have enough cash
+            # Log trade details
+            direction_str = "BUY" if signal.direction > 0 else "SELL"
+            logger.info(f"     📈 {direction_str} {signal.symbol}:")
+            logger.info(f"        Price: ${current_price:.2f} → ${execution_price:.2f} (slippage: {self.slippage:.3%})")
+            logger.info(f"        Position Size: ${position_size_dollars:,.2f}")
+            logger.info(f"        Shares: {shares:.2f}")
+            logger.info(f"        Commission: ${commission_cost:.2f}")
+            logger.info(f"        Total Cost: ${total_cost:,.2f}")
+            
+            # If total cost exceeds available cash, reduce position size
             if total_cost > self.cash:
-                logger.warning(
-                    f"Insufficient cash for {signal.symbol}. "
-                    f"Required: ${total_cost:,.2f}, Available: ${self.cash:,.2f}"
-                )
+                # Calculate maximum position size that fits within available cash
+                # position_size + (position_size * commission) <= cash
+                # position_size * (1 + commission) <= cash
+                # position_size <= cash / (1 + commission)
+                max_position_size = self.cash / (1 + self.commission)
+                position_size_dollars = min(position_size_dollars, max_position_size)
+                shares = position_size_dollars / execution_price
+                commission_cost = position_size_dollars * self.commission
+                total_cost = position_size_dollars + commission_cost
+                
+                # Ensure total cost doesn't exceed cash due to floating point precision
+                if total_cost > self.cash:
+                    # Reduce position size by a small amount to account for precision
+                    position_size_dollars = self.cash - (position_size_dollars * self.commission)
+                    position_size_dollars = max(0, position_size_dollars)  # Ensure non-negative
+                    shares = position_size_dollars / execution_price
+                    commission_cost = position_size_dollars * self.commission
+                    total_cost = position_size_dollars + commission_cost
+            
+            # Check if we have enough cash (with small tolerance for floating point precision)
+            if total_cost > self.cash + 1e-6:
+                logger.warning(f"     ❌ SKIPPED {direction_str} {signal.symbol} - Insufficient cash")
+                logger.warning(f"        Required: ${total_cost:,.2f}, Available: ${self.cash:,.2f}")
                 continue
             
             # Execute trade
@@ -393,6 +456,7 @@ class BacktestEngine:
                     execution_price,
                     current_date
                 )
+                logger.info(f"        ✅ Position adjusted successfully")
             else:
                 # Open new position
                 self._open_position(
@@ -401,9 +465,11 @@ class BacktestEngine:
                     execution_price,
                     current_date
                 )
+                logger.info(f"        ✅ Position opened successfully")
             
             # Deduct cash
             self.cash -= total_cost
+            logger.info(f"        💰 Cash remaining: ${self.cash:,.2f}")
     
     def _open_position(
         self,
@@ -510,6 +576,54 @@ class BacktestEngine:
         symbols_to_close = list(self.positions.keys())
         for symbol in symbols_to_close:
             self._close_position(symbol, timestamp, aligned_data)
+    
+    def _log_position_changes(
+        self,
+        positions_before: Dict[str, Position],
+        positions_after: Dict[str, Position],
+        current_date: datetime
+    ) -> None:
+        """Log detailed position changes during rebalancing."""
+        # Find positions that were closed
+        closed_positions = set(positions_before.keys()) - set(positions_after.keys())
+        if closed_positions:
+            logger.info("   Positions Closed:")
+            for symbol in closed_positions:
+                pos = positions_before[symbol]
+                market_value = pos.quantity * pos.current_price
+                pnl = (pos.current_price - pos.entry_price) * pos.quantity
+                logger.info(f"     {symbol}: {pos.quantity:.2f} shares @ ${pos.current_price:.2f} "
+                          f"(Value: ${market_value:,.2f}, P&L: ${pnl:,.2f})")
+        
+        # Find positions that were opened
+        opened_positions = set(positions_after.keys()) - set(positions_before.keys())
+        if opened_positions:
+            logger.info("   Positions Opened:")
+            for symbol in opened_positions:
+                pos = positions_after[symbol]
+                market_value = pos.quantity * pos.current_price
+                logger.info(f"     {symbol}: {pos.quantity:.2f} shares @ ${pos.current_price:.2f} "
+                          f"(Value: ${market_value:,.2f})")
+        
+        # Find positions that were adjusted
+        adjusted_positions = set(positions_before.keys()) & set(positions_after.keys())
+        for symbol in adjusted_positions:
+            pos_before = positions_before[symbol]
+            pos_after = positions_after[symbol]
+            if pos_before.quantity != pos_after.quantity:
+                quantity_change = pos_after.quantity - pos_before.quantity
+                action = "Increased" if quantity_change > 0 else "Reduced"
+                logger.info(f"   Position Adjusted:")
+                logger.info(f"     {symbol}: {action} by {abs(quantity_change):.2f} shares "
+                          f"({pos_before.quantity:.2f} → {pos_after.quantity:.2f})")
+        
+        # If no changes, log that
+        if not closed_positions and not opened_positions and not any(
+            positions_before.get(symbol, Position("", 0, 0, current_date, 0, current_date, {})).quantity != 
+            positions_after.get(symbol, Position("", 0, 0, current_date, 0, current_date, {})).quantity
+            for symbol in adjusted_positions
+        ):
+            logger.info("   No position changes made")
     
     def _generate_results(
         self,
