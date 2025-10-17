@@ -36,9 +36,9 @@ def apply_custom_css():
             font-size: 1.1rem;
         }
         
-        /* Metric cards */
+        /* Metric cards - Light mode default */
         .metric-card {
-            background: white;
+            background: #ffffff;
             padding: 1.5rem;
             border-radius: 8px;
             box-shadow: 0 2px 4px rgba(0,0,0,0.1);
@@ -47,7 +47,7 @@ def apply_custom_css():
         }
         
         .metric-card h3 {
-            color: #333;
+            color: #333333;
             margin-bottom: 0.5rem;
             font-size: 0.9rem;
             text-transform: uppercase;
@@ -58,6 +58,19 @@ def apply_custom_css():
             font-size: 2rem;
             font-weight: bold;
             color: #1f77b4;
+        }
+        
+        /* Ensure light mode metric cards have light background */
+        [data-theme="light"] .metric-card {
+            background: #ffffff !important;
+        }
+        
+        [data-theme="light"] .metric-card h3 {
+            color: #333333 !important;
+        }
+        
+        [data-theme="light"] .metric-card .value {
+            color: #1f77b4 !important;
         }
         
         .metric-card .delta {
@@ -198,22 +211,39 @@ def apply_custom_css():
         #MainMenu {visibility: hidden;}
         footer {visibility: hidden;}
         
-        /* Card container */
+        /* Card container - Light mode default */
         .card {
-            background: white;
+            background: #ffffff;
             padding: 1.5rem;
             border-radius: 8px;
             box-shadow: 0 2px 4px rgba(0,0,0,0.1);
             margin-bottom: 1rem;
-            color: #333;
+            color: #333333;
         }
         
-        .card h3 {
+        .card h3, .card h4 {
             color: #1f77b4;
         }
         
         .card p, .card ul, .card li {
-            color: #333;
+            color: #333333;
+        }
+        
+        /* Ensure light mode cards have light background */
+        [data-theme="light"] .card {
+            background: #ffffff !important;
+            color: #333333 !important;
+        }
+        
+        [data-theme="light"] .card h3,
+        [data-theme="light"] .card h4 {
+            color: #1f77b4 !important;
+        }
+        
+        [data-theme="light"] .card p,
+        [data-theme="light"] .card ul,
+        [data-theme="light"] .card li {
+            color: #333333 !important;
         }
         
         /* Footer styling */
@@ -258,7 +288,7 @@ def apply_custom_css():
             color: white;
         }
         
-        /* Colored highlight cards */
+        /* Colored highlight cards - Light mode default */
         .card-success {
             background: #e8f5e9;
             color: #2e7d32;
@@ -296,6 +326,46 @@ def apply_custom_css():
         
         .card-warning p {
             color: #ff9800;
+        }
+        
+        /* Ensure colored cards work in light mode */
+        [data-theme="light"] .card-success {
+            background: #e8f5e9 !important;
+            color: #2e7d32 !important;
+        }
+        
+        [data-theme="light"] .card-success h4 {
+            color: #1b5e20 !important;
+        }
+        
+        [data-theme="light"] .card-success p {
+            color: #2ca02c !important;
+        }
+        
+        [data-theme="light"] .card-info {
+            background: #e3f2fd !important;
+            color: #1565c0 !important;
+        }
+        
+        [data-theme="light"] .card-info h4 {
+            color: #0d47a1 !important;
+        }
+        
+        [data-theme="light"] .card-info p {
+            color: #1f77b4 !important;
+        }
+        
+        [data-theme="light"] .card-warning {
+            background: #fff3e0 !important;
+            color: #e65100 !important;
+        }
+        
+        [data-theme="light"] .card-warning h4 {
+            color: #bf360c !important;
+        }
+        
+        [data-theme="light"] .card-warning p {
+            color: #ff9800 !important;
         }
         
         /* Dark mode support */
@@ -434,133 +504,110 @@ def apply_custom_css():
         }
         
         /* Force dark mode for Streamlit dark theme */
-        [data-testid="stAppViewContainer"][data-theme="dark"] .card,
-        .stApp[data-theme="dark"] .card {
+        [data-theme="dark"] .card {
             background: #1e1e1e !important;
             box-shadow: 0 2px 8px rgba(0,0,0,0.4);
             color: #e0e0e0 !important;
         }
         
-        [data-testid="stAppViewContainer"][data-theme="dark"] .card h3,
-        .stApp[data-theme="dark"] .card h3 {
+        [data-theme="dark"] .card h3,
+        [data-theme="dark"] .card h4 {
             color: #4fc3f7 !important;
         }
         
-        [data-testid="stAppViewContainer"][data-theme="dark"] .card p,
-        [data-testid="stAppViewContainer"][data-theme="dark"] .card ul,
-        [data-testid="stAppViewContainer"][data-theme="dark"] .card li,
-        .stApp[data-theme="dark"] .card p,
-        .stApp[data-theme="dark"] .card ul,
-        .stApp[data-theme="dark"] .card li {
+        [data-theme="dark"] .card p,
+        [data-theme="dark"] .card ul,
+        [data-theme="dark"] .card li {
             color: #e0e0e0 !important;
         }
         
-        [data-testid="stAppViewContainer"][data-theme="dark"] .metric-card,
-        .stApp[data-theme="dark"] .metric-card {
+        [data-theme="dark"] .metric-card {
             background: #1e1e1e !important;
             box-shadow: 0 2px 8px rgba(0,0,0,0.4);
         }
         
-        [data-testid="stAppViewContainer"][data-theme="dark"] .metric-card h3,
-        .stApp[data-theme="dark"] .metric-card h3 {
+        [data-theme="dark"] .metric-card h3 {
             color: #b0b0b0 !important;
         }
         
-        [data-testid="stAppViewContainer"][data-theme="dark"] .metric-card .value,
-        .stApp[data-theme="dark"] .metric-card .value {
+        [data-theme="dark"] .metric-card .value {
             color: #4fc3f7 !important;
         }
         
-        [data-testid="stAppViewContainer"][data-theme="dark"] .metric-card.positive .value,
-        .stApp[data-theme="dark"] .metric-card.positive .value {
+        [data-theme="dark"] .metric-card.positive .value {
             color: #66bb6a !important;
         }
         
-        [data-testid="stAppViewContainer"][data-theme="dark"] .metric-card.negative .value,
-        .stApp[data-theme="dark"] .metric-card.negative .value {
+        [data-theme="dark"] .metric-card.negative .value {
             color: #ef5350 !important;
         }
         
-        [data-testid="stAppViewContainer"][data-theme="dark"] .info-box,
-        .stApp[data-theme="dark"] .info-box {
+        [data-theme="dark"] .info-box {
             background: #1a237e !important;
             color: #90caf9 !important;
             border-left-color: #42a5f5;
         }
         
-        [data-testid="stAppViewContainer"][data-theme="dark"] .warning-box,
-        .stApp[data-theme="dark"] .warning-box {
+        [data-theme="dark"] .warning-box {
             background: #4a2c00 !important;
             color: #ffb74d !important;
             border-left-color: #ffa726;
         }
         
-        [data-testid="stAppViewContainer"][data-theme="dark"] .success-box,
-        .stApp[data-theme="dark"] .success-box {
+        [data-theme="dark"] .success-box {
             background: #1b5e20 !important;
             color: #81c784 !important;
             border-left-color: #66bb6a;
         }
         
-        [data-testid="stAppViewContainer"][data-theme="dark"] .error-box,
-        .stApp[data-theme="dark"] .error-box {
+        [data-theme="dark"] .error-box {
             background: #4a0000 !important;
             color: #ef9a9a !important;
             border-left-color: #ef5350;
         }
         
         /* Colored highlight cards in Streamlit dark theme */
-        [data-testid="stAppViewContainer"][data-theme="dark"] .card-success,
-        .stApp[data-theme="dark"] .card-success {
+        [data-theme="dark"] .card-success {
             background: #1b5e20 !important;
             color: #a5d6a7 !important;
         }
         
-        [data-testid="stAppViewContainer"][data-theme="dark"] .card-success h4,
-        .stApp[data-theme="dark"] .card-success h4 {
+        [data-theme="dark"] .card-success h4 {
             color: #c8e6c9 !important;
         }
         
-        [data-testid="stAppViewContainer"][data-theme="dark"] .card-success p,
-        .stApp[data-theme="dark"] .card-success p {
+        [data-theme="dark"] .card-success p {
             color: #66bb6a !important;
         }
         
-        [data-testid="stAppViewContainer"][data-theme="dark"] .card-info,
-        .stApp[data-theme="dark"] .card-info {
+        [data-theme="dark"] .card-info {
             background: #1a237e !important;
             color: #90caf9 !important;
         }
         
-        [data-testid="stAppViewContainer"][data-theme="dark"] .card-info h4,
-        .stApp[data-theme="dark"] .card-info h4 {
+        [data-theme="dark"] .card-info h4 {
             color: #bbdefb !important;
         }
         
-        [data-testid="stAppViewContainer"][data-theme="dark"] .card-info p,
-        .stApp[data-theme="dark"] .card-info p {
+        [data-theme="dark"] .card-info p {
             color: #42a5f5 !important;
         }
         
-        [data-testid="stAppViewContainer"][data-theme="dark"] .card-warning,
-        .stApp[data-theme="dark"] .card-warning {
+        [data-theme="dark"] .card-warning {
             background: #4a2c00 !important;
             color: #ffcc80 !important;
         }
         
-        [data-testid="stAppViewContainer"][data-theme="dark"] .card-warning h4,
-        .stApp[data-theme="dark"] .card-warning h4 {
+        [data-theme="dark"] .card-warning h4 {
             color: #ffe0b2 !important;
         }
         
-        [data-testid="stAppViewContainer"][data-theme="dark"] .card-warning p,
-        .stApp[data-theme="dark"] .card-warning p {
+        [data-theme="dark"] .card-warning p {
             color: #ffa726 !important;
         }
         
         /* Footer in Streamlit dark theme */
-        [data-testid="stAppViewContainer"][data-theme="dark"] .sidebar-footer,
-        .stApp[data-theme="dark"] .sidebar-footer {
+        [data-theme="dark"] .sidebar-footer {
             color: #b0b0b0 !important;
         }
     </style>
