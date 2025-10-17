@@ -7,11 +7,20 @@ for strategies, data sources, and system settings.
 
 import os
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Optional, List
 
 import yaml
 import toml
 from loguru import logger
+
+# Import universe and strategy loaders
+try:
+    from .universe_loader import UniverseLoader, get_universe_loader
+    from .strategy_loader import StrategyLoader, get_strategy_loader
+    _LOADERS_AVAILABLE = True
+except ImportError:
+    _LOADERS_AVAILABLE = False
+    logger.warning("Universe and Strategy loaders not available")
 
 
 class ConfigManager:
@@ -262,6 +271,133 @@ class ConfigManager:
             ])
         
         return sorted(configs)
+    
+    # ========================================================================
+    # UNIVERSE MANAGEMENT
+    # ========================================================================
+    
+    def get_universe_loader(self) -> Optional['UniverseLoader']:
+        """
+        Get universe loader instance.
+        
+        Returns:
+            UniverseLoader or None if not available
+        """
+        if not _LOADERS_AVAILABLE:
+            logger.warning("Universe loader not available")
+            return None
+        return get_universe_loader()
+    
+    def list_universes(self, asset_class: Optional[str] = None) -> List[str]:
+        """
+        List available asset universes.
+        
+        Args:
+            asset_class: Filter by asset class
+        
+        Returns:
+            List of universe IDs
+        """
+        loader = self.get_universe_loader()
+        if not loader:
+            return []
+        return loader.list_universes(asset_class=asset_class)
+    
+    def get_universe_symbols(self, universe_id: str) -> List[str]:
+        """
+        Get symbols for a universe.
+        
+        Args:
+            universe_id: Universe identifier
+        
+        Returns:
+            List of symbols
+        """
+        loader = self.get_universe_loader()
+        if not loader:
+            return []
+        return loader.get_symbols(universe_id)
+    
+    def get_universe_info(self, universe_id: str) -> Dict[str, Any]:
+        """
+        Get information about a universe.
+        
+        Args:
+            universe_id: Universe identifier
+        
+        Returns:
+            Universe information dictionary
+        """
+        loader = self.get_universe_loader()
+        if not loader:
+            return {}
+        return loader.get_universe_info(universe_id)
+    
+    # ========================================================================
+    # STRATEGY MANAGEMENT
+    # ========================================================================
+    
+    def get_strategy_loader(self) -> Optional['StrategyLoader']:
+        """
+        Get strategy loader instance.
+        
+        Returns:
+            StrategyLoader or None if not available
+        """
+        if not _LOADERS_AVAILABLE:
+            logger.warning("Strategy loader not available")
+            return None
+        return get_strategy_loader()
+    
+    def list_strategies(self, category: Optional[str] = None) -> List[str]:
+        """
+        List available strategies.
+        
+        Args:
+            category: Filter by category
+        
+        Returns:
+            List of strategy IDs
+        """
+        loader = self.get_strategy_loader()
+        if not loader:
+            return []
+        return loader.list_strategies(category=category)
+    
+    def get_strategy_info(self, strategy_id: str) -> Dict[str, Any]:
+        """
+        Get information about a strategy.
+        
+        Args:
+            strategy_id: Strategy identifier
+        
+        Returns:
+            Strategy information dictionary
+        """
+        loader = self.get_strategy_loader()
+        if not loader:
+            return {}
+        return loader.get_strategy_info(strategy_id)
+    
+    def create_strategy(
+        self,
+        strategy_id: str,
+        custom_params: Optional[Dict[str, Any]] = None
+    ):
+        """
+        Create strategy instance.
+        
+        Args:
+            strategy_id: Strategy identifier
+            custom_params: Custom parameters
+        
+        Returns:
+            Strategy instance
+        """
+        loader = self.get_strategy_loader()
+        if not loader:
+            raise RuntimeError("Strategy loader not available")
+        return loader.create_strategy(strategy_id, custom_params)
 
 
 # Global config manager instance

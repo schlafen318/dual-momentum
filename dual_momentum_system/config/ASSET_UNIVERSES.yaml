@@ -1,0 +1,575 @@
+# Pre-built Asset Universes for Backtesting
+# These universes can be referenced by name in strategy configurations
+# Users can also define custom universes via the frontend
+
+# ============================================================================
+# GLOBAL EQUITY MOMENTUM (GEM) - Classic Antonacci Configuration
+# ============================================================================
+gem_classic:
+  name: "Global Equity Momentum - Classic"
+  description: "Classic GEM portfolio as described by Gary Antonacci"
+  asset_class: equity
+  benchmark: SPY
+  symbols:
+    - SPY      # S&P 500 (US Stocks)
+    - VEU      # FTSE All-World ex-US (International Developed + Emerging)
+    - BND      # Vanguard Total Bond Market (Safe Asset)
+  metadata:
+    source: "Gary Antonacci - Dual Momentum Investing"
+    rebalance_recommended: monthly
+    min_history_days: 252
+
+gem_extended:
+  name: "Global Equity Momentum - Extended"
+  description: "Extended GEM with separate developed/emerging and multiple asset classes"
+  asset_class: multi_asset
+  benchmark: SPY
+  symbols:
+    - SPY      # S&P 500
+    - EFA      # MSCI EAFE (Developed Markets ex-US)
+    - EEM      # MSCI Emerging Markets
+    - AGG      # US Aggregate Bonds
+    - TLT      # Long-term Treasuries
+    - GLD      # Gold
+  metadata:
+    source: "Enhanced GEM implementation"
+    rebalance_recommended: monthly
+    min_history_days: 252
+
+# ============================================================================
+# GLOBAL SECTOR ROTATION
+# ============================================================================
+global_sectors_us:
+  name: "US Market Sectors (11 GICS Sectors)"
+  description: "Complete US market sector coverage via SPDR Select Sector ETFs"
+  asset_class: equity
+  benchmark: SPY
+  symbols:
+    - XLE      # Energy
+    - XLF      # Financials
+    - XLU      # Utilities
+    - XLI      # Industrials
+    - XLV      # Health Care
+    - XLK      # Technology
+    - XLB      # Materials
+    - XLP      # Consumer Staples
+    - XLY      # Consumer Discretionary
+    - XLRE     # Real Estate
+    - XLC      # Communication Services
+  metadata:
+    provider: "State Street SPDR"
+    sector_classification: "GICS"
+    rebalance_recommended: monthly
+
+global_sectors_intl:
+  name: "Global Sector Rotation"
+  description: "Global sector exposure including US, developed, and emerging markets"
+  asset_class: equity
+  benchmark: VT
+  symbols:
+    - XLE      # US Energy
+    - XLF      # US Financials
+    - XLK      # US Technology
+    - XLV      # US Healthcare
+    - XLI      # US Industrials
+    - VGK      # European Stocks
+    - VPL      # Pacific Stocks
+    - EEM      # Emerging Markets
+    - GLD      # Gold
+    - DBC      # Commodities
+  metadata:
+    geographic_exposure: "Global"
+    rebalance_recommended: monthly
+
+# ============================================================================
+# CRYPTOCURRENCY UNIVERSES
+# ============================================================================
+crypto_major:
+  name: "Major Cryptocurrencies"
+  description: "Top 5 cryptocurrencies by market capitalization"
+  asset_class: crypto
+  benchmark: BTC-USD
+  symbols:
+    - BTC-USD  # Bitcoin
+    - ETH-USD  # Ethereum
+    - BNB-USD  # Binance Coin
+    - ADA-USD  # Cardano
+    - SOL-USD  # Solana
+  metadata:
+    market: "Cryptocurrency"
+    high_volatility: true
+    rebalance_recommended: weekly
+    warning: "Highly volatile asset class"
+
+crypto_extended:
+  name: "Extended Crypto Universe"
+  description: "Top 15 cryptocurrencies for broader diversification"
+  asset_class: crypto
+  benchmark: BTC-USD
+  symbols:
+    - BTC-USD  # Bitcoin
+    - ETH-USD  # Ethereum
+    - BNB-USD  # Binance Coin
+    - XRP-USD  # Ripple
+    - ADA-USD  # Cardano
+    - SOL-USD  # Solana
+    - DOGE-USD # Dogecoin
+    - DOT-USD  # Polkadot
+    - MATIC-USD # Polygon
+    - AVAX-USD # Avalanche
+    - LINK-USD # Chainlink
+    - UNI-USD  # Uniswap
+    - ATOM-USD # Cosmos
+    - LTC-USD  # Litecoin
+    - BCH-USD  # Bitcoin Cash
+  metadata:
+    market: "Cryptocurrency"
+    high_volatility: true
+    rebalance_recommended: weekly
+
+# ============================================================================
+# MULTI-ASSET BALANCED PORTFOLIOS
+# ============================================================================
+multi_asset_balanced:
+  name: "Multi-Asset Balanced"
+  description: "Balanced portfolio across equities, bonds, commodities, and alternatives"
+  asset_class: multi_asset
+  benchmark: AOR  # iShares Core Growth Allocation ETF
+  symbols:
+    # Equities (40%)
+    - SPY      # US Large Cap
+    - IWM      # US Small Cap
+    - EFA      # International Developed
+    - EEM      # Emerging Markets
+    # Fixed Income (40%)
+    - AGG      # US Aggregate Bonds
+    - TLT      # Long-term Treasuries
+    - LQD      # Investment Grade Corporates
+    - HYG      # High Yield Bonds
+    # Alternatives (20%)
+    - GLD      # Gold
+    - SLV      # Silver
+    - DBC      # Commodities
+    - VNQ      # Real Estate
+  metadata:
+    target_allocation:
+      equities: 0.40
+      fixed_income: 0.40
+      alternatives: 0.20
+    risk_level: "Moderate"
+    rebalance_recommended: monthly
+
+multi_asset_aggressive:
+  name: "Multi-Asset Aggressive Growth"
+  description: "Growth-oriented multi-asset portfolio with equity bias"
+  asset_class: multi_asset
+  benchmark: AOA  # iShares Core Aggressive Allocation ETF
+  symbols:
+    # Equities (70%)
+    - SPY      # US Large Cap
+    - QQQ      # US Tech
+    - IWM      # US Small Cap
+    - EFA      # International Developed
+    - EEM      # Emerging Markets
+    - VWO      # Emerging Markets (Vanguard)
+    # Fixed Income (20%)
+    - AGG      # US Aggregate Bonds
+    - TLT      # Long-term Treasuries
+    # Alternatives (10%)
+    - GLD      # Gold
+    - DBC      # Commodities
+  metadata:
+    target_allocation:
+      equities: 0.70
+      fixed_income: 0.20
+      alternatives: 0.10
+    risk_level: "Aggressive"
+    rebalance_recommended: monthly
+
+multi_asset_conservative:
+  name: "Multi-Asset Conservative"
+  description: "Conservative portfolio emphasizing capital preservation"
+  asset_class: multi_asset
+  benchmark: AOK  # iShares Core Conservative Allocation ETF
+  symbols:
+    # Equities (30%)
+    - SPY      # US Large Cap
+    - EFA      # International Developed
+    - VIG      # Dividend Appreciation
+    # Fixed Income (60%)
+    - AGG      # US Aggregate Bonds
+    - TLT      # Long-term Treasuries
+    - SHY      # Short-term Treasuries
+    - LQD      # Investment Grade Corporates
+    - MUB      # Municipal Bonds
+    # Alternatives (10%)
+    - GLD      # Gold
+    - VCIT     # Intermediate-Term Corporate Bonds
+  metadata:
+    target_allocation:
+      equities: 0.30
+      fixed_income: 0.60
+      alternatives: 0.10
+    risk_level: "Conservative"
+    rebalance_recommended: quarterly
+
+# ============================================================================
+# FACTOR-BASED STRATEGIES
+# ============================================================================
+factor_momentum:
+  name: "Factor - Momentum"
+  description: "Pure momentum factor exposure across asset classes"
+  asset_class: multi_asset
+  benchmark: MTUM  # iShares MSCI USA Momentum Factor ETF
+  symbols:
+    - MTUM     # US Momentum
+    - IMTM     # International Momentum
+    - EEM      # Emerging Markets (for momentum signals)
+    - GLD      # Gold (for momentum signals)
+    - DBC      # Commodities (for momentum signals)
+    - TLT      # Treasuries (defensive)
+  metadata:
+    factor: "Momentum"
+    rebalance_recommended: monthly
+
+factor_value:
+  name: "Factor - Value"
+  description: "Value factor exposure across markets"
+  asset_class: equity
+  benchmark: VTV  # Vanguard Value ETF
+  symbols:
+    - VTV      # US Large Cap Value
+    - VBR      # US Small Cap Value
+    - EFV      # International Value
+    - IVAL     # International Small Cap Value
+    - DEM      # Emerging Markets Value
+  metadata:
+    factor: "Value"
+    rebalance_recommended: quarterly
+
+factor_quality:
+  name: "Factor - Quality"
+  description: "Quality factor: profitable, growing, well-managed companies"
+  asset_class: equity
+  benchmark: QUAL  # iShares MSCI USA Quality Factor ETF
+  symbols:
+    - QUAL     # US Quality
+    - IQLT     # International Quality
+    - SPHQ     # S&P 500 Quality
+    - JQUA     # JPMorgan US Quality Factor
+  metadata:
+    factor: "Quality"
+    rebalance_recommended: quarterly
+
+# ============================================================================
+# COMMODITY & INFLATION HEDGE
+# ============================================================================
+commodities_broad:
+  name: "Broad Commodities"
+  description: "Diversified commodity exposure"
+  asset_class: commodity
+  benchmark: DBC
+  symbols:
+    - DBC      # Invesco DB Commodity Index
+    - GSG      # iShares S&P GSCI Commodity
+    - GLD      # Gold
+    - SLV      # Silver
+    - USO      # US Oil Fund
+    - UNG      # US Natural Gas Fund
+    - CORN     # Teucrium Corn Fund
+    - WEAT     # Teucrium Wheat Fund
+  metadata:
+    use_case: "Inflation hedge, diversification"
+    rebalance_recommended: monthly
+
+precious_metals:
+  name: "Precious Metals"
+  description: "Gold, silver, platinum, and mining stocks"
+  asset_class: commodity
+  benchmark: GLD
+  symbols:
+    - GLD      # Gold
+    - SLV      # Silver
+    - PPLT     # Platinum
+    - PALL     # Palladium
+    - GDX      # Gold Miners
+    - GDXJ     # Junior Gold Miners
+    - SIL      # Silver Miners
+  metadata:
+    use_case: "Safe haven, inflation hedge"
+    rebalance_recommended: monthly
+
+# ============================================================================
+# FIXED INCOME STRATEGIES
+# ============================================================================
+bonds_treasury_ladder:
+  name: "US Treasury Ladder"
+  description: "Treasury ladder across maturity spectrum"
+  asset_class: bond
+  benchmark: AGG
+  symbols:
+    - SHY      # 1-3 Year Treasuries
+    - IEI      # 3-7 Year Treasuries
+    - IEF      # 7-10 Year Treasuries
+    - TLH      # 10-20 Year Treasuries
+    - TLT      # 20+ Year Treasuries
+    - TIPS     # Treasury Inflation-Protected Securities
+  metadata:
+    credit_quality: "AAA (US Government)"
+    rebalance_recommended: quarterly
+
+bonds_credit:
+  name: "Credit Bond Spectrum"
+  description: "Investment grade and high yield corporate bonds"
+  asset_class: bond
+  benchmark: AGG
+  symbols:
+    - LQD      # Investment Grade Corporate
+    - VCIT     # Intermediate Corporate
+    - VCLT     # Long-term Corporate
+    - HYG      # High Yield Corporate
+    - JNK      # High Yield (SPDR)
+    - ANGL     # Fallen Angels
+    - BNDX     # International Bonds
+  metadata:
+    credit_quality: "Mixed (IG to HY)"
+    rebalance_recommended: monthly
+
+# ============================================================================
+# THEMATIC & SPECIALIZED
+# ============================================================================
+tech_innovation:
+  name: "Technology & Innovation"
+  description: "Cutting-edge technology and disruptive innovation"
+  asset_class: equity
+  benchmark: QQQ
+  symbols:
+    - QQQ      # Nasdaq 100
+    - XLK      # Technology Sector
+    - ARKK     # ARK Innovation
+    - ARKG     # ARK Genomics
+    - ARKF     # ARK Fintech
+    - WCLD     # Cloud Computing
+    - ROBO     # Robotics & AI
+    - FINX     # FinTech
+  metadata:
+    theme: "Innovation & Disruption"
+    risk_level: "High"
+    rebalance_recommended: monthly
+
+clean_energy:
+  name: "Clean Energy & Sustainability"
+  description: "Renewable energy and ESG-focused investments"
+  asset_class: equity
+  benchmark: ICLN
+  symbols:
+    - ICLN     # iShares Global Clean Energy
+    - TAN      # Invesco Solar ETF
+    - QCLN     # First Trust NASDAQ Clean Edge
+    - PBW      # Invesco WilderHill Clean Energy
+    - ACES     # ALPS Clean Energy ETF
+    - LIT      # Lithium & Battery Tech
+  metadata:
+    theme: "ESG & Sustainability"
+    rebalance_recommended: monthly
+
+emerging_markets:
+  name: "Emerging Markets Focus"
+  description: "Diversified emerging market equity exposure"
+  asset_class: equity
+  benchmark: EEM
+  symbols:
+    - EEM      # MSCI Emerging Markets
+    - VWO      # FTSE Emerging Markets
+    - IEMG     # Core MSCI Emerging Markets
+    - EWZ      # Brazil
+    - FXI      # China Large Cap
+    - INDA     # India
+    - RSX      # Russia (check availability)
+    - EWT      # Taiwan
+    - EWY      # South Korea
+    - THD      # Thailand
+  metadata:
+    geographic_focus: "Emerging Markets"
+    risk_level: "High"
+    rebalance_recommended: monthly
+
+# ============================================================================
+# INCOME-FOCUSED
+# ============================================================================
+dividend_aristocrats:
+  name: "Dividend Aristocrats"
+  description: "High-quality dividend-paying stocks"
+  asset_class: equity
+  benchmark: NOBL
+  symbols:
+    - NOBL     # S&P 500 Dividend Aristocrats
+    - VIG      # Dividend Appreciation
+    - SCHD     # US Dividend Equity
+    - DVY      # Dow Jones Dividend
+    - SDY      # S&P Dividend
+    - VYM      # High Dividend Yield
+  metadata:
+    focus: "Dividend Income"
+    risk_level: "Moderate"
+    rebalance_recommended: quarterly
+
+global_income:
+  name: "Global Income Portfolio"
+  description: "Diversified income across equities, bonds, and REITs"
+  asset_class: multi_asset
+  benchmark: VIG
+  symbols:
+    # Dividend Equities
+    - VIG      # Dividend Appreciation
+    - VYMI     # International High Dividend
+    - SCHD     # US Dividend
+    # Bonds
+    - HYG      # High Yield Bonds
+    - LQD      # Investment Grade Corporate
+    - PFF      # Preferred Stock
+    # REITs
+    - VNQ      # US REITs
+    - VNQI     # International REITs
+    - REM      # Mortgage REITs
+  metadata:
+    focus: "Income Generation"
+    rebalance_recommended: quarterly
+
+# ============================================================================
+# GEOGRAPHIC FOCUS
+# ============================================================================
+us_market_cap:
+  name: "US Market Cap Spectrum"
+  description: "Full US equity market coverage by size"
+  asset_class: equity
+  benchmark: VTI
+  symbols:
+    - SPY      # Large Cap (S&P 500)
+    - IJH      # Mid Cap (S&P 400)
+    - IWM      # Small Cap (Russell 2000)
+    - IWC      # Micro Cap
+    - VTI      # Total Stock Market
+  metadata:
+    geographic_focus: "United States"
+    rebalance_recommended: quarterly
+
+european_markets:
+  name: "European Markets"
+  description: "Developed European equity markets"
+  asset_class: equity
+  benchmark: VGK
+  symbols:
+    - VGK      # European Stocks
+    - EWG      # Germany
+    - EWU      # United Kingdom
+    - EWQ      # France
+    - EWI      # Italy
+    - EWP      # Spain
+    - EWL      # Switzerland
+    - EWN      # Netherlands
+  metadata:
+    geographic_focus: "Europe"
+    rebalance_recommended: monthly
+
+asia_pacific:
+  name: "Asia-Pacific Markets"
+  description: "Developed and emerging Asian markets"
+  asset_class: equity
+  benchmark: VPL
+  symbols:
+    - VPL      # Pacific Stocks
+    - EWJ      # Japan
+    - EWY      # South Korea
+    - EWT      # Taiwan
+    - EWA      # Australia
+    - EWH      # Hong Kong
+    - EWS      # Singapore
+    - INDA     # India
+    - FXI      # China
+    - THD      # Thailand
+  metadata:
+    geographic_focus: "Asia-Pacific"
+    rebalance_recommended: monthly
+
+# ============================================================================
+# VOLATILITY & HEDGING
+# ============================================================================
+low_volatility:
+  name: "Low Volatility Equity"
+  description: "Lower-risk equity exposure"
+  asset_class: equity
+  benchmark: USMV
+  symbols:
+    - USMV     # US Minimum Volatility
+    - EFAV     # International Minimum Volatility
+    - ACWV     # Global Minimum Volatility
+    - SPLV     # S&P 500 Low Volatility
+  metadata:
+    strategy: "Defensive Equity"
+    risk_level: "Low-Moderate"
+    rebalance_recommended: quarterly
+
+all_weather:
+  name: "All-Weather Portfolio"
+  description: "Risk-parity inspired all-weather portfolio"
+  asset_class: multi_asset
+  benchmark: AOR
+  symbols:
+    # Equities (30%)
+    - SPY      # US Stocks
+    - EFA      # International Stocks
+    # Bonds (55%)
+    - TLT      # Long-term Treasuries
+    - IEF      # Intermediate Treasuries
+    - TIP      # TIPS
+    # Commodities (15%)
+    - GLD      # Gold
+    - DBC      # Broad Commodities
+  metadata:
+    strategy: "Risk Parity / All-Weather"
+    target_allocation:
+      equities: 0.30
+      bonds: 0.55
+      commodities: 0.15
+    rebalance_recommended: quarterly
+    source: "Inspired by Ray Dalio's All-Weather"
+
+# ============================================================================
+# CURRENCY (FX)
+# ============================================================================
+major_currencies:
+  name: "Major Currency Pairs"
+  description: "G7 and major currency pairs vs USD"
+  asset_class: fx
+  benchmark: DXY  # US Dollar Index (for reference)
+  symbols:
+    - EURUSD=X # Euro / US Dollar
+    - GBPUSD=X # British Pound / US Dollar
+    - USDJPY=X # US Dollar / Japanese Yen
+    - USDCHF=X # US Dollar / Swiss Franc
+    - AUDUSD=X # Australian Dollar / US Dollar
+    - NZDUSD=X # New Zealand Dollar / US Dollar
+    - USDCAD=X # US Dollar / Canadian Dollar
+  metadata:
+    market: "Foreign Exchange"
+    rebalance_recommended: weekly
+    note: "FX pairs - check data source compatibility"
+
+# ============================================================================
+# CUSTOM TEMPLATE (for users to copy)
+# ============================================================================
+_custom_template:
+  name: "Custom Universe Template"
+  description: "Copy this template to create your own universe"
+  asset_class: equity  # Options: equity, bond, commodity, crypto, fx, multi_asset
+  benchmark: SPY  # Reference benchmark for comparison
+  symbols:
+    - SYMBOL1
+    - SYMBOL2
+    - SYMBOL3
+  metadata:
+    created_by: "User"
+    created_date: "2025-10-17"
+    notes: "Custom universe notes here"
+    rebalance_recommended: monthly  # daily, weekly, monthly, quarterly, yearly
