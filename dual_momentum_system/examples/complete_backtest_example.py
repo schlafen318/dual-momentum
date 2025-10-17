@@ -239,11 +239,11 @@ def main():
         print(f"Win Rate: {results.win_rate:.2%}")
         
         print("\nTop 5 Trades by P&L:")
-        top_trades = results.trades.nlargest(5, 'pnl')[['symbol', 'entry_date', 'exit_date', 'pnl', 'pnl_pct']]
+        top_trades = results.trades.nlargest(5, 'pnl')[['symbol', 'entry_timestamp', 'exit_timestamp', 'pnl', 'pnl_pct']]
         print(top_trades.to_string(index=False))
         
         print("\nWorst 5 Trades by P&L:")
-        worst_trades = results.trades.nsmallest(5, 'pnl')[['symbol', 'entry_date', 'exit_date', 'pnl', 'pnl_pct']]
+        worst_trades = results.trades.nsmallest(5, 'pnl')[['symbol', 'entry_timestamp', 'exit_timestamp', 'pnl', 'pnl_pct']]
         print(worst_trades.to_string(index=False))
     else:
         print("\nNo trades executed")
