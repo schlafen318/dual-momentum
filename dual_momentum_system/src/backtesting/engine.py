@@ -70,6 +70,7 @@ class BacktestEngine:
         self.trades: List[Trade] = []
         self.equity_curve: List[float] = []
         self.timestamps: List[datetime] = []
+        self.position_history: List[Dict[str, Any]] = []
         
         logger.info(
             f"Initialized BacktestEngine with ${initial_capital:,.2f} capital, "
@@ -166,6 +167,9 @@ class BacktestEngine:
             # Record equity
             self.equity_curve.append(portfolio_value)
             self.timestamps.append(current_date)
+            
+            # Record position snapshot for allocation tracking
+            self._record_position_snapshot(current_date, portfolio_value)
             
             # Check if we should rebalance
             should_rebalance = (
@@ -279,6 +283,7 @@ class BacktestEngine:
         self.trades = []
         self.equity_curve = []
         self.timestamps = []
+        self.position_history = []
     
     def _align_data(
         self,
@@ -398,6 +403,84 @@ class BacktestEngine:
             pos.quantity * pos.current_price for pos in self.positions.values()
         )
         return self.cash + positions_value
+    
+    def _record_position_snapshot(
+        self,
+        current_date: datetime,
+        portfolio_value: float
+    ) -> None:
+        """
+        Record a snapshot of current positions for allocation tracking.
+        
+        Args:
+            current_date: Current timestamp
+            portfolio_value: Total portfolio value
+        """
+        snapshot = {
+            'timestamp': current_date,
+            'portfolio_value': portfolio_value,
+            'cash': self.cash,
+        }
+        
+        # Add position data
+        for symbol, position in self.positions.items():
+            snapshot[f'{symbol}_quantity'] = position.quantity
+            snapshot[f'{symbol}_price'] = position.current_price
+            snapshot[f'{symbol}_value'] = position.quantity * position.current_price
+        
+        self.position_history.append(snapshot)
+    
+    def _create_positions_dataframe(self) -> pd.DataFrame:
+        """
+        Convert position history into a structured DataFrame.
+        
+        Returns:
+            DataFrame with position history organized for allocation tracking
+        """
+        if not self.position_history:
+            return pd.DataFrame()
+        
+        # Convert list of dicts to DataFrame
+        positions_df = pd.DataFrame(self.position_history)
+        
+        # Extract all unique symbols from the column names
+        value_columns = [col for col in positions_df.columns if col.endswith('_value')]
+        symbols = [col.replace('_value', '') for col in value_columns]
+        
+        # Create a cleaner structure for allocation analysis
+        # Each row represents the state at a given timestamp
+        result_data = []
+        
+        for idx, row in positions_df.iterrows():
+            timestamp = row['timestamp']
+            portfolio_value = row['portfolio_value']
+            cash = row['cash']
+            
+            # Create base record
+            record = {
+                'timestamp': timestamp,
+                'portfolio_value': portfolio_value,
+                'cash': cash,
+                'cash_pct': (cash / portfolio_value * 100) if portfolio_value > 0 else 0
+            }
+            
+            # Add each symbol's allocation
+            for symbol in symbols:
+                value = row.get(f'{symbol}_value', 0)
+                quantity = row.get(f'{symbol}_quantity', 0)
+                price = row.get(f'{symbol}_price', 0)
+                
+                record[f'{symbol}_value'] = value
+                record[f'{symbol}_quantity'] = quantity
+                record[f'{symbol}_price'] = price
+                record[f'{symbol}_pct'] = (value / portfolio_value * 100) if portfolio_value > 0 else 0
+            
+            result_data.append(record)
+        
+        result_df = pd.DataFrame(result_data)
+        result_df.set_index('timestamp', inplace=True)
+        
+        return result_df
     
     def _execute_signals(
         self,
@@ -715,6 +798,9 @@ class BacktestEngine:
             self.risk_free_rate
         )
         
+        # Convert position history to DataFrame
+        positions_df = self._create_positions_dataframe()
+        
         # Create result object
         result = BacktestResult(
             strategy_name=strategy_name,
@@ -723,7 +809,7 @@ class BacktestEngine:
             initial_capital=self.initial_capital,
             final_capital=self.equity_curve[-1] if self.equity_curve else self.initial_capital,
             returns=returns,
-            positions=pd.DataFrame(),  # Could track position history
+            positions=positions_df,
             trades=trades_df,
             metrics=metrics,
             equity_curve=equity_series,
