@@ -294,8 +294,8 @@ def render_charts(results):
     
     if hasattr(results, 'returns'):
         try:
-            # Convert returns to monthly
-            monthly_returns = results.returns.resample('M').apply(lambda x: (1 + x).prod() - 1)
+            # Convert returns to monthly (use 'ME' for month-end instead of deprecated 'M')
+            monthly_returns = results.returns.resample('ME').apply(lambda x: (1 + x).prod() - 1 if len(x) > 0 else 0)
             
             # Create pivot table for heatmap
             monthly_returns_df = pd.DataFrame({
