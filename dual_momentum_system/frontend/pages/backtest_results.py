@@ -6,6 +6,7 @@ Displays comprehensive performance metrics, charts, and trade analysis.
 
 import streamlit as st
 import pandas as pd
+import numpy as np
 import plotly.graph_objects as go
 import plotly.express as px
 from datetime import datetime
@@ -34,11 +35,12 @@ def render():
     results = st.session_state.backtest_results
     
     # Tabs for different analyses
-    tab1, tab2, tab3, tab4, tab5 = st.tabs([
+    tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
         "📈 Overview",
         "💹 Charts",
         "📋 Trades",
         "📊 Rolling Metrics",
+        "🎯 Allocation",
         "💾 Export"
     ])
     
@@ -55,6 +57,9 @@ def render():
         render_rolling_metrics(results)
     
     with tab5:
+        render_allocation(results)
+    
+    with tab6:
         render_export_options(results)
 
 
@@ -588,6 +593,383 @@ def render_rolling_metrics(results):
     )
     
     st.plotly_chart(fig, width='stretch')
+
+
+def render_allocation(results):
+    """Render allocation analysis showing how capital was allocated over time."""
+    
+    st.markdown("### 🎯 Portfolio Allocation Over Time")
+    
+    st.markdown("""
+    Visualize how your strategy allocated capital across different assets throughout the backtesting period.
+    """)
+    
+    # Check if we have positions data
+    if not hasattr(results, 'positions') or len(results.positions) == 0:
+        st.info("No position data available. Allocation tracking requires position history from the backtest.")
+        return
+    
+    # Calculate allocation over time
+    allocation_df = _calculate_allocation_over_time(results)
+    
+    if allocation_df is None or len(allocation_df) == 0:
+        st.info("Unable to calculate allocation data from available position history.")
+        return
+    
+    # Stacked area chart showing allocation percentages
+    st.markdown("#### 📊 Allocation Over Time (Percentage)")
+    
+    fig = go.Figure()
+    
+    # Get all symbols from the allocation dataframe
+    symbols = [col for col in allocation_df.columns if col not in ['Date', 'Cash']]
+    
+    # Add cash allocation first (at the bottom)
+    if 'Cash' in allocation_df.columns:
+        fig.add_trace(go.Scatter(
+            x=allocation_df['Date'],
+            y=allocation_df['Cash'],
+            mode='lines',
+            name='Cash',
+            stackgroup='one',
+            fillcolor='rgba(200, 200, 200, 0.5)',
+            line=dict(width=0.5, color='rgb(150, 150, 150)'),
+            hovertemplate='<b>Cash</b><br>%{y:.1f}%<extra></extra>'
+        ))
+    
+    # Define a color palette for assets
+    colors = px.colors.qualitative.Plotly + px.colors.qualitative.Set2
+    
+    # Add each asset's allocation
+    for i, symbol in enumerate(symbols):
+        color = colors[i % len(colors)]
+        fig.add_trace(go.Scatter(
+            x=allocation_df['Date'],
+            y=allocation_df[symbol],
+            mode='lines',
+            name=symbol,
+            stackgroup='one',
+            line=dict(width=0.5),
+            hovertemplate=f'<b>{symbol}</b><br>%{{y:.1f}}%<extra></extra>'
+        ))
+    
+    fig.update_layout(
+        title="Portfolio Allocation by Asset",
+        xaxis_title="Date",
+        yaxis_title="Allocation (%)",
+        hovermode='x unified',
+        height=500,
+        showlegend=True,
+        legend=dict(
+            orientation="v",
+            yanchor="top",
+            y=1,
+            xanchor="left",
+            x=1.02
+        ),
+        yaxis=dict(range=[0, 100])
+    )
+    
+    st.plotly_chart(fig, use_container_width=True)
+    
+    render_section_divider()
+    
+    # Allocation statistics
+    st.markdown("#### 📈 Allocation Statistics")
+    
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        st.markdown("**Average Allocation per Asset**")
+        avg_allocation = allocation_df[symbols].mean().sort_values(ascending=False)
+        avg_df = pd.DataFrame({
+            'Asset': avg_allocation.index,
+            'Avg Allocation (%)': avg_allocation.values
+        })
+        avg_df['Avg Allocation (%)'] = avg_df['Avg Allocation (%)'].apply(lambda x: f"{x:.2f}%")
+        st.dataframe(avg_df, hide_index=True, use_container_width=True)
+    
+    with col2:
+        st.markdown("**Allocation Range per Asset**")
+        range_data = []
+        for symbol in symbols:
+            min_val = allocation_df[symbol].min()
+            max_val = allocation_df[symbol].max()
+            range_data.append({
+                'Asset': symbol,
+                'Min (%)': f"{min_val:.2f}%",
+                'Max (%)': f"{max_val:.2f}%"
+            })
+        range_df = pd.DataFrame(range_data)
+        st.dataframe(range_df, hide_index=True, use_container_width=True)
+    
+    render_section_divider()
+    
+    # Rebalancing events
+    st.markdown("#### 🔄 Allocation at Rebalancing Events")
+    
+    rebalance_allocation = _get_rebalancing_allocation(results, allocation_df)
+    
+    if rebalance_allocation is not None and len(rebalance_allocation) > 0:
+        # Display as interactive table
+        st.dataframe(
+            rebalance_allocation.style.format({
+                col: '{:.2f}%' for col in rebalance_allocation.columns if col != 'Date'
+            }),
+            use_container_width=True,
+            height=400
+        )
+        
+        # Download button
+        csv = rebalance_allocation.to_csv(index=False)
+        st.download_button(
+            label="📥 Download Allocation History (CSV)",
+            data=csv,
+            file_name=f"allocation_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv",
+            mime="text/csv"
+        )
+    else:
+        st.info("Rebalancing event details not available.")
+    
+    render_section_divider()
+    
+    # Allocation heatmap
+    st.markdown("#### 🗺️ Allocation Heatmap")
+    
+    if len(symbols) > 1:
+        # Create heatmap showing allocation changes over time
+        # Sample the data to avoid too many time points
+        sample_size = min(50, len(allocation_df))
+        sample_indices = np.linspace(0, len(allocation_df) - 1, sample_size, dtype=int)
+        sampled_df = allocation_df.iloc[sample_indices]
+        
+        # Prepare data for heatmap
+        heatmap_data = sampled_df[symbols].T
+        dates_formatted = sampled_df['Date'].dt.strftime('%Y-%m-%d').tolist()
+        
+        fig = go.Figure(data=go.Heatmap(
+            z=heatmap_data.values,
+            x=dates_formatted,
+            y=symbols,
+            colorscale='Viridis',
+            hovertemplate='Asset: %{y}<br>Date: %{x}<br>Allocation: %{z:.1f}%<extra></extra>',
+            colorbar=dict(title="Allocation (%)")
+        ))
+        
+        fig.update_layout(
+            title="Allocation Heatmap Over Time",
+            xaxis_title="Date",
+            yaxis_title="Asset",
+            height=max(300, len(symbols) * 40),
+            xaxis={'side': 'bottom'}
+        )
+        
+        st.plotly_chart(fig, use_container_width=True)
+    else:
+        st.info("Heatmap requires multiple assets to display.")
+
+
+def _calculate_allocation_over_time(results):
+    """
+    Calculate portfolio allocation percentages over time.
+    
+    Args:
+        results: BacktestResult object
+    
+    Returns:
+        DataFrame with dates and allocation percentages for each asset
+    """
+    try:
+        # Get equity curve for total portfolio value
+        equity_curve = results.equity_curve
+        
+        # Check if we have vectorbt positions data
+        positions_df = results.positions
+        
+        if positions_df is None or len(positions_df) == 0:
+            return None
+        
+        # VectorBT positions have different column names
+        # Try to identify the relevant columns
+        required_cols = set()
+        col_mapping = {}
+        
+        # Map common column name variations
+        for col in positions_df.columns:
+            col_lower = col.lower()
+            if 'column' in col_lower or 'symbol' in col_lower:
+                col_mapping['symbol'] = col
+                required_cols.add('symbol')
+            elif 'entry' in col_lower and 'idx' in col_lower:
+                col_mapping['entry_idx'] = col
+                required_cols.add('entry_idx')
+            elif 'exit' in col_lower and 'idx' in col_lower:
+                col_mapping['exit_idx'] = col
+                required_cols.add('exit_idx')
+            elif 'size' in col_lower:
+                col_mapping['size'] = col
+                required_cols.add('size')
+        
+        # If we don't have the required columns, try to construct allocation from equity and trades
+        if len(required_cols) < 3:
+            return _calculate_allocation_from_trades(results)
+        
+        # Create a time series of allocations
+        dates = equity_curve.index
+        allocation_dict = {'Date': dates}
+        
+        # Initialize allocation tracking
+        symbols = positions_df[col_mapping['symbol']].unique() if 'symbol' in col_mapping else []
+        for symbol in symbols:
+            allocation_dict[symbol] = np.zeros(len(dates))
+        allocation_dict['Cash'] = np.zeros(len(dates))
+        
+        # Iterate through time and calculate allocation at each point
+        for i, date in enumerate(dates):
+            portfolio_value = equity_curve.iloc[i]
+            
+            # Find active positions at this date
+            asset_values = {}
+            
+            for _, pos in positions_df.iterrows():
+                symbol = pos[col_mapping['symbol']]
+                entry_idx = pos[col_mapping.get('entry_idx', 'Entry Index')]
+                exit_idx = pos[col_mapping.get('exit_idx', 'Exit Index')]
+                size = abs(pos[col_mapping.get('size', 'Size')])
+                
+                # Check if position is active at this date
+                if entry_idx <= i < exit_idx:
+                    # Estimate position value (size * current price)
+                    # Since we don't have price here, use equity proportions
+                    if symbol not in asset_values:
+                        asset_values[symbol] = 0
+                    asset_values[symbol] += size
+            
+            # Calculate percentages
+            total_asset_value = sum(asset_values.values())
+            if portfolio_value > 0:
+                for symbol, value in asset_values.items():
+                    allocation_dict[symbol][i] = (value / total_asset_value * 100) if total_asset_value > 0 else 0
+                
+                # Cash is the remainder
+                total_allocated = sum(allocation_dict[symbol][i] for symbol in symbols if symbol in allocation_dict)
+                allocation_dict['Cash'][i] = max(0, 100 - total_allocated)
+        
+        # Convert to DataFrame
+        allocation_df = pd.DataFrame(allocation_dict)
+        
+        return allocation_df
+    
+    except Exception as e:
+        st.error(f"Error calculating allocation: {str(e)}")
+        return _calculate_allocation_from_trades(results)
+
+
+def _calculate_allocation_from_trades(results):
+    """
+    Alternative method to calculate allocation from trades and equity curve.
+    
+    Args:
+        results: BacktestResult object
+    
+    Returns:
+        DataFrame with allocation over time
+    """
+    try:
+        if not hasattr(results, 'trades') or len(results.trades) == 0:
+            return None
+        
+        trades_df = results.trades
+        equity_curve = results.equity_curve
+        
+        # Create allocation tracking
+        dates = equity_curve.index
+        allocation_dict = {'Date': dates}
+        
+        # Get all symbols from trades
+        symbols = trades_df['symbol'].unique() if 'symbol' in trades_df.columns else []
+        
+        for symbol in symbols:
+            allocation_dict[symbol] = np.zeros(len(dates))
+        allocation_dict['Cash'] = np.full(len(dates), 100.0)
+        
+        # Track positions based on entry and exit
+        for _, trade in trades_df.iterrows():
+            symbol = trade['symbol']
+            entry_time = trade['entry_timestamp'] if 'entry_timestamp' in trade else None
+            exit_time = trade['exit_timestamp'] if 'exit_timestamp' in trade else None
+            
+            if entry_time is None or exit_time is None:
+                continue
+            
+            # Find date indices
+            entry_mask = dates >= entry_time
+            exit_mask = dates < exit_time
+            active_mask = entry_mask & exit_mask
+            
+            # For simplicity, assume equal weight among active positions
+            # This is a rough approximation
+            for i in np.where(active_mask)[0]:
+                allocation_dict[symbol][i] = 100.0 / len(symbols)
+        
+        # Recalculate cash
+        for i in range(len(dates)):
+            total_invested = sum(allocation_dict[symbol][i] for symbol in symbols)
+            allocation_dict['Cash'][i] = max(0, 100 - total_invested)
+        
+        return pd.DataFrame(allocation_dict)
+    
+    except Exception as e:
+        st.error(f"Error calculating allocation from trades: {str(e)}")
+        return None
+
+
+def _get_rebalancing_allocation(results, allocation_df):
+    """
+    Extract allocation data at rebalancing events.
+    
+    Args:
+        results: BacktestResult object
+        allocation_df: DataFrame with allocation over time
+    
+    Returns:
+        DataFrame with allocation at each rebalancing event
+    """
+    try:
+        if allocation_df is None or len(allocation_df) == 0:
+            return None
+        
+        # Identify rebalancing events by detecting changes in allocation
+        # A rebalancing event is when allocation changes significantly
+        
+        rebalance_dates = []
+        threshold = 1.0  # 1% change threshold
+        
+        for i in range(1, len(allocation_df)):
+            # Check if any allocation changed significantly
+            symbols = [col for col in allocation_df.columns if col not in ['Date', 'Cash']]
+            max_change = 0
+            for symbol in symbols:
+                change = abs(allocation_df[symbol].iloc[i] - allocation_df[symbol].iloc[i-1])
+                max_change = max(max_change, change)
+            
+            if max_change > threshold:
+                rebalance_dates.append(i)
+        
+        # Include first and last dates
+        if 0 not in rebalance_dates:
+            rebalance_dates.insert(0, 0)
+        if len(allocation_df) - 1 not in rebalance_dates:
+            rebalance_dates.append(len(allocation_df) - 1)
+        
+        # Extract allocation at these dates
+        rebalance_allocation = allocation_df.iloc[rebalance_dates].reset_index(drop=True)
+        
+        return rebalance_allocation
+    
+    except Exception as e:
+        st.error(f"Error extracting rebalancing allocation: {str(e)}")
+        return None
 
 
 def render_export_options(results):
