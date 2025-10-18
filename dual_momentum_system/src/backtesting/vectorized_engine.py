@@ -84,6 +84,7 @@ class VectorizedBacktestEngine:
         group_by: Optional[Union[bool, str]] = None,
         cash_sharing: bool = True,
         call_seq: str = 'auto',
+        benchmark_data: Optional[Union[pd.Series, PriceData]] = None,
         **kwargs
     ) -> BacktestResult:
         """
@@ -101,6 +102,7 @@ class VectorizedBacktestEngine:
             group_by: Group assets for cash sharing
             cash_sharing: Whether to share cash across assets
             call_seq: Order of signal execution ('auto', 'random', array)
+            benchmark_data: Benchmark price data for comparison (optional)
             **kwargs: Additional portfolio parameters
         
         Returns:
@@ -148,12 +150,19 @@ class VectorizedBacktestEngine:
             **{**self.kwargs, **kwargs}
         )
         
+        # Calculate benchmark returns if provided
+        benchmark_returns = None
+        if benchmark_data is not None:
+            benchmark_prices = self._prepare_benchmark_data(benchmark_data, close_prices.index)
+            benchmark_returns = benchmark_prices.pct_change().dropna()
+        
         # Extract results
         results = self._extract_results(
             portfolio,
             close_prices,
             signals,
-            'VectorizedStrategy'
+            'VectorizedStrategy',
+            benchmark_returns=benchmark_returns
         )
         
         logger.info(
@@ -390,12 +399,43 @@ class VectorizedBacktestEngine:
         
         return close_df
     
+    def _prepare_benchmark_data(
+        self,
+        benchmark_data: Union[pd.Series, PriceData],
+        index: pd.DatetimeIndex
+    ) -> pd.Series:
+        """
+        Convert benchmark data to Series format and align with strategy dates.
+        
+        Args:
+            benchmark_data: Benchmark price data
+            index: Target date index to align with
+        
+        Returns:
+            Series with benchmark close prices aligned to index
+        """
+        if isinstance(benchmark_data, pd.Series):
+            benchmark_prices = benchmark_data
+        elif isinstance(benchmark_data, PriceData):
+            benchmark_prices = benchmark_data.data['close']
+        elif isinstance(benchmark_data, pd.DataFrame):
+            benchmark_prices = benchmark_data['close']
+        else:
+            # Assume it's a dict-like with 'close' key
+            benchmark_prices = pd.Series(benchmark_data)
+        
+        # Align benchmark with strategy dates
+        benchmark_prices = benchmark_prices.reindex(index).fillna(method='ffill')
+        
+        return benchmark_prices
+    
     def _extract_results(
         self,
         portfolio: vbt.Portfolio,
         close_prices: pd.DataFrame,
         signals: Optional[pd.DataFrame],
-        strategy_name: str
+        strategy_name: str,
+        benchmark_returns: Optional[pd.Series] = None
     ) -> BacktestResult:
         """
         Extract results from vectorbt portfolio.
@@ -455,7 +495,8 @@ class VectorizedBacktestEngine:
             returns=returns,
             equity_curve=equity_curve,
             trades=trades_df,
-            risk_free_rate=self.risk_free_rate
+            risk_free_rate=self.risk_free_rate,
+            benchmark_returns=benchmark_returns
         )
         
         # Get positions

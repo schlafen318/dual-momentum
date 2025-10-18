@@ -80,10 +80,103 @@ def render_no_results():
     """, unsafe_allow_html=True)
 
 
+def render_benchmark_comparison(results, metrics, benchmark_symbol):
+    """Render benchmark comparison metrics."""
+    
+    st.markdown(f"#### 📈 Benchmark Comparison vs {benchmark_symbol}")
+    
+    # Check if benchmark metrics exist
+    has_alpha = 'alpha' in metrics
+    
+    if not has_alpha:
+        st.info("Benchmark comparison metrics not available. This may be due to insufficient data overlap.")
+        return
+    
+    # Top-level comparison metrics
+    col1, col2, col3, col4 = st.columns(4)
+    
+    with col1:
+        alpha = metrics.get('alpha', 0) * 100
+        color = "normal" if alpha >= 0 else "inverse"
+        st.metric(
+            "Alpha (Annual)",
+            f"{alpha:.2f}%",
+            delta="Excess return" if alpha >= 0 else "Underperformance",
+            delta_color=color
+        )
+    
+    with col2:
+        beta = metrics.get('beta', 0)
+        st.metric(
+            "Beta",
+            f"{beta:.2f}",
+            delta="Market sensitivity"
+        )
+    
+    with col3:
+        info_ratio = metrics.get('information_ratio', 0)
+        st.metric(
+            "Information Ratio",
+            f"{info_ratio:.2f}",
+            delta="Risk-adj. alpha"
+        )
+    
+    with col4:
+        correlation = metrics.get('benchmark_correlation', 0)
+        st.metric(
+            "Correlation",
+            f"{correlation:.2f}",
+            delta="vs benchmark"
+        )
+    
+    st.markdown("<br>", unsafe_allow_html=True)
+    
+    # Detailed benchmark metrics
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        st.markdown("##### Performance vs Benchmark")
+        benchmark_df = pd.DataFrame({
+            'Metric': [
+                'Active Return (Ann.)',
+                'Excess Return (Cum.)',
+                'Tracking Error',
+                'Up Capture Ratio',
+                'Down Capture Ratio'
+            ],
+            'Value': [
+                f"{metrics.get('active_return', 0)*100:.2f}%",
+                f"{metrics.get('excess_return', 0)*100:.2f}%",
+                f"{metrics.get('tracking_error', 0)*100:.2f}%",
+                f"{metrics.get('up_capture', 0)*100:.1f}%",
+                f"{metrics.get('down_capture', 0)*100:.1f}%"
+            ]
+        })
+        st.dataframe(benchmark_df, hide_index=True, use_container_width=True)
+    
+    with col2:
+        st.markdown("##### Interpretation Guide")
+        st.markdown("""
+        - **Alpha**: Excess return vs benchmark (positive is better)
+        - **Beta**: Market sensitivity (1.0 = matches benchmark)
+        - **Info Ratio**: Risk-adjusted outperformance (>0.5 is good)
+        - **Up Capture**: % of benchmark gains captured (>100% is better)
+        - **Down Capture**: % of benchmark losses captured (<100% is better)
+        """, unsafe_allow_html=True)
+
+
 def render_overview(results):
     """Render performance overview with summary metrics."""
     
     st.markdown("### 📊 Performance Summary")
+    
+    # Check if benchmark data exists
+    has_benchmark = (
+        'benchmark_symbol' in st.session_state and 
+        st.session_state.benchmark_symbol and
+        'benchmark_data' in st.session_state and
+        st.session_state.benchmark_data is not None
+    )
     
     # Extract metrics
     metrics = results.metrics
@@ -177,6 +270,11 @@ def render_overview(results):
     
     render_section_divider()
     
+    # Benchmark comparison section
+    if has_benchmark:
+        render_benchmark_comparison(results, metrics, st.session_state.benchmark_symbol)
+        render_section_divider()
+    
     # Trading statistics
     st.markdown("#### 📊 Trading Statistics")
     
@@ -218,6 +316,14 @@ def render_charts(results):
     
     st.markdown("### 📈 Performance Charts")
     
+    # Check if benchmark data exists
+    has_benchmark = (
+        'benchmark_symbol' in st.session_state and 
+        st.session_state.benchmark_symbol and
+        'benchmark_data' in st.session_state and
+        st.session_state.benchmark_data is not None
+    )
+    
     # Equity curve
     st.markdown("#### Portfolio Value Over Time")
     
@@ -231,24 +337,47 @@ def render_charts(results):
             x=equity_df['Date'],
             y=equity_df['Value'],
             mode='lines',
-            name='Portfolio Value',
+            name='Strategy',
             line=dict(color='#1f77b4', width=2),
             fill='tonexty',
             fillcolor='rgba(31, 119, 180, 0.1)'
         ))
         
+        # Add benchmark if available
+        if has_benchmark:
+            try:
+                benchmark_data = st.session_state.benchmark_data
+                benchmark_prices = benchmark_data.data['close']
+                
+                # Normalize benchmark to start at same value as portfolio
+                initial_capital = results.initial_capital
+                benchmark_normalized = benchmark_prices / benchmark_prices.iloc[0] * initial_capital
+                
+                # Align with strategy dates
+                benchmark_aligned = benchmark_normalized.reindex(equity_df['Date']).fillna(method='ffill')
+                
+                fig.add_trace(go.Scatter(
+                    x=equity_df['Date'],
+                    y=benchmark_aligned.values,
+                    mode='lines',
+                    name=f'Benchmark ({st.session_state.benchmark_symbol})',
+                    line=dict(color='#ff7f0e', width=2, dash='dash')
+                ))
+            except Exception as e:
+                pass  # Silently skip if benchmark data can't be plotted
+        
         # Add initial capital line
         initial_capital = results.initial_capital
         fig.add_hline(
             y=initial_capital,
-            line_dash="dash",
+            line_dash="dot",
             line_color="gray",
             annotation_text="Initial Capital",
             annotation_position="right"
         )
         
         fig.update_layout(
-            title="Equity Curve",
+            title="Equity Curve - Strategy vs Benchmark",
             xaxis_title="Date",
             yaxis_title="Portfolio Value ($)",
             hovermode='x unified',
@@ -257,6 +386,58 @@ def render_charts(results):
         )
         
         st.plotly_chart(fig, width='stretch')
+    
+    # Returns comparison chart
+    if has_benchmark:
+        st.markdown("#### Cumulative Returns Comparison")
+        
+        try:
+            strategy_returns = results.returns
+            benchmark_data = st.session_state.benchmark_data
+            benchmark_prices = benchmark_data.data['close']
+            benchmark_returns = benchmark_prices.pct_change().dropna()
+            
+            # Align returns
+            strategy_returns_aligned, benchmark_returns_aligned = strategy_returns.align(
+                benchmark_returns, join='inner'
+            )
+            
+            # Calculate cumulative returns
+            strategy_cum_returns = (1 + strategy_returns_aligned).cumprod() - 1
+            benchmark_cum_returns = (1 + benchmark_returns_aligned).cumprod() - 1
+            
+            fig = go.Figure()
+            
+            fig.add_trace(go.Scatter(
+                x=strategy_cum_returns.index,
+                y=strategy_cum_returns.values * 100,
+                mode='lines',
+                name='Strategy',
+                line=dict(color='#1f77b4', width=2)
+            ))
+            
+            fig.add_trace(go.Scatter(
+                x=benchmark_cum_returns.index,
+                y=benchmark_cum_returns.values * 100,
+                mode='lines',
+                name=f'Benchmark ({st.session_state.benchmark_symbol})',
+                line=dict(color='#ff7f0e', width=2, dash='dash')
+            ))
+            
+            fig.add_hline(y=0, line_dash="dot", line_color="gray")
+            
+            fig.update_layout(
+                title="Cumulative Returns - Strategy vs Benchmark",
+                xaxis_title="Date",
+                yaxis_title="Cumulative Return (%)",
+                hovermode='x unified',
+                height=350,
+                showlegend=True
+            )
+            
+            st.plotly_chart(fig, width='stretch')
+        except Exception as e:
+            st.warning(f"Could not generate returns comparison chart: {str(e)}")
     
     # Drawdown chart
     st.markdown("#### Drawdown Analysis")
@@ -1033,17 +1214,29 @@ def render_export_options(results):
         )
         
         # Full report
+        report_data = {
+            'strategy': st.session_state.get('last_backtest_params', {}),
+            'metrics': results.metrics,
+            'summary': {
+                'total_return': results.total_return,
+                'num_trades': results.num_trades,
+                'win_rate': results.win_rate
+            }
+        }
+        
+        # Add benchmark info if available
+        if st.session_state.get('benchmark_symbol'):
+            report_data['benchmark'] = {
+                'symbol': st.session_state.benchmark_symbol,
+                'alpha': results.metrics.get('alpha', 0),
+                'beta': results.metrics.get('beta', 0),
+                'information_ratio': results.metrics.get('information_ratio', 0),
+                'tracking_error': results.metrics.get('tracking_error', 0)
+            }
+        
         st.download_button(
             label="📑 Download Full Report (JSON)",
-            data=json.dumps({
-                'strategy': st.session_state.get('last_backtest_params', {}),
-                'metrics': results.metrics,
-                'summary': {
-                    'total_return': results.total_return,
-                    'num_trades': results.num_trades,
-                    'win_rate': results.win_rate
-                }
-            }, indent=2, default=str),
+            data=json.dumps(report_data, indent=2, default=str),
             file_name=f"full_report_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json",
             mime="application/json",
             width='stretch'

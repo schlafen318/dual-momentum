@@ -200,6 +200,24 @@ def render_strategy_configuration():
         )
         st.session_state.safe_asset = safe_asset if safe_asset else None
     
+    # Benchmark selection
+    render_section_divider()
+    st.markdown("#### 📊 Benchmark Comparison")
+    
+    col1, col2 = st.columns([2, 1])
+    
+    with col1:
+        benchmark_symbol = st.text_input(
+            "Benchmark Symbol (optional)",
+            value="SPY",
+            help="Benchmark for performance comparison (e.g., 'SPY' for S&P 500, 'BTC-USD' for Bitcoin)"
+        )
+        st.session_state.benchmark_symbol = benchmark_symbol if benchmark_symbol else None
+    
+    with col2:
+        if benchmark_symbol:
+            st.info(f"Will compare against {benchmark_symbol}")
+    
     # Date range selection
     render_section_divider()
     st.markdown("#### 📅 Backtest Period")
@@ -293,6 +311,7 @@ def render_configuration_summary():
     </div>
     """, unsafe_allow_html=True)
     
+    benchmark = st.session_state.get('benchmark_symbol')
     st.markdown(f"""
     <div class="card">
         <h4>Parameters</h4>
@@ -300,6 +319,7 @@ def render_configuration_summary():
             <li>📏 <strong>Lookback:</strong> {st.session_state.get('lookback_period', 0)} days</li>
             <li>🎯 <strong>Threshold:</strong> {st.session_state.get('absolute_threshold', 0):.2f}</li>
             <li>📊 <strong>Vol. Adj.:</strong> {'Yes' if st.session_state.get('use_volatility', False) else 'No'}</li>
+            <li>📈 <strong>Benchmark:</strong> {benchmark if benchmark else 'None'}</li>
         </ul>
     </div>
     """, unsafe_allow_html=True)
@@ -420,6 +440,19 @@ def run_backtest():
             st.session_state.end_date
         )
         
+        # Generate benchmark data if specified
+        benchmark_symbol = st.session_state.get('benchmark_symbol')
+        benchmark_data = None
+        if benchmark_symbol:
+            status_text.text(f"📊 Generating benchmark data ({benchmark_symbol})...")
+            progress_bar.progress(35)
+            benchmark_dict = generate_sample_data(
+                [benchmark_symbol],
+                st.session_state.start_date,
+                st.session_state.end_date
+            )
+            benchmark_data = benchmark_dict[benchmark_symbol]
+        
         # Initialize strategy
         status_text.text("⚙️ Configuring strategy...")
         progress_bar.progress(50)
@@ -456,7 +489,8 @@ def run_backtest():
         # Run backtest
         results = engine.run(
             strategy=strategy,
-            price_data=price_data_dict
+            price_data=price_data_dict,
+            benchmark_data=benchmark_data
         )
         
         # Calculate additional metrics
@@ -471,9 +505,12 @@ def run_backtest():
         status_text.text("✅ Backtest complete!")
         
         st.session_state.backtest_results = results
+        st.session_state.benchmark_data = benchmark_data
+        st.session_state.benchmark_symbol = benchmark_symbol
         st.session_state.last_backtest_params = {
             'strategy_type': st.session_state.strategy_type,
             'symbols': symbols,
+            'benchmark': benchmark_symbol,
             'timestamp': datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         }
         
@@ -574,6 +611,7 @@ def save_configuration():
         'initial_capital': st.session_state.get('initial_capital'),
         'commission': st.session_state.get('commission'),
         'slippage': st.session_state.get('slippage'),
+        'benchmark_symbol': st.session_state.get('benchmark_symbol'),
     }
     
     st.session_state.current_strategy_config = config

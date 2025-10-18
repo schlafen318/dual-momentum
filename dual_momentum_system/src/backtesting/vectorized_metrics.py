@@ -74,7 +74,8 @@ class VectorizedMetricsCalculator:
         returns: pd.Series,
         equity_curve: pd.Series,
         trades: Optional[pd.DataFrame] = None,
-        risk_free_rate: float = 0.0
+        risk_free_rate: float = 0.0,
+        benchmark_returns: Optional[pd.Series] = None
     ) -> Dict[str, float]:
         """
         Calculate all performance metrics.
@@ -84,6 +85,7 @@ class VectorizedMetricsCalculator:
             equity_curve: Series of portfolio values
             trades: DataFrame of trade records (optional)
             risk_free_rate: Annual risk-free rate
+            benchmark_returns: Benchmark returns for comparison (optional)
         
         Returns:
             Dictionary of all metrics
@@ -108,6 +110,10 @@ class VectorizedMetricsCalculator:
         
         # Timing metrics
         metrics.update(self.calculate_timing_metrics(returns, equity_curve))
+        
+        # Benchmark comparison metrics
+        if benchmark_returns is not None and len(benchmark_returns) > 0:
+            metrics.update(self.calculate_benchmark_metrics(returns, benchmark_returns, risk_free_rate))
         
         return metrics
     
@@ -743,6 +749,106 @@ class VectorizedMetricsCalculator:
             return var
         
         return float(tail_returns.mean())
+    
+    def calculate_benchmark_metrics(
+        self,
+        returns: pd.Series,
+        benchmark_returns: pd.Series,
+        risk_free_rate: float = 0.0
+    ) -> Dict[str, float]:
+        """
+        Calculate benchmark comparison metrics.
+        
+        Args:
+            returns: Strategy returns
+            benchmark_returns: Benchmark returns
+            risk_free_rate: Annual risk-free rate
+        
+        Returns:
+            Dict with benchmark comparison metrics
+        """
+        metrics = {}
+        
+        # Align returns with benchmark
+        aligned_returns, aligned_benchmark = returns.align(benchmark_returns, join='inner')
+        
+        if len(aligned_returns) == 0 or len(aligned_benchmark) == 0:
+            return {
+                'alpha': 0.0,
+                'beta': 0.0,
+                'tracking_error': 0.0,
+                'information_ratio': 0.0,
+                'benchmark_correlation': 0.0,
+                'excess_return': 0.0,
+                'active_return': 0.0,
+            }
+        
+        # Calculate benchmark metrics
+        period_rf = (1 + risk_free_rate) ** (1 / self.periods_per_year) - 1
+        
+        # Excess returns (strategy and benchmark vs risk-free)
+        excess_returns = aligned_returns - period_rf
+        excess_benchmark = aligned_benchmark - period_rf
+        
+        # Beta (sensitivity to benchmark)
+        if excess_benchmark.std() > 0:
+            covariance = aligned_returns.cov(aligned_benchmark)
+            benchmark_variance = aligned_benchmark.var()
+            metrics['beta'] = float(covariance / benchmark_variance) if benchmark_variance > 0 else 0.0
+        else:
+            metrics['beta'] = 0.0
+        
+        # Alpha (excess return over what beta would predict)
+        # Alpha = Portfolio Return - (Risk-free Rate + Beta * (Benchmark Return - Risk-free Rate))
+        annual_strategy_return = (1 + aligned_returns).prod() ** (self.periods_per_year / len(aligned_returns)) - 1
+        annual_benchmark_return = (1 + aligned_benchmark).prod() ** (self.periods_per_year / len(aligned_benchmark)) - 1
+        
+        expected_return = risk_free_rate + metrics['beta'] * (annual_benchmark_return - risk_free_rate)
+        metrics['alpha'] = float(annual_strategy_return - expected_return)
+        
+        # Tracking error (volatility of excess returns)
+        active_returns = aligned_returns - aligned_benchmark
+        metrics['tracking_error'] = float(active_returns.std() * np.sqrt(self.periods_per_year))
+        
+        # Information ratio (risk-adjusted active return)
+        if metrics['tracking_error'] > 0:
+            metrics['information_ratio'] = float(
+                active_returns.mean() * self.periods_per_year / metrics['tracking_error']
+            )
+        else:
+            metrics['information_ratio'] = 0.0
+        
+        # Correlation with benchmark
+        if aligned_returns.std() > 0 and aligned_benchmark.std() > 0:
+            metrics['benchmark_correlation'] = float(aligned_returns.corr(aligned_benchmark))
+        else:
+            metrics['benchmark_correlation'] = 0.0
+        
+        # Excess return (cumulative)
+        metrics['excess_return'] = float((1 + aligned_returns).prod() - (1 + aligned_benchmark).prod())
+        
+        # Active return (annualized difference)
+        metrics['active_return'] = float(annual_strategy_return - annual_benchmark_return)
+        
+        # Up/down capture ratios
+        up_periods = aligned_benchmark > 0
+        down_periods = aligned_benchmark < 0
+        
+        if up_periods.sum() > 0:
+            up_strategy = aligned_returns[up_periods].mean()
+            up_benchmark = aligned_benchmark[up_periods].mean()
+            metrics['up_capture'] = float(up_strategy / up_benchmark) if up_benchmark != 0 else 0.0
+        else:
+            metrics['up_capture'] = 0.0
+        
+        if down_periods.sum() > 0:
+            down_strategy = aligned_returns[down_periods].mean()
+            down_benchmark = aligned_benchmark[down_periods].mean()
+            metrics['down_capture'] = float(down_strategy / down_benchmark) if down_benchmark != 0 else 0.0
+        else:
+            metrics['down_capture'] = 0.0
+        
+        return metrics
     
     def _empty_metrics(self) -> Dict[str, float]:
         """Return empty metrics dictionary."""
