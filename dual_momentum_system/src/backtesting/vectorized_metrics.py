@@ -144,8 +144,11 @@ class VectorizedMetricsCalculator:
             metrics['annual_return'] = (
                 (1 + returns).prod() ** (self.periods_per_year / len(returns)) - 1
             )
+            # Also add annualized_return alias for dashboard compatibility
+            metrics['annualized_return'] = metrics['annual_return']
         else:
             metrics['annual_return'] = 0.0
+            metrics['annualized_return'] = 0.0
         
         # Cumulative return
         metrics['cumulative_return'] = float((1 + returns).prod() - 1) if len(returns) > 0 else 0.0
@@ -175,6 +178,8 @@ class VectorizedMetricsCalculator:
         
         # Volatility
         metrics['annual_volatility'] = self.calculate_annual_volatility(returns)
+        # Add volatility alias for dashboard compatibility
+        metrics['volatility'] = metrics['annual_volatility']
         metrics['downside_volatility'] = self.calculate_downside_volatility(returns)
         
         # Drawdown metrics
@@ -360,14 +365,32 @@ class VectorizedMetricsCalculator:
             metrics['best_day'] = float(returns.max())
             metrics['worst_day'] = float(returns.min())
             
-            # Best/worst month (if enough data)
-            if len(returns) > 20:
-                monthly_returns = returns.resample('M').apply(lambda x: (1 + x).prod() - 1)
-                metrics['best_month'] = float(monthly_returns.max())
-                metrics['worst_month'] = float(monthly_returns.min())
-            else:
+            # Best/worst month (if enough data and proper index)
+            try:
+                # Check if returns has a DatetimeIndex
+                if hasattr(returns.index, 'to_period') and len(returns) > 20:
+                    # Use 'ME' instead of deprecated 'M' for month-end frequency
+                    monthly_returns = returns.resample('ME').apply(lambda x: (1 + x).prod() - 1 if len(x) > 0 else 0)
+                    if len(monthly_returns) > 0:
+                        metrics['best_month'] = float(monthly_returns.max())
+                        metrics['worst_month'] = float(monthly_returns.min())
+                        # Calculate positive months
+                        positive_months_count = int((monthly_returns > 0).sum())
+                        total_months = len(monthly_returns)
+                        metrics['positive_months'] = (positive_months_count / total_months * 100) if total_months > 0 else 0.0
+                    else:
+                        metrics['best_month'] = 0.0
+                        metrics['worst_month'] = 0.0
+                        metrics['positive_months'] = 0.0
+                else:
+                    metrics['best_month'] = 0.0
+                    metrics['worst_month'] = 0.0
+                    metrics['positive_months'] = 0.0
+            except Exception as e:
+                logger.warning(f"Failed to calculate monthly metrics: {e}")
                 metrics['best_month'] = 0.0
                 metrics['worst_month'] = 0.0
+                metrics['positive_months'] = 0.0
             
             # Positive/negative periods
             metrics['positive_periods'] = int((returns > 0).sum())
@@ -403,18 +426,29 @@ class VectorizedMetricsCalculator:
         start_value = equity_curve.iloc[0]
         end_value = equity_curve.iloc[-1]
         
-        if start_value <= 0:
+        if start_value <= 0 or end_value <= 0:
             return 0.0
         
-        # Calculate number of years
-        time_diff = equity_curve.index[-1] - equity_curve.index[0]
-        years = time_diff.total_seconds() / (365.25 * 24 * 3600)
-        
-        if years == 0:
+        try:
+            # Calculate number of years
+            time_diff = equity_curve.index[-1] - equity_curve.index[0]
+            years = time_diff.total_seconds() / (365.25 * 24 * 3600)
+            
+            # Require at least 1 day of data for meaningful CAGR
+            if years < 0.003:  # Less than ~1 day
+                return 0.0
+            
+            cagr = (end_value / start_value) ** (1 / years) - 1
+            
+            # Sanity check: CAGR should be reasonable (-100% to +10000%)
+            if cagr < -1.0 or cagr > 100.0:
+                logger.warning(f"CAGR calculation resulted in extreme value: {cagr:.2%} (duration: {years:.4f} years)")
+            
+            return float(cagr)
+        except (AttributeError, TypeError) as e:
+            # Index might not support datetime operations
+            logger.warning(f"Failed to calculate CAGR: {e}")
             return 0.0
-        
-        cagr = (end_value / start_value) ** (1 / years) - 1
-        return float(cagr)
     
     def calculate_annual_volatility(self, returns: pd.Series) -> float:
         """
@@ -716,10 +750,16 @@ class VectorizedMetricsCalculator:
             'total_return': 0.0,
             'cagr': 0.0,
             'annual_return': 0.0,
+            'annualized_return': 0.0,  # Alias for dashboard
             'annual_volatility': 0.0,
+            'volatility': 0.0,  # Alias for dashboard
             'sharpe_ratio': 0.0,
             'sortino_ratio': 0.0,
             'calmar_ratio': 0.0,
             'max_drawdown': 0.0,
             'win_rate': 0.0,
+            'best_month': 0.0,
+            'worst_month': 0.0,
+            'positive_months': 0.0,  # As percentage
+            'avg_drawdown': 0.0,
         }
