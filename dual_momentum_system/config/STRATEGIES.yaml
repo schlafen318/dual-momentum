@@ -133,6 +133,8 @@ strategies:
       fast_ma: 50
       slow_ma: 200
       signal_threshold: 0.0
+      strength_method: binary
+      strength_scale_range: 0.10
     recommended_universes:
       - us_market_cap
       - global_sectors_us
@@ -159,6 +161,8 @@ strategies:
       fast_ma: 50
       slow_ma: 200
       signal_threshold: 0.0
+      strength_method: linear
+      strength_scale_range: 0.05
     recommended_universes:
       - us_market_cap
       - factor_momentum
@@ -185,6 +189,8 @@ strategies:
       fast_ma: 20
       slow_ma: 50
       signal_threshold: 0.0
+      strength_method: momentum_ratio
+      strength_scale_range: 0.10
     recommended_universes:
       - crypto_major
       - tech_innovation
