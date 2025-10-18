@@ -950,6 +950,43 @@ def render_allocation(results):
         st.info("Heatmap requires multiple assets to display.")
 
 
+def _extract_allocation_from_position_history(positions_df):
+    """
+    Extract allocation data from standard BacktestEngine position history.
+    
+    Args:
+        positions_df: DataFrame with position history (has _pct columns)
+    
+    Returns:
+        DataFrame with dates and allocation percentages for each asset
+    """
+    try:
+        # Extract percentage columns
+        pct_columns = [col for col in positions_df.columns if col.endswith('_pct') and col != 'cash_pct']
+        
+        # Create allocation DataFrame
+        allocation_dict = {'Date': positions_df.index}
+        
+        # Add cash allocation
+        if 'cash_pct' in positions_df.columns:
+            allocation_dict['Cash'] = positions_df['cash_pct'].values
+        else:
+            allocation_dict['Cash'] = np.zeros(len(positions_df))
+        
+        # Add each symbol's allocation
+        for pct_col in pct_columns:
+            symbol = pct_col.replace('_pct', '')
+            allocation_dict[symbol] = positions_df[pct_col].values
+        
+        allocation_df = pd.DataFrame(allocation_dict)
+        
+        return allocation_df
+    
+    except Exception as e:
+        st.error(f"Error extracting allocation from position history: {str(e)}")
+        return None
+
+
 def _calculate_allocation_over_time(results):
     """
     Calculate portfolio allocation percentages over time.
@@ -964,11 +1001,18 @@ def _calculate_allocation_over_time(results):
         # Get equity curve for total portfolio value
         equity_curve = results.equity_curve
         
-        # Check if we have vectorbt positions data
+        # Check if we have positions data
         positions_df = results.positions
         
         if positions_df is None or len(positions_df) == 0:
             return None
+        
+        # Check if this is the new standard engine format (has _pct columns)
+        pct_columns = [col for col in positions_df.columns if col.endswith('_pct') and col != 'cash_pct']
+        
+        if len(pct_columns) > 0:
+            # New format from standard BacktestEngine - already has percentages calculated
+            return _extract_allocation_from_position_history(positions_df)
         
         # VectorBT positions have different column names
         # Try to identify the relevant columns
