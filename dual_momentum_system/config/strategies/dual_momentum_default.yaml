@@ -29,6 +29,36 @@ safe_asset: SHY
 # Range: 0.0 to 1.0
 signal_threshold: 0.0
 
+# === Signal Strength Calculation ===
+# Method for calculating signal strength (how to weight assets)
+# Options:
+#   'binary': All passing assets get equal weight (strength=1.0)
+#             Best for: Simple equal-weight strategies
+#             Example: If SPY has 10% momentum and QQQ has 20%, both get strength=1.0
+#
+#   'linear': Linear scaling from threshold to threshold + scale_range
+#             Best for: Gradually increasing position size with momentum
+#             Example: With threshold=0.0 and scale_range=0.1:
+#                      5% momentum → 0.5 strength, 10% momentum → 1.0 strength
+#
+#   'proportional': Weight proportional to momentum magnitude
+#             Best for: Allocating more to higher momentum assets
+#             Example: SPY (10% mom) gets 33% weight, QQQ (20% mom) gets 67% weight
+#
+#   'momentum_ratio': Normalize by highest momentum asset
+#             Best for: Emphasizing the leader while keeping others
+#             Example: SPY (10% mom) → 0.5, QQQ (20% mom) → 1.0
+#
+strength_method: binary
+
+# Scale range for 'linear' method (ignored for other methods)
+# Momentum must exceed threshold by this amount to reach full strength
+# Example: With threshold=0.0 and scale_range=0.1:
+#   - 0% momentum → 0.0 strength (filtered out by threshold)
+#   - 5% momentum → 0.5 strength
+#   - 10%+ momentum → 1.0 strength
+strength_scale_range: 0.10
+
 # Asset universe for the strategy
 # Leave empty or null to use all available assets
 universe:
