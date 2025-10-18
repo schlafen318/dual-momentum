@@ -83,6 +83,7 @@ class BacktestEngine:
         risk_manager: Optional[BaseRiskManager] = None,
         start_date: Optional[datetime] = None,
         end_date: Optional[datetime] = None,
+        benchmark_data: Optional[PriceData] = None,
     ) -> BacktestResult:
         """
         Run backtest for a strategy.
@@ -93,6 +94,7 @@ class BacktestEngine:
             risk_manager: Optional risk manager for position sizing
             start_date: Optional start date (uses data start if None)
             end_date: Optional end date (uses data end if None)
+            benchmark_data: Optional benchmark price data for comparison
         
         Returns:
             BacktestResult with performance metrics and trade history
@@ -706,13 +708,20 @@ class BacktestEngine:
         else:
             trades_df = pd.DataFrame()
         
+        # Calculate benchmark returns if provided
+        benchmark_returns = None
+        if benchmark_data is not None:
+            benchmark_prices = benchmark_data.data['close'].reindex(equity_series.index).fillna(method='ffill')
+            benchmark_returns = benchmark_prices.pct_change().dropna()
+        
         # Calculate metrics
         from .performance import PerformanceCalculator
         calculator = PerformanceCalculator()
         metrics = calculator.calculate_metrics(
             returns,
             equity_series,
-            self.risk_free_rate
+            self.risk_free_rate,
+            benchmark_returns=benchmark_returns
         )
         
         # Create result object
