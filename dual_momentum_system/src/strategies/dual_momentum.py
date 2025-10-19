@@ -13,7 +13,7 @@ import numpy as np
 from loguru import logger
 
 from ..core.base_strategy import BaseStrategy
-from ..core.types import MomentumType, PriceData, Signal
+from ..core.types import MomentumType, PriceData, Signal, SignalReason
 
 
 class DualMomentumStrategy(BaseStrategy):
@@ -34,6 +34,10 @@ class DualMomentumStrategy(BaseStrategy):
         - absolute_threshold: Minimum momentum to be invested (default: 0.0)
         - use_volatility_adjustment: Adjust for volatility (default: False)
         - safe_asset: Symbol for safe asset (bonds/cash) when momentum negative (default: None)
+        - blend_zone_lower: Lower bound for blend zone (default: -0.05)
+        - blend_zone_upper: Upper bound for blend zone (default: 0.05)
+        - enable_blending: Enable gradual allocation blending (default: True)
+        - rebalance_threshold: Minimum change to trigger rebalance (default: 0.05)
     """
     
     def __init__(self, config: Optional[Dict[str, Any]] = None):
@@ -52,6 +56,10 @@ class DualMomentumStrategy(BaseStrategy):
             'use_volatility_adjustment': False,
             'safe_asset': None,
             'signal_threshold': 0.0,
+            'blend_zone_lower': -0.05,
+            'blend_zone_upper': 0.05,
+            'enable_blending': True,
+            'rebalance_threshold': 0.05,
         }
         
         # Merge with provided config
@@ -64,6 +72,46 @@ class DualMomentumStrategy(BaseStrategy):
         self.use_vol_adj = self.config['use_volatility_adjustment']
         self.safe_asset = self.config['safe_asset']
         self.absolute_threshold = self.config['absolute_threshold']
+        self.blend_zone_lower = self.config['blend_zone_lower']
+        self.blend_zone_upper = self.config['blend_zone_upper']
+        self.enable_blending = self.config['enable_blending']
+        self.rebalance_threshold = self.config['rebalance_threshold']
+        
+        # Validate safe asset configuration
+        self._validate_safe_asset_config()
+    
+    def _validate_safe_asset_config(self) -> None:
+        """
+        Validate safe asset configuration at initialization.
+        
+        This provides early feedback on configuration issues rather than
+        waiting for runtime failures during backtesting.
+        
+        Raises:
+            ValueError: If safe asset configuration is invalid
+        """
+        if self.safe_asset is not None:
+            # Check if symbol format is valid
+            if not isinstance(self.safe_asset, str):
+                raise ValueError(
+                    f"safe_asset must be a string symbol, got {type(self.safe_asset)}"
+                )
+            
+            if not self.safe_asset or not self.safe_asset.strip():
+                raise ValueError("safe_asset cannot be empty string")
+            
+            # Check if it's a reasonable symbol format (basic validation)
+            if len(self.safe_asset) > 10:
+                logger.warning(
+                    f"safe_asset '{self.safe_asset}' is unusually long (>10 chars). "
+                    f"Verify this is a valid symbol."
+                )
+            
+            logger.info(f"Safe asset configured: {self.safe_asset}")
+        else:
+            logger.info(
+                "No safe asset configured. Portfolio will hold cash during defensive periods."
+            )
     
     def calculate_momentum(
         self,
@@ -121,6 +169,36 @@ class DualMomentumStrategy(BaseStrategy):
             momentum = closes.pct_change(self.lookback_period)
             return momentum
     
+    def _calculate_blend_ratio(self, momentum: float) -> float:
+        """
+        Calculate risky:safe blend ratio based on momentum strength.
+        
+        Provides gradual transition between risk-on and risk-off modes
+        to reduce whipsaw and transaction costs.
+        
+        Args:
+            momentum: Momentum score
+        
+        Returns:
+            Blend ratio (0.0 = 100% safe, 1.0 = 100% risky)
+        
+        Example:
+            >>> strategy._calculate_blend_ratio(0.10)  # Above upper bound
+            1.0  # 100% risky
+            >>> strategy._calculate_blend_ratio(-0.10)  # Below lower bound
+            0.0  # 100% safe
+            >>> strategy._calculate_blend_ratio(0.00)  # In blend zone
+            0.5  # 50% risky, 50% safe
+        """
+        if momentum >= self.blend_zone_upper:
+            return 1.0  # 100% risky assets
+        elif momentum <= self.blend_zone_lower:
+            return 0.0  # 100% safe asset
+        else:
+            # Linear interpolation in blend zone
+            range_size = self.blend_zone_upper - self.blend_zone_lower
+            return (momentum - self.blend_zone_lower) / range_size
+    
     def generate_signals(
         self,
         price_data: Union[PriceData, Dict[str, PriceData]]
@@ -133,7 +211,8 @@ class DualMomentumStrategy(BaseStrategy):
         2. Apply absolute momentum filter (must be > threshold)
         3. Rank remaining assets by relative momentum
         4. Generate signals for top N assets
-        5. If no assets pass filter, signal safe asset (if configured)
+        5. If no assets pass filter, check for blended allocation
+        6. If blending disabled or momentum very negative, signal safe asset
         
         Args:
             price_data: Price data for assets
@@ -197,6 +276,9 @@ class DualMomentumStrategy(BaseStrategy):
             position_count = self.get_position_count()
             top_assets = sorted_assets[:position_count]
             
+            # Collect alternatives for metadata
+            alternatives = [symbol for symbol, _ in sorted_assets[position_count:position_count+3]]
+            
             # Generate long signals for top assets
             for symbol, momentum_score in top_assets:
                 # Normalize strength (0 to 1 based on relative ranking)
@@ -208,11 +290,21 @@ class DualMomentumStrategy(BaseStrategy):
                 
                 strength = max(0.0, min(1.0, strength))
                 
+                # Calculate confidence based on gap to next asset
+                confidence = 1.0
+                if len(sorted_assets) > 1 and max_momentum > 0:
+                    second_momentum = sorted_assets[1][1]
+                    gap = (max_momentum - second_momentum) / max_momentum
+                    confidence = 0.7 + (gap * 0.3)  # 0.7 to 1.0 based on gap
+                
                 signal = Signal(
                     timestamp=latest_timestamp,
                     symbol=symbol,
                     direction=1,  # Long
                     strength=strength,
+                    reason=SignalReason.RELATIVE_TOP,
+                    confidence=min(1.0, confidence),
+                    alternatives=alternatives if alternatives else None,
                     metadata={
                         'momentum_score': momentum_score,
                         'rank': top_assets.index((symbol, momentum_score)) + 1,
@@ -228,23 +320,90 @@ class DualMomentumStrategy(BaseStrategy):
             # No assets pass absolute momentum filter
             logger.info("No assets pass absolute momentum filter")
             
-            # If safe asset configured, signal it
+            # Check if we should use blended allocation
+            if self.enable_blending and self.safe_asset:
+                # Get top asset momentum (even if negative)
+                sorted_all = sorted(
+                    latest_momentum.items(),
+                    key=lambda x: x[1] if not pd.isna(x[1]) else float('-inf'),
+                    reverse=True
+                )
+                
+                if sorted_all:
+                    top_symbol, top_momentum = sorted_all[0]
+                    
+                    # Check if we're in the blend zone
+                    if self.blend_zone_lower <= top_momentum <= self.blend_zone_upper:
+                        blend_ratio = self._calculate_blend_ratio(top_momentum)
+                        
+                        # Generate blended signals (risky + safe)
+                        if blend_ratio > 0:
+                            # Risky asset signal
+                            signal = Signal(
+                                timestamp=latest_timestamp,
+                                symbol=top_symbol,
+                                direction=1,
+                                strength=blend_ratio,
+                                reason=SignalReason.BLEND_ALLOCATION,
+                                confidence=0.6,  # Lower confidence for blended
+                                blend_ratio=blend_ratio,
+                                metadata={
+                                    'momentum_score': top_momentum,
+                                    'rank': 1,
+                                    'strategy': 'dual_momentum',
+                                    'blend_mode': 'risky_component',
+                                    'lookback_period': self.lookback_period
+                                }
+                            )
+                            signals.append(signal)
+                        
+                        if blend_ratio < 1.0:
+                            # Safe asset signal
+                            signal = Signal(
+                                timestamp=latest_timestamp,
+                                symbol=self.safe_asset,
+                                direction=1,
+                                strength=1.0 - blend_ratio,
+                                reason=SignalReason.BLEND_ALLOCATION,
+                                confidence=0.6,
+                                blend_ratio=blend_ratio,
+                                metadata={
+                                    'momentum_score': top_momentum,
+                                    'rank': 1,
+                                    'strategy': 'dual_momentum',
+                                    'blend_mode': 'safe_component',
+                                    'lookback_period': self.lookback_period
+                                }
+                            )
+                            signals.append(signal)
+                        
+                        logger.info(
+                            f"Blended allocation: {blend_ratio:.1%} {top_symbol}, "
+                            f"{(1-blend_ratio):.1%} {self.safe_asset} "
+                            f"(momentum: {top_momentum:.2%})"
+                        )
+                        return signals
+            
+            # Not blending or momentum too negative - full defensive
             if self.safe_asset:
                 signal = Signal(
                     timestamp=latest_timestamp,
                     symbol=self.safe_asset,
                     direction=1,  # Long
                     strength=1.0,
+                    reason=SignalReason.DEFENSIVE_ROTATION,
+                    confidence=1.0,
                     metadata={
                         'momentum_score': 0.0,
                         'rank': 1,
                         'strategy': 'dual_momentum',
-                        'reason': 'safe_asset',
                         'lookback_period': self.lookback_period
                     }
                 )
                 signals.append(signal)
-                logger.info(f"Switched to safe asset: {self.safe_asset}")
+                logger.info(f"Defensive rotation to safe asset: {self.safe_asset}")
+            else:
+                logger.info("No safe asset configured - portfolio will hold cash")
         
         return signals
     
@@ -258,6 +417,7 @@ class DualMomentumStrategy(BaseStrategy):
         Returns:
             List of signals
         """
+        signals = []
         momentum = self.calculate_momentum(price_data)
         
         if len(momentum) == 0:
@@ -274,6 +434,8 @@ class DualMomentumStrategy(BaseStrategy):
                 symbol=price_data.symbol,
                 direction=1,
                 strength=min(1.0, abs(latest_momentum)),
+                reason=SignalReason.MOMENTUM_POSITIVE,
+                confidence=1.0,
                 metadata={
                     'momentum_score': latest_momentum,
                     'strategy': 'dual_momentum',
@@ -282,17 +444,61 @@ class DualMomentumStrategy(BaseStrategy):
             )
             return [signal]
         
-        elif self.safe_asset:
-            # Safe asset signal
+        # Check for blended allocation
+        elif self.enable_blending and self.safe_asset:
+            if self.blend_zone_lower <= latest_momentum <= self.blend_zone_upper:
+                blend_ratio = self._calculate_blend_ratio(latest_momentum)
+                
+                if blend_ratio > 0:
+                    signal = Signal(
+                        timestamp=latest_timestamp,
+                        symbol=price_data.symbol,
+                        direction=1,
+                        strength=blend_ratio,
+                        reason=SignalReason.BLEND_ALLOCATION,
+                        confidence=0.6,
+                        blend_ratio=blend_ratio,
+                        metadata={
+                            'momentum_score': latest_momentum,
+                            'strategy': 'dual_momentum',
+                            'blend_mode': 'risky_component',
+                            'lookback_period': self.lookback_period
+                        }
+                    )
+                    signals.append(signal)
+                
+                if blend_ratio < 1.0:
+                    signal = Signal(
+                        timestamp=latest_timestamp,
+                        symbol=self.safe_asset,
+                        direction=1,
+                        strength=1.0 - blend_ratio,
+                        reason=SignalReason.BLEND_ALLOCATION,
+                        confidence=0.6,
+                        blend_ratio=blend_ratio,
+                        metadata={
+                            'momentum_score': latest_momentum,
+                            'strategy': 'dual_momentum',
+                            'blend_mode': 'safe_component',
+                            'lookback_period': self.lookback_period
+                        }
+                    )
+                    signals.append(signal)
+                
+                return signals
+        
+        # Full defensive
+        if self.safe_asset:
             signal = Signal(
                 timestamp=latest_timestamp,
                 symbol=self.safe_asset,
                 direction=1,
                 strength=1.0,
+                reason=SignalReason.DEFENSIVE_ROTATION,
+                confidence=1.0,
                 metadata={
                     'momentum_score': latest_momentum,
                     'strategy': 'dual_momentum',
-                    'reason': 'safe_asset',
                     'lookback_period': self.lookback_period
                 }
             )
