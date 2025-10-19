@@ -476,6 +476,18 @@ def run_backtest():
         else:
             strategy = AbsoluteMomentumStrategy(strategy_config)
         
+        # Ensure safe asset data is available if configured
+        safe_asset = st.session_state.get('safe_asset')
+        if safe_asset and safe_asset not in price_data_dict:
+            status_text.text(f"🛡️ Generating safe asset data ({safe_asset})...")
+            progress_bar.progress(60)
+            safe_asset_dict = generate_sample_data(
+                [safe_asset],
+                st.session_state.start_date,
+                st.session_state.end_date
+            )
+            price_data_dict[safe_asset] = safe_asset_dict[safe_asset]
+        
         # Initialize backtest engine
         status_text.text("🚀 Running backtest...")
         progress_bar.progress(70)
