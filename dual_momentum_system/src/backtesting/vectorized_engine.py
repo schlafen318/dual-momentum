@@ -453,6 +453,21 @@ class VectorizedBacktestEngine:
         equity_curve = portfolio.value()
         returns = portfolio.returns()
         
+        # Convert to Series if DataFrame (VectorBT returns DataFrames even for single assets)
+        if isinstance(returns, pd.DataFrame):
+            if returns.shape[1] == 1:
+                returns = returns.iloc[:, 0]
+            else:
+                # Multi-asset: use total portfolio returns
+                returns = returns.sum(axis=1)
+        
+        if isinstance(equity_curve, pd.DataFrame):
+            if equity_curve.shape[1] == 1:
+                equity_curve = equity_curve.iloc[:, 0]
+            else:
+                # Multi-asset: use total portfolio value
+                equity_curve = equity_curve.sum(axis=1)
+        
         # Extract trades
         trades_df = portfolio.trades.records_readable
         
