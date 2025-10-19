@@ -22,29 +22,51 @@ The frontend `strategy_builder.py` page allows users to configure a safe asset t
 
 ### Fix Location: `dual_momentum_system/frontend/pages/strategy_builder.py`
 
-Added automatic safe asset data generation in the `run_backtest()` function (lines 479-489):
+**UPDATED**: Replaced sample data generation with **REAL data fetching** from Yahoo Finance.
+
+The system now:
+1. **Fetches real market data** for all universe symbols
+2. **Attempts to fetch safe asset data** from Yahoo Finance
+3. **Falls back to CASH** if safe asset data unavailable
+4. **Warns user before starting** backtest
 
 ```python
-# Ensure safe asset data is available if configured
+# Handle safe asset - try to fetch real data, fallback to cash
 safe_asset = st.session_state.get('safe_asset')
-if safe_asset and safe_asset not in price_data_dict:
-    status_text.text(f"🛡️ Generating safe asset data ({safe_asset})...")
-    progress_bar.progress(60)
-    safe_asset_dict = generate_sample_data(
-        [safe_asset],
-        st.session_state.start_date,
-        st.session_state.end_date
-    )
-    price_data_dict[safe_asset] = safe_asset_dict[safe_asset]
+if safe_asset:
+    if safe_asset not in price_data_dict:
+        # Try to fetch real data from Yahoo Finance
+        safe_asset_dict = fetch_real_data(
+            [safe_asset],
+            start_date,
+            end_date,
+            data_source,
+            asset_instance,
+            status_text
+        )
+        
+        if safe_asset_dict and safe_asset in safe_asset_dict:
+            # Successfully fetched real data
+            price_data_dict[safe_asset] = safe_asset_dict[safe_asset]
+        else:
+            # Could not fetch - use CASH instead and warn user
+            warnings.append(
+                f"⚠️ WARNING: Could not fetch real data for safe asset '{safe_asset}'.\n"
+                f"   The strategy will use CASH during defensive periods instead."
+            )
+            safe_asset = None  # Use cash
 ```
 
-### How It Works
+### How It Works Now
 
-1. **User configures safe asset** in the Strategy Builder UI
-2. **Frontend generates sample data** for all symbols in the universe
-3. **NEW: Check if safe asset is missing** from the generated data
-4. **NEW: Auto-generate safe asset data** if missing
-5. **Run backtest** with complete data including safe asset
+1. **User configures safe asset** in the Strategy Builder UI (e.g., 'SHY')
+2. **System fetches REAL data** from Yahoo Finance for universe
+3. **System checks if safe asset in data**
+4. **If missing: Attempts to fetch safe asset** from Yahoo Finance
+5. **If fetch fails: Sets safe_asset=None (CASH)** and shows warning
+6. **User sees warning BEFORE backtest** starts
+7. **User can review and proceed** or modify configuration
+8. **Backtest runs with real market data**
 
 ## Complete Fix Architecture
 

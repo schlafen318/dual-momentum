@@ -425,68 +425,122 @@ def run_backtest():
     # Show progress
     progress_bar = st.progress(0)
     status_text = st.empty()
+    warnings_container = st.container()
+    warnings = []
     
     try:
-        status_text.text("🔄 Initializing backtest engine...")
+        status_text.text("🔄 Initializing data source...")
         progress_bar.progress(10)
         
-        # Create mock price data (in production, fetch from data source)
-        status_text.text("📊 Generating sample data...")
-        progress_bar.progress(30)
+        # Initialize real data source (Yahoo Finance)
+        from src.data_sources.yahoo_finance import YahooFinanceSource
+        data_source = YahooFinanceSource(config={'cache_enabled': True})
         
-        price_data_dict = generate_sample_data(
+        # Get asset class
+        asset_class_str = st.session_state.get('asset_class', 'equity').lower()
+        asset_class_map = {
+            'equity': EquityAsset,
+            'crypto': CryptoAsset,
+            'commodity': CommodityAsset,
+            'bond': BondAsset,
+            'fx': FXAsset
+        }
+        AssetClass = asset_class_map.get(asset_class_str, EquityAsset)
+        asset_instance = AssetClass()
+        
+        # Fetch REAL data for all symbols
+        status_text.text("📊 Fetching real market data...")
+        progress_bar.progress(20)
+        
+        price_data_dict = fetch_real_data(
             symbols,
             st.session_state.start_date,
-            st.session_state.end_date
+            st.session_state.end_date,
+            data_source,
+            asset_instance,
+            status_text
         )
         
-        # Generate benchmark data if specified
+        if not price_data_dict:
+            st.error("❌ Failed to fetch data for any symbols. Please check symbols and try again.")
+            return
+        
+        progress_bar.progress(40)
+        
+        # Fetch benchmark data if specified
         benchmark_symbol = st.session_state.get('benchmark_symbol')
         benchmark_data = None
         if benchmark_symbol:
-            status_text.text(f"📊 Generating benchmark data ({benchmark_symbol})...")
-            progress_bar.progress(35)
-            benchmark_dict = generate_sample_data(
+            status_text.text(f"📊 Fetching benchmark data ({benchmark_symbol})...")
+            benchmark_dict = fetch_real_data(
                 [benchmark_symbol],
                 st.session_state.start_date,
-                st.session_state.end_date
+                st.session_state.end_date,
+                data_source,
+                asset_instance,
+                status_text
             )
-            benchmark_data = benchmark_dict[benchmark_symbol]
+            if benchmark_dict:
+                benchmark_data = benchmark_dict[benchmark_symbol]
+            else:
+                warnings.append(f"⚠️ Could not fetch benchmark data for {benchmark_symbol}")
         
-        # Initialize strategy
-        status_text.text("⚙️ Configuring strategy...")
         progress_bar.progress(50)
+        
+        # Initialize strategy configuration
+        status_text.text("⚙️ Configuring strategy...")
         
         strategy_config = {
             'lookback_period': st.session_state.get('lookback_period', 252),
             'rebalance_frequency': st.session_state.get('rebalance_freq', 'monthly'),
             'position_count': min(
                 st.session_state.get('position_count', 1),
-                len(symbols)
+                len(price_data_dict)
             ),
             'absolute_threshold': st.session_state.get('absolute_threshold', 0.0),
             'use_volatility_adjustment': st.session_state.get('use_volatility', False),
         }
         
-        if st.session_state.get('safe_asset'):
-            strategy_config['safe_asset'] = st.session_state.safe_asset
+        # Handle safe asset - try to fetch real data, fallback to cash
+        safe_asset = st.session_state.get('safe_asset')
+        if safe_asset:
+            if safe_asset not in price_data_dict:
+                status_text.text(f"🛡️ Attempting to fetch safe asset data ({safe_asset})...")
+                safe_asset_dict = fetch_real_data(
+                    [safe_asset],
+                    st.session_state.start_date,
+                    st.session_state.end_date,
+                    data_source,
+                    asset_instance,
+                    status_text
+                )
+                
+                if safe_asset_dict and safe_asset in safe_asset_dict:
+                    price_data_dict[safe_asset] = safe_asset_dict[safe_asset]
+                    warnings.append(f"✓ Safe asset '{safe_asset}' data fetched successfully")
+                else:
+                    # Could not fetch safe asset data - use cash instead
+                    warnings.append(
+                        f"⚠️ WARNING: Could not fetch real data for safe asset '{safe_asset}'.\n"
+                        f"   The strategy will use CASH during defensive periods instead of {safe_asset}."
+                    )
+                    safe_asset = None  # Use cash
+            
+            # Set safe asset in config (None = cash)
+            strategy_config['safe_asset'] = safe_asset
         
+        # Show warnings before starting backtest
+        if warnings:
+            with warnings_container:
+                st.warning("\n\n".join(warnings))
+        
+        progress_bar.progress(60)
+        
+        # Create strategy instance
         if st.session_state.strategy_type == "Dual Momentum":
             strategy = DualMomentumStrategy(strategy_config)
         else:
             strategy = AbsoluteMomentumStrategy(strategy_config)
-        
-        # Ensure safe asset data is available if configured
-        safe_asset = st.session_state.get('safe_asset')
-        if safe_asset and safe_asset not in price_data_dict:
-            status_text.text(f"🛡️ Generating safe asset data ({safe_asset})...")
-            progress_bar.progress(60)
-            safe_asset_dict = generate_sample_data(
-                [safe_asset],
-                st.session_state.start_date,
-                st.session_state.end_date
-            )
-            price_data_dict[safe_asset] = safe_asset_dict[safe_asset]
         
         # Initialize backtest engine
         status_text.text("🚀 Running backtest...")
@@ -551,60 +605,62 @@ def run_backtest():
         status_text.empty()
 
 
-def generate_sample_data(symbols: List[str], start_date, end_date) -> Dict[str, PriceData]:
+def fetch_real_data(
+    symbols: List[str],
+    start_date,
+    end_date,
+    data_source,
+    asset_instance,
+    status_text=None
+) -> Dict[str, PriceData]:
     """
-    Generate sample price data for backtesting.
+    Fetch REAL market data from Yahoo Finance.
     
-    In production, this would fetch real data from data sources.
+    Args:
+        symbols: List of symbols to fetch
+        start_date: Start date
+        end_date: End date
+        data_source: YahooFinanceSource instance
+        asset_instance: Asset class instance for normalization
+        status_text: Optional Streamlit text element for progress updates
+    
+    Returns:
+        Dictionary of symbol -> PriceData with real market data
     """
-    import random
-    
-    date_range = pd.date_range(start=start_date, end=end_date, freq='D')
     price_data_dict = {}
-    
-    asset_class_str = st.session_state.get('asset_class', 'equity').lower()
-    
-    # Get appropriate asset class
-    asset_class_map = {
-        'equity': EquityAsset,
-        'crypto': CryptoAsset,
-        'commodity': CommodityAsset,
-        'bond': BondAsset,
-        'fx': FXAsset
-    }
-    
-    AssetClass = asset_class_map.get(asset_class_str, EquityAsset)
-    asset_instance = AssetClass()
+    failed_symbols = []
     
     for symbol in symbols:
-        # Generate realistic price data with momentum
-        base_price = random.uniform(50, 200)
-        trend = random.uniform(-0.0005, 0.0015)  # Daily trend
-        volatility = random.uniform(0.01, 0.03)   # Daily volatility
-        
-        prices = [base_price]
-        for _ in range(len(date_range) - 1):
-            # Random walk with trend
-            change = trend + np.random.randn() * volatility
-            new_price = prices[-1] * (1 + change)
-            prices.append(max(new_price, 1.0))  # Prevent negative prices
-        
-        # Create OHLCV data
-        df = pd.DataFrame({
-            'open': prices,
-            'high': [p * (1 + abs(np.random.randn()) * 0.01) for p in prices],
-            'low': [p * (1 - abs(np.random.randn()) * 0.01) for p in prices],
-            'close': prices,
-            'volume': np.random.randint(1000000, 10000000, len(prices))
-        }, index=date_range)
-        
-        # Ensure high >= low
-        df['high'] = df[['open', 'high', 'low', 'close']].max(axis=1)
-        df['low'] = df[['open', 'high', 'low', 'close']].min(axis=1)
-        
-        # Normalize data
-        price_data = asset_instance.normalize_data(df, symbol)
-        price_data_dict[symbol] = price_data
+        try:
+            if status_text:
+                status_text.text(f"📊 Fetching {symbol}...")
+            
+            # Fetch real data from Yahoo Finance
+            raw_data = data_source.fetch_data(
+                symbol=symbol,
+                start_date=start_date,
+                end_date=end_date,
+                timeframe='1d'
+            )
+            
+            if not raw_data.empty:
+                # Normalize data using asset class
+                normalized = asset_instance.normalize_data(raw_data, symbol)
+                price_data_dict[symbol] = normalized
+            else:
+                failed_symbols.append(symbol)
+                
+        except Exception as e:
+            failed_symbols.append(symbol)
+            if status_text:
+                status_text.text(f"⚠️ Failed to fetch {symbol}: {str(e)}")
+    
+    # Show summary
+    if failed_symbols:
+        st.warning(
+            f"⚠️ Could not fetch data for: {', '.join(failed_symbols)}\n"
+            f"These symbols will be excluded from the backtest."
+        )
     
     return price_data_dict
 
