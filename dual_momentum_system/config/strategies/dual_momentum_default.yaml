@@ -23,7 +23,9 @@ use_volatility_adjustment: false
 
 # Safe asset to hold when all risky assets fail absolute momentum filter
 # Common choices: 'SHY' (short-term bonds), 'AGG' (aggregate bonds), 'BIL' (T-bills)
-safe_asset: SHY
+# IMPORTANT: The safe asset MUST be included in your universe or fetched separately
+# Using AGG since it's already in the default universe below
+safe_asset: AGG
 
 # Minimum signal strength to generate trade
 # Range: 0.0 to 1.0

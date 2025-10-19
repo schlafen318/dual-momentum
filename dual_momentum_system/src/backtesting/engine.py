@@ -155,6 +155,9 @@ class BacktestEngine:
                 f"Have {len(date_index)} periods, need {required_history}"
             )
         
+        # Validate safe asset availability
+        self._validate_safe_asset_data(strategy, aligned_data)
+        
         # Track last rebalance date
         last_rebalance = None
         
@@ -278,6 +281,49 @@ class BacktestEngine:
         )
         
         return results
+    
+    def _validate_safe_asset_data(
+        self,
+        strategy: BaseStrategy,
+        aligned_data: Dict[str, pd.DataFrame]
+    ) -> None:
+        """
+        Validate that safe asset data is available if configured.
+        
+        This is critical because if the safe asset is configured but not included
+        in the price data, defensive signals will be silently skipped, leaving the
+        portfolio in cash during bearish periods instead of rotating to bonds.
+        
+        Args:
+            strategy: Strategy instance
+            aligned_data: Price data dictionary
+        """
+        safe_asset = None
+        
+        # Try to get safe asset from strategy config or attribute
+        if hasattr(strategy, 'config'):
+            safe_asset = strategy.config.get('safe_asset')
+        elif hasattr(strategy, 'safe_asset'):
+            safe_asset = strategy.safe_asset
+        
+        if safe_asset and safe_asset not in aligned_data:
+            logger.warning(
+                f"\n{'='*80}\n"
+                f"⚠️  IMPORTANT: Strategy configured with safe_asset='{safe_asset}' "
+                f"but no price data provided.\n"
+                f"\n"
+                f"IMPACT: During bearish markets when no assets have positive momentum,\n"
+                f"        the strategy will signal the safe asset but execution will be\n"
+                f"        SKIPPED, leaving your portfolio in CASH instead of bonds.\n"
+                f"\n"
+                f"RECOMMENDATION:\n"
+                f"  1. Add '{safe_asset}' to your asset universe, OR\n"
+                f"  2. Change safe_asset to one already in your universe (e.g., 'AGG'), OR\n"
+                f"  3. Fetch {safe_asset} price data separately before running backtest\n"
+                f"\n"
+                f"This is a common cause of high cash allocation during downturns.\n"
+                f"{'='*80}"
+            )
     
     def _reset(self) -> None:
         """Reset engine state for new backtest."""
@@ -529,7 +575,27 @@ class BacktestEngine:
         
         # Then, open/adjust positions based on signals
         for signal in signals:
-            if signal.direction == 0 or signal.symbol not in aligned_data:
+            if signal.direction == 0:
+                continue
+            
+            # Check if price data is available for this signal
+            if signal.symbol not in aligned_data:
+                # Check if this is the safe asset - if so, this is a critical issue
+                safe_asset = None
+                if hasattr(strategy, 'config'):
+                    safe_asset = strategy.config.get('safe_asset')
+                elif hasattr(strategy, 'safe_asset'):
+                    safe_asset = strategy.safe_asset
+                
+                if safe_asset and signal.symbol == safe_asset:
+                    logger.warning(
+                        f"⚠️ CRITICAL: Safe asset '{signal.symbol}' signal generated but "
+                        f"no price data available. Portfolio will hold cash instead. "
+                        f"\n        RECOMMENDATION: Add {signal.symbol} to your asset universe "
+                        f"or fetch its data separately to enable defensive positioning."
+                    )
+                else:
+                    logger.debug(f"Skipping signal for {signal.symbol} - no price data available")
                 continue
             
             # Get current price

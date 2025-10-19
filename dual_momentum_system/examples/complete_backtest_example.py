@@ -144,6 +144,20 @@ def main():
     
     strategy = DualMomentum(config=strategy_config)
     
+    # AUTOMATIC SAFE ASSET FETCHING
+    # If the safe asset is not in the universe, it will be automatically fetched
+    # This prevents the common issue of safe asset signals being silently skipped
+    from src.backtesting.utils import ensure_safe_asset_data
+    
+    price_data = ensure_safe_asset_data(
+        strategy=strategy,
+        price_data=price_data,
+        data_source=data_source,
+        start_date=start_date,
+        end_date=end_date,
+        asset_class=asset_class
+    )
+    
     print(f"Strategy: {strategy.get_name()}")
     print(f"  - Momentum Type: {strategy.get_momentum_type().value}")
     print(f"  - Lookback Period: {strategy.get_required_history()} days")

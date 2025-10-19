@@ -25,7 +25,7 @@ strategies:
       position_count: 1  # Hold only the top-ranked asset
       absolute_threshold: 0.0  # Positive momentum required
       use_volatility_adjustment: false
-      safe_asset: SHY  # Short-term Treasury ETF
+      safe_asset: AGG  # Aggregate Bond ETF (commonly in universe)
       signal_threshold: 0.0
     recommended_universes:
       - gem_classic
