@@ -521,7 +521,8 @@ def run_backtest():
         col1, col2 = st.columns(2)
         with col1:
             if st.button("📊 View Results", width='stretch'):
-                st.info("Navigate to Backtest Results page using the sidebar")
+                st.session_state.navigate_to = "📊 Backtest Results"
+                st.rerun()
         with col2:
             if st.button("➕ Add to Comparison", width='stretch'):
                 strategy_name = f"{st.session_state.strategy_type} - {datetime.now().strftime('%H:%M:%S')}"

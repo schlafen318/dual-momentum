@@ -60,16 +60,25 @@ def main():
         st.markdown("---")
         
         # Navigation
+        pages = [
+            "🏠 Home",
+            "🛠️ Strategy Builder",
+            "📊 Backtest Results",
+            "🔄 Compare Strategies",
+            "🗂️ Asset Universe Manager"
+        ]
+        
+        # Check if navigation is triggered programmatically
+        default_index = 0
+        if 'navigate_to' in st.session_state:
+            if st.session_state.navigate_to in pages:
+                default_index = pages.index(st.session_state.navigate_to)
+            del st.session_state.navigate_to
+        
         page = st.radio(
             "Navigation",
-            [
-                "🏠 Home",
-                "🛠️ Strategy Builder",
-                "📊 Backtest Results",
-                "🔄 Compare Strategies",
-                "🗂️ Asset Universe Manager"
-            ],
-            index=0
+            pages,
+            index=default_index
         )
         
         st.markdown("---")

@@ -304,7 +304,8 @@ def render_overview(results):
     
     with col2:
         if st.button("🔄 Run New Backtest", width='stretch'):
-            st.info("Navigate to Strategy Builder to configure a new backtest")
+            st.session_state.navigate_to = "🛠️ Strategy Builder"
+            st.rerun()
     
     with col3:
         if st.button("📥 Download Report", width='stretch'):
