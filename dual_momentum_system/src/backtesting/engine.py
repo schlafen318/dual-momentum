@@ -268,7 +268,8 @@ class BacktestEngine:
         results = self._generate_results(
             strategy.get_name(),
             date_index[0],
-            date_index[-1]
+            date_index[-1],
+            benchmark_data
         )
         
         logger.info(
@@ -777,7 +778,8 @@ class BacktestEngine:
         self,
         strategy_name: str,
         start_date: datetime,
-        end_date: datetime
+        end_date: datetime,
+        benchmark_data: Optional[PriceData] = None
     ) -> BacktestResult:
         """Generate backtest results."""
         # Create equity curve series
@@ -828,7 +830,7 @@ class BacktestEngine:
         logger.info("=" * 60)
         logger.info("POSITION DATA SUMMARY")
         logger.info("=" * 60)
-        logger.info(f"Total timesteps in backtest: {len(date_index)}")
+        logger.info(f"Total timesteps in backtest: {len(equity_series)}")
         logger.info(f"Position history snapshots recorded: {len(self.position_history)}")
         logger.info(f"Positions DataFrame shape: {positions_df.shape}")
         
