@@ -786,8 +786,23 @@ def render_allocation(results):
     """)
     
     # Check if we have positions data
-    if not hasattr(results, 'positions') or len(results.positions) == 0:
-        st.info("No position data available. Allocation tracking requires position history from the backtest.")
+    if not hasattr(results, 'positions'):
+        st.warning("⚠️ Position data attribute is missing from backtest results. This may indicate an issue with the backtesting engine.")
+        st.info("Allocation tracking requires position history to be captured during the backtest.")
+        return
+    
+    # Check if positions DataFrame is empty
+    if isinstance(results.positions, pd.DataFrame):
+        if results.positions.empty:
+            st.warning("⚠️ Position data DataFrame is empty (no rows). This may occur if:")
+            st.markdown("""
+            - The backtest period was too short
+            - No trading signals were generated
+            - All trades were rejected due to insufficient capital
+            """)
+            return
+    elif len(results.positions) == 0:
+        st.warning("⚠️ Position data is empty.")
         return
     
     # Calculate allocation over time
@@ -980,10 +995,17 @@ def _extract_allocation_from_position_history(positions_df):
         
         allocation_df = pd.DataFrame(allocation_dict)
         
+        if allocation_df.empty:
+            st.warning("⚠️ Allocation DataFrame is empty after extraction")
+            return None
+        
         return allocation_df
     
     except Exception as e:
         st.error(f"Error extracting allocation from position history: {str(e)}")
+        import traceback
+        with st.expander("Show error details"):
+            st.code(traceback.format_exc())
         return None
 
 
@@ -1004,7 +1026,13 @@ def _calculate_allocation_over_time(results):
         # Check if we have positions data
         positions_df = results.positions
         
-        if positions_df is None or len(positions_df) == 0:
+        if positions_df is None:
+            return None
+        
+        # Check if DataFrame is empty
+        if isinstance(positions_df, pd.DataFrame) and positions_df.empty:
+            return None
+        elif not isinstance(positions_df, pd.DataFrame) and len(positions_df) == 0:
             return None
         
         # Check if this is the new standard engine format (has _pct columns)

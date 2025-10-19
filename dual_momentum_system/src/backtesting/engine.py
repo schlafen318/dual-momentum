@@ -425,12 +425,17 @@ class BacktestEngine:
         }
         
         # Add position data
+        num_positions = len(self.positions)
         for symbol, position in self.positions.items():
             snapshot[f'{symbol}_quantity'] = position.quantity
             snapshot[f'{symbol}_price'] = position.current_price
             snapshot[f'{symbol}_value'] = position.quantity * position.current_price
         
         self.position_history.append(snapshot)
+        
+        # Log first few snapshots for debugging
+        if len(self.position_history) <= 3:
+            logger.debug(f"Position snapshot #{len(self.position_history)}: {num_positions} positions, cash=${self.cash:,.2f}")
     
     def _create_positions_dataframe(self) -> pd.DataFrame:
         """
@@ -440,10 +445,19 @@ class BacktestEngine:
             DataFrame with position history organized for allocation tracking
         """
         if not self.position_history:
+            logger.debug("Position history is empty, returning empty DataFrame")
             return pd.DataFrame()
         
+        logger.debug(f"Creating positions DataFrame from {len(self.position_history)} snapshots")
+        
         # Convert list of dicts to DataFrame
-        positions_df = pd.DataFrame(self.position_history)
+        try:
+            positions_df = pd.DataFrame(self.position_history)
+            logger.debug(f"Initial DataFrame shape after conversion: {positions_df.shape}")
+            logger.debug(f"Initial DataFrame columns: {positions_df.columns.tolist()}")
+        except Exception as e:
+            logger.error(f"Failed to create DataFrame from position_history: {e}")
+            return pd.DataFrame()
         
         # Extract all unique symbols from the column names
         value_columns = [col for col in positions_df.columns if col.endswith('_value')]
@@ -809,6 +823,29 @@ class BacktestEngine:
         
         # Convert position history to DataFrame
         positions_df = self._create_positions_dataframe()
+        
+        # Debug logging for position data
+        logger.info("=" * 60)
+        logger.info("POSITION DATA SUMMARY")
+        logger.info("=" * 60)
+        logger.info(f"Total timesteps in backtest: {len(date_index)}")
+        logger.info(f"Position history snapshots recorded: {len(self.position_history)}")
+        logger.info(f"Positions DataFrame shape: {positions_df.shape}")
+        
+        if not positions_df.empty:
+            logger.info(f"Positions DataFrame columns: {positions_df.columns.tolist()}")
+            logger.info("First 3 rows of positions data:")
+            logger.info(f"\n{positions_df.head(3)}")
+            logger.info("Last 3 rows of positions data:")
+            logger.info(f"\n{positions_df.tail(3)}")
+        else:
+            logger.warning("⚠️  Positions DataFrame is EMPTY!")
+            logger.warning("This means no position history was recorded during the backtest.")
+            if len(self.position_history) == 0:
+                logger.error("❌ position_history list is empty - _record_position_snapshot was never called!")
+            else:
+                logger.error(f"❌ position_history has {len(self.position_history)} entries but DataFrame is empty!")
+        logger.info("=" * 60)
         
         # Create result object
         result = BacktestResult(
