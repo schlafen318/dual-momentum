@@ -976,8 +976,10 @@ def _extract_allocation_from_position_history(positions_df):
         DataFrame with dates and allocation percentages for each asset
     """
     try:
-        # Extract percentage columns
-        pct_columns = [col for col in positions_df.columns if col.endswith('_pct') and col != 'cash_pct']
+        # Extract percentage columns (exclude cash and portfolio itself)
+        pct_columns = [col for col in positions_df.columns 
+                      if col.endswith('_pct') 
+                      and col not in ['cash_pct', 'portfolio_pct']]
         
         # Create allocation DataFrame
         allocation_dict = {'Date': positions_df.index}
@@ -988,7 +990,7 @@ def _extract_allocation_from_position_history(positions_df):
         else:
             allocation_dict['Cash'] = np.zeros(len(positions_df))
         
-        # Add each symbol's allocation
+        # Add each symbol's allocation (backtested assets only)
         for pct_col in pct_columns:
             symbol = pct_col.replace('_pct', '')
             allocation_dict[symbol] = positions_df[pct_col].values
