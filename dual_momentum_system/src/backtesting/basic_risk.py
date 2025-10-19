@@ -10,6 +10,7 @@ from typing import Any, Dict, Optional
 from loguru import logger
 
 from ..core.base_risk import BaseRiskManager
+from ..core.cash_manager import CashManager
 from ..core.types import Position, PortfolioState, Signal
 
 
@@ -32,6 +33,8 @@ class BasicRiskManager(BaseRiskManager):
         - emergency_stop_threshold: Drawdown threshold to halt trading (default: 0.4)
         - equal_weight: Use equal weighting (default: True)
         - target_volatility: Target portfolio volatility for vol scaling (default: None)
+        - strategic_cash_pct: Strategic cash to hold (default: 0.0)
+        - operational_buffer_pct: Operational buffer reserve (default: 0.02)
     """
     
     def __init__(self, config: Optional[Dict[str, Any]] = None):
@@ -50,6 +53,8 @@ class BasicRiskManager(BaseRiskManager):
             'emergency_stop_threshold': 0.4,
             'equal_weight': True,
             'target_volatility': None,
+            'strategic_cash_pct': 0.0,
+            'operational_buffer_pct': 0.02,
         }
         
         # Merge with provided config
@@ -59,6 +64,12 @@ class BasicRiskManager(BaseRiskManager):
         super().__init__(default_config)
         
         self.equal_weight = self.config['equal_weight']
+        
+        # Initialize cash manager
+        self.cash_manager = CashManager(
+            strategic_cash_pct=self.config['strategic_cash_pct'],
+            operational_buffer_pct=self.config['operational_buffer_pct']
+        )
     
     def calculate_position_size(
         self,
@@ -71,10 +82,11 @@ class BasicRiskManager(BaseRiskManager):
         Calculate position size.
         
         For basic risk manager:
-        1. If equal_weight: divide portfolio by number of positions
-        2. Apply signal strength as multiplier
-        3. Respect max position size limits
-        4. Adjust for volatility if target_volatility is set
+        1. Account for strategic cash and operational buffer
+        2. If equal_weight: divide deployable capital by number of positions
+        3. Apply signal strength as multiplier
+        4. Respect max position size limits
+        5. Adjust for volatility if target_volatility is set
         
         Args:
             signal: Trading signal
@@ -89,6 +101,12 @@ class BasicRiskManager(BaseRiskManager):
             logger.warning("Portfolio value is zero or negative")
             return 0.0
         
+        # Calculate deployable capital (accounting for cash reserves)
+        # For this calculation, we need current cash, but we don't have it directly
+        # So we use portfolio_value as approximation
+        # In a real scenario, the engine would pass current_cash
+        deployable_value = portfolio_value * (1.0 - self.config['strategic_cash_pct'])
+        
         # Determine number of positions
         position_limit = self.get_position_limit()
         
@@ -99,7 +117,7 @@ class BasicRiskManager(BaseRiskManager):
         else:
             num_positions = position_limit
         
-        # Calculate base position size
+        # Calculate base position size as percentage of deployable capital
         if self.equal_weight:
             # Equal weight across positions
             base_size_pct = 1.0 / num_positions
@@ -114,8 +132,12 @@ class BasicRiskManager(BaseRiskManager):
         max_pos = self.get_max_position_size()
         size_pct = min(size_pct, max_pos)
         
-        # Calculate dollar amount
-        position_size_dollars = portfolio_value * size_pct
+        # Calculate dollar amount from deployable capital
+        position_size_dollars = deployable_value * size_pct
+        
+        # Apply confidence factor if available
+        if hasattr(signal, 'confidence'):
+            position_size_dollars *= signal.confidence
         
         # Adjust for volatility if configured and data available
         target_vol = self.get_target_volatility()
@@ -129,7 +151,7 @@ class BasicRiskManager(BaseRiskManager):
         
         logger.debug(
             f"Position size for {signal.symbol}: "
-            f"${position_size_dollars:,.2f} ({size_pct:.1%} of portfolio)"
+            f"${position_size_dollars:,.2f} ({size_pct:.1%} of deployable capital)"
         )
         
         return position_size_dollars
@@ -201,17 +223,44 @@ class BasicRiskManager(BaseRiskManager):
         """Get emergency stop threshold."""
         return self.config.get('emergency_stop_threshold')
     
+    def get_cash_allocation(self, total_value: float, current_cash: float):
+        """
+        Get cash allocation breakdown.
+        
+        Args:
+            total_value: Total portfolio value
+            current_cash: Current cash balance
+        
+        Returns:
+            CashAllocation object with breakdown
+        """
+        return self.cash_manager.calculate_allocation(total_value, current_cash)
+    
+    def get_available_for_investment(self, total_value: float, current_cash: float) -> float:
+        """
+        Get capital available for new investments.
+        
+        Args:
+            total_value: Total portfolio value
+            current_cash: Current cash balance
+        
+        Returns:
+            Amount available for investment
+        """
+        return self.cash_manager.available_for_investment(total_value, current_cash)
+    
     @classmethod
     def get_version(cls) -> str:
         """Return plugin version."""
-        return "1.0.0"
+        return "1.1.0"
     
     @classmethod
     def get_description(cls) -> str:
         """Return plugin description."""
         return (
             "Basic risk manager with equal-weight position sizing, "
-            "leverage limits, concentration limits, and drawdown monitoring. "
+            "leverage limits, concentration limits, drawdown monitoring, "
+            "and explicit cash management (strategic vs operational). "
             "Suitable for most momentum strategies with simple, conservative "
             "risk controls."
         )

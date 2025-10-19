@@ -294,9 +294,15 @@ class BacktestEngine:
         in the price data, defensive signals will be silently skipped, leaving the
         portfolio in cash during bearish periods instead of rotating to bonds.
         
+        FAIL-FAST: This now raises an exception instead of just warning, preventing
+        silent failures during backtesting.
+        
         Args:
             strategy: Strategy instance
             aligned_data: Price data dictionary
+        
+        Raises:
+            ValueError: If safe asset is configured but data is not available
         """
         safe_asset = None
         
@@ -307,22 +313,25 @@ class BacktestEngine:
             safe_asset = strategy.safe_asset
         
         if safe_asset and safe_asset not in aligned_data:
-            logger.warning(
+            error_msg = (
                 f"\n{'='*80}\n"
-                f"⚠️  IMPORTANT: Strategy configured with safe_asset='{safe_asset}' "
-                f"but no price data provided.\n"
+                f"❌ CONFIGURATION ERROR: Safe asset '{safe_asset}' configured but no price data available!\n"
                 f"\n"
-                f"IMPACT: During bearish markets when no assets have positive momentum,\n"
-                f"        the strategy will signal the safe asset but execution will be\n"
-                f"        SKIPPED, leaving your portfolio in CASH instead of bonds.\n"
+                f"IMPACT: During bearish markets, defensive signals will fail, leaving portfolio in CASH.\n"
                 f"\n"
-                f"RECOMMENDATION:\n"
+                f"SOLUTIONS:\n"
                 f"  1. Add '{safe_asset}' to your asset universe, OR\n"
-                f"  2. Change safe_asset to one already in your universe (e.g., 'AGG'), OR\n"
-                f"  3. Fetch {safe_asset} price data separately before running backtest\n"
+                f"  2. Use a safe asset already in your universe (e.g., 'AGG', 'TLT'), OR\n"
+                f"  3. Use utils.ensure_safe_asset_data() to auto-fetch, OR\n"
+                f"  4. Set safe_asset=None to explicitly hold cash\n"
                 f"\n"
-                f"This is a common cause of high cash allocation during downturns.\n"
+                f"Available symbols in price data: {list(aligned_data.keys())}\n"
                 f"{'='*80}"
+            )
+            logger.error(error_msg)
+            raise ValueError(
+                f"Safe asset '{safe_asset}' configured but not in price data. "
+                f"Add to universe or use utils.ensure_safe_asset_data()."
             )
     
     def _reset(self) -> None:
@@ -580,22 +589,13 @@ class BacktestEngine:
             
             # Check if price data is available for this signal
             if signal.symbol not in aligned_data:
-                # Check if this is the safe asset - if so, this is a critical issue
-                safe_asset = None
-                if hasattr(strategy, 'config'):
-                    safe_asset = strategy.config.get('safe_asset')
-                elif hasattr(strategy, 'safe_asset'):
-                    safe_asset = strategy.safe_asset
-                
-                if safe_asset and signal.symbol == safe_asset:
-                    logger.warning(
-                        f"⚠️ CRITICAL: Safe asset '{signal.symbol}' signal generated but "
-                        f"no price data available. Portfolio will hold cash instead. "
-                        f"\n        RECOMMENDATION: Add {signal.symbol} to your asset universe "
-                        f"or fetch its data separately to enable defensive positioning."
-                    )
-                else:
-                    logger.debug(f"Skipping signal for {signal.symbol} - no price data available")
+                # This should not happen now due to fail-fast validation
+                # But keeping as defensive check
+                logger.error(
+                    f"❌ Signal for '{signal.symbol}' cannot be executed - no price data! "
+                    f"This should have been caught in validation. "
+                    f"Reason: {signal.reason.value if hasattr(signal, 'reason') else 'unknown'}"
+                )
                 continue
             
             # Get current price
@@ -626,10 +626,19 @@ class BacktestEngine:
             commission_cost = position_size_dollars * self.commission
             total_cost = position_size_dollars + commission_cost
             
-            # Log trade details
+            # Log trade details with enhanced context
             direction_str = "BUY" if signal.direction > 0 else "SELL"
-            logger.info(f"     📈 {direction_str} {signal.symbol}:")
+            reason_str = f" [{signal.reason.value}]" if hasattr(signal, 'reason') else ""
+            blend_str = ""
+            if hasattr(signal, 'blend_ratio') and signal.blend_ratio is not None:
+                blend_str = f" (blend: {signal.blend_ratio:.1%} risky)"
+            confidence_str = ""
+            if hasattr(signal, 'confidence'):
+                confidence_str = f" confidence={signal.confidence:.2f}"
+            
+            logger.info(f"     📈 {direction_str} {signal.symbol}{reason_str}{blend_str}")
             logger.info(f"        Price: ${current_price:.2f} → ${execution_price:.2f} (slippage: {self.slippage:.3%})")
+            logger.info(f"        Signal: strength={signal.strength:.2f}{confidence_str}")
             logger.info(f"        Position Size: ${position_size_dollars:,.2f}")
             logger.info(f"        Shares: {shares:.2f}")
             logger.info(f"        Commission: ${commission_cost:.2f}")

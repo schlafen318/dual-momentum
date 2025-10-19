@@ -39,6 +39,25 @@ class SignalType(Enum):
     EXIT = 0
 
 
+class SignalReason(Enum):
+    """
+    Reason for signal generation.
+    
+    Helps distinguish between different signal generation logic
+    for better debugging and performance attribution.
+    """
+    MOMENTUM_POSITIVE = "momentum_positive"  # Asset has positive momentum
+    MOMENTUM_NEGATIVE = "momentum_negative"  # Asset has negative momentum
+    RELATIVE_TOP = "relative_top"  # Top asset by relative momentum
+    DEFENSIVE_ROTATION = "defensive_rotation"  # Rotating to safe asset
+    NO_OPPORTUNITIES = "no_opportunities"  # No valid opportunities, hold cash/safe
+    BLEND_ALLOCATION = "blend_allocation"  # Blended allocation (partial risky/safe)
+    REBALANCING = "rebalancing"  # Periodic rebalancing
+    RISK_LIMIT = "risk_limit"  # Risk limit triggered
+    EMERGENCY_EXIT = "emergency_exit"  # Emergency stop triggered
+    CUSTOM = "custom"  # Custom reason
+
+
 @dataclass
 class AssetMetadata:
     """
@@ -124,12 +143,20 @@ class Signal:
         symbol: Asset symbol
         direction: Signal direction (1=long, -1=short, 0=neutral/exit)
         strength: Signal confidence/strength (0.0 to 1.0)
+        reason: Reason for signal generation (for debugging/attribution)
+        confidence: Confidence level in signal (0.0 to 1.0)
+        blend_ratio: Optional ratio for blended allocation (0.0=all safe, 1.0=all risky)
+        alternatives: Optional list of alternative assets that were considered
         metadata: Additional signal information (momentum scores, indicators, etc.)
     """
     timestamp: datetime
     symbol: str
     direction: int  # 1 for long, -1 for short, 0 for neutral/exit
     strength: float  # Signal strength/confidence (0.0 to 1.0)
+    reason: SignalReason = SignalReason.CUSTOM
+    confidence: float = 1.0  # Confidence level (0.0 to 1.0)
+    blend_ratio: Optional[float] = None  # For partial allocations (0.0 to 1.0)
+    alternatives: Optional[List[str]] = None  # Alternative assets considered
     metadata: Dict[str, Any] = field(default_factory=dict)
     
     def __post_init__(self):
@@ -139,6 +166,12 @@ class Signal:
         
         if not 0.0 <= self.strength <= 1.0:
             raise ValueError(f"Strength must be between 0.0 and 1.0, got {self.strength}")
+        
+        if not 0.0 <= self.confidence <= 1.0:
+            raise ValueError(f"Confidence must be between 0.0 and 1.0, got {self.confidence}")
+        
+        if self.blend_ratio is not None and not 0.0 <= self.blend_ratio <= 1.0:
+            raise ValueError(f"Blend ratio must be between 0.0 and 1.0, got {self.blend_ratio}")
     
     @property
     def is_long(self) -> bool:
@@ -154,6 +187,16 @@ class Signal:
     def is_exit(self) -> bool:
         """Check if signal is exit/neutral."""
         return self.direction == 0
+    
+    @property
+    def is_defensive(self) -> bool:
+        """Check if signal is for defensive positioning (safe asset)."""
+        return self.reason == SignalReason.DEFENSIVE_ROTATION
+    
+    @property
+    def is_blended(self) -> bool:
+        """Check if signal is for blended allocation."""
+        return self.blend_ratio is not None and 0.0 < self.blend_ratio < 1.0
 
 
 @dataclass
