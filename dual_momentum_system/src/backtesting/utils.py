@@ -5,9 +5,12 @@ Provides helper functions to make backtesting easier and avoid common pitfalls.
 """
 
 from datetime import datetime, timedelta
-from typing import Dict, Tuple
+from typing import Any, Dict, Optional, Tuple
 
 from loguru import logger
+
+from ..core.base_strategy import BaseStrategy
+from ..core.base_data_source import BaseDataSource
 
 
 def calculate_data_fetch_dates(
@@ -169,3 +172,219 @@ def print_backtest_summary(
         print(f"  Expected on or after: {first_rebalance_expected.date()}")
     
     print("=" * 80 + "\n")
+
+
+def ensure_safe_asset_data(
+    strategy: BaseStrategy,
+    price_data: Dict[str, Any],
+    data_source: BaseDataSource,
+    start_date: datetime,
+    end_date: datetime,
+    asset_class: Optional[Any] = None
+) -> Dict[str, Any]:
+    """
+    Automatically fetch safe asset data if it's configured but missing.
+    
+    This function solves the common issue where a strategy has a safe_asset
+    configured (e.g., 'SHY', 'AGG') but that asset is not included in the
+    universe or price data. During bearish markets, the strategy will try to
+    rotate to the safe asset but the signal will be silently skipped, leaving
+    the portfolio in cash instead of bonds.
+    
+    This function:
+    1. Checks if the strategy has a safe_asset configured
+    2. Checks if that safe_asset is already in the price_data
+    3. If missing, automatically fetches it and adds to price_data
+    
+    Args:
+        strategy: Strategy instance with potential safe_asset config
+        price_data: Dictionary of existing price data (symbol -> PriceData)
+        data_source: Data source instance to fetch missing data
+        start_date: Start date for data fetching
+        end_date: End date for data fetching
+        asset_class: Optional asset class instance for normalization
+    
+    Returns:
+        Updated price_data dictionary with safe asset included if needed
+    
+    Example:
+        >>> from src.data_sources.yahoo_finance import YahooFinanceSource
+        >>> from src.strategies.dual_momentum import DualMomentumStrategy
+        >>> from src.asset_classes.equity import EquityAsset
+        >>> 
+        >>> strategy = DualMomentumStrategy({
+        ...     'safe_asset': 'SHY',  # Safe asset not in universe
+        ...     'position_count': 1
+        ... })
+        >>> 
+        >>> # Fetch universe data
+        >>> price_data = {}
+        >>> for symbol in ['SPY', 'AGG', 'GLD']:
+        ...     raw = data_source.fetch_data(symbol, start, end)
+        ...     price_data[symbol] = asset.normalize_data(raw, symbol)
+        >>> 
+        >>> # Automatically fetch safe asset if missing
+        >>> price_data = ensure_safe_asset_data(
+        ...     strategy, price_data, data_source, start, end, asset
+        ... )
+        >>> # Now price_data includes 'SHY'
+        >>> 
+        >>> # Run backtest - safe asset signals will now work
+        >>> results = engine.run(strategy, price_data)
+    
+    Note:
+        - This is called automatically if you use `prepare_backtest_data()`
+        - You can call it manually before running backtests
+        - Works with any data source (Yahoo Finance, Alpha Vantage, etc.)
+        - Handles both strategy.config['safe_asset'] and strategy.safe_asset
+    """
+    # Try to get safe asset from strategy
+    safe_asset = None
+    
+    if hasattr(strategy, 'config') and isinstance(strategy.config, dict):
+        safe_asset = strategy.config.get('safe_asset')
+    elif hasattr(strategy, 'safe_asset'):
+        safe_asset = strategy.safe_asset
+    
+    # If no safe asset configured, nothing to do
+    if not safe_asset:
+        logger.debug("No safe asset configured in strategy")
+        return price_data
+    
+    # Check if safe asset already in price_data
+    if safe_asset in price_data:
+        logger.debug(f"Safe asset '{safe_asset}' already in price data")
+        return price_data
+    
+    # Safe asset is missing - fetch it
+    logger.info(
+        f"🛡️  Safe asset '{safe_asset}' configured but not in price data. "
+        f"Fetching automatically..."
+    )
+    
+    try:
+        # Fetch safe asset data
+        raw_data = data_source.fetch_data(safe_asset, start_date, end_date)
+        
+        if raw_data.empty:
+            logger.warning(
+                f"⚠️ Failed to fetch data for safe asset '{safe_asset}'. "
+                f"Safe asset signals will be skipped during backtest."
+            )
+            return price_data
+        
+        # Normalize data if asset class provided
+        if asset_class:
+            try:
+                normalized_data = asset_class.normalize_data(raw_data, safe_asset)
+                price_data[safe_asset] = normalized_data
+                logger.info(
+                    f"✓ Successfully fetched {len(normalized_data.data)} bars for safe asset '{safe_asset}'"
+                )
+            except Exception as e:
+                logger.error(f"Failed to normalize safe asset data: {e}")
+                # Still add raw data as fallback
+                from ..core.types import PriceData
+                price_data[safe_asset] = PriceData(symbol=safe_asset, data=raw_data)
+                logger.info(f"✓ Added raw data for safe asset '{safe_asset}' (normalization failed)")
+        else:
+            # No asset class provided, wrap in PriceData
+            from ..core.types import PriceData
+            price_data[safe_asset] = PriceData(symbol=safe_asset, data=raw_data)
+            logger.info(f"✓ Successfully fetched {len(raw_data)} bars for safe asset '{safe_asset}'")
+        
+    except Exception as e:
+        logger.error(
+            f"❌ Failed to fetch safe asset '{safe_asset}': {e}\n"
+            f"   Safe asset signals will be skipped. Consider:\n"
+            f"   1. Adding '{safe_asset}' to your universe manually, OR\n"
+            f"   2. Changing safe_asset to one already in your universe"
+        )
+    
+    return price_data
+
+
+def prepare_backtest_data(
+    strategy: BaseStrategy,
+    symbols: list,
+    data_source: BaseDataSource,
+    start_date: datetime,
+    end_date: datetime,
+    asset_class: Optional[Any] = None,
+    include_safe_asset: bool = True
+) -> Dict[str, Any]:
+    """
+    Prepare all data needed for backtesting, including automatic safe asset fetching.
+    
+    This is a convenience function that:
+    1. Fetches data for all symbols in the universe
+    2. Automatically fetches safe asset if configured and missing
+    3. Normalizes all data using the provided asset class
+    4. Returns a ready-to-use price_data dictionary
+    
+    Args:
+        strategy: Strategy instance
+        symbols: List of symbols in the universe
+        data_source: Data source to fetch from
+        start_date: Start date for data
+        end_date: End date for data
+        asset_class: Asset class for data normalization
+        include_safe_asset: Whether to auto-fetch safe asset (default: True)
+    
+    Returns:
+        Dictionary of symbol -> PriceData ready for backtesting
+    
+    Example:
+        >>> from src.backtesting.utils import prepare_backtest_data
+        >>> 
+        >>> # One-line data preparation
+        >>> price_data = prepare_backtest_data(
+        ...     strategy=strategy,
+        ...     symbols=['SPY', 'AGG', 'GLD'],
+        ...     data_source=data_source,
+        ...     start_date=start,
+        ...     end_date=end,
+        ...     asset_class=equity_asset
+        ... )
+        >>> # Automatically includes safe asset if configured
+        >>> 
+        >>> # Run backtest
+        >>> results = engine.run(strategy, price_data)
+    """
+    logger.info(f"Preparing backtest data for {len(symbols)} symbols")
+    
+    price_data = {}
+    
+    # Fetch data for all symbols
+    for symbol in symbols:
+        try:
+            logger.debug(f"Fetching {symbol}...")
+            raw_data = data_source.fetch_data(symbol, start_date, end_date)
+            
+            if raw_data.empty:
+                logger.warning(f"No data returned for {symbol}")
+                continue
+            
+            # Normalize if asset class provided
+            if asset_class:
+                normalized_data = asset_class.normalize_data(raw_data, symbol)
+                price_data[symbol] = normalized_data
+            else:
+                from ..core.types import PriceData
+                price_data[symbol] = PriceData(symbol=symbol, data=raw_data)
+            
+            logger.debug(f"✓ Loaded {symbol}")
+            
+        except Exception as e:
+            logger.error(f"Failed to fetch {symbol}: {e}")
+            continue
+    
+    logger.info(f"✓ Successfully loaded {len(price_data)} symbols")
+    
+    # Automatically include safe asset if configured
+    if include_safe_asset:
+        price_data = ensure_safe_asset_data(
+            strategy, price_data, data_source, start_date, end_date, asset_class
+        )
+    
+    return price_data
