@@ -388,28 +388,6 @@ class VectorizedMetricsCalculator:
                         metrics['best_month'] = 0.0
                         metrics['worst_month'] = 0.0
                         metrics['positive_months'] = 0.0
-                elif len(returns) > 20:
-                    # Fallback: Approximate monthly returns using rolling windows
-                    logger.info("DateTimeIndex not available, using rolling window approximation for monthly metrics")
-                    window_size = self.periods_per_year // 12  # Approximate month size
-                    if window_size > 0 and len(returns) >= window_size:
-                        rolling_monthly = returns.rolling(window=int(window_size)).apply(
-                            lambda x: (1 + x).prod() - 1 if len(x) > 0 else 0
-                        ).dropna()
-                        if len(rolling_monthly) > 0:
-                            metrics['best_month'] = float(rolling_monthly.max())
-                            metrics['worst_month'] = float(rolling_monthly.min())
-                            positive_count = int((rolling_monthly > 0).sum())
-                            metrics['positive_months'] = (positive_count / len(rolling_monthly) * 100) if len(rolling_monthly) > 0 else 0.0
-                        else:
-                            metrics['best_month'] = 0.0
-                            metrics['worst_month'] = 0.0
-                            metrics['positive_months'] = 0.0
-                    else:
-                        logger.warning("Insufficient data for monthly metrics approximation")
-                        metrics['best_month'] = 0.0
-                        metrics['worst_month'] = 0.0
-                        metrics['positive_months'] = 0.0
                 else:
                     metrics['best_month'] = 0.0
                     metrics['worst_month'] = 0.0
@@ -474,29 +452,9 @@ class VectorizedMetricsCalculator:
             
             return float(cagr)
         except (AttributeError, TypeError) as e:
-            # Index might not support datetime operations - try fallback using number of periods
-            logger.info(f"DateTimeIndex not available for CAGR, using period count fallback: {e}")
-            try:
-                num_periods = len(equity_curve)
-                if num_periods < 2:
-                    return 0.0
-                
-                # Estimate years based on frequency and number of periods
-                years = num_periods / self.periods_per_year
-                
-                if years < 0.003:  # Less than ~1 day
-                    return 0.0
-                
-                cagr = (end_value / start_value) ** (1 / years) - 1
-                
-                # Sanity check
-                if cagr < -1.0 or cagr > 100.0:
-                    logger.warning(f"Fallback CAGR calculation resulted in extreme value: {cagr:.2%} (estimated duration: {years:.4f} years from {num_periods} periods)")
-                
-                return float(cagr)
-            except Exception as fallback_error:
-                logger.error(f"Fallback CAGR calculation also failed: {fallback_error}")
-                return 0.0
+            # Index might not support datetime operations
+            logger.warning(f"Failed to calculate CAGR: {e}")
+            return 0.0
     
     def calculate_annual_volatility(self, returns: pd.Series) -> float:
         """
