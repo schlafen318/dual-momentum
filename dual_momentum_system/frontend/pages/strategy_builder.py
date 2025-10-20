@@ -193,12 +193,32 @@ def render_strategy_configuration():
     
     # Safe asset for absolute momentum
     if strategy_type == "Dual Momentum":
-        safe_asset = st.text_input(
-            "Safe Asset Symbol (optional)",
-            value="",
-            help="Asset to hold when momentum is negative (e.g., 'SHY' for short-term bonds)"
-        )
-        st.session_state.safe_asset = safe_asset if safe_asset else None
+        st.markdown("#### 🛡️ Safe Asset Configuration")
+        
+        col1, col2 = st.columns([3, 1])
+        
+        with col1:
+            safe_asset = st.text_input(
+                "Safe Asset Symbol (optional)",
+                value="",
+                placeholder="AGG (default)",
+                help="Asset to hold when momentum is negative. Common choices: 'AGG' (aggregate bonds), 'SHY' (short-term bonds), 'BIL' (T-bills). Leave empty to hold cash."
+            )
+            st.session_state.safe_asset = safe_asset if safe_asset else None
+        
+        with col2:
+            st.markdown("<br>", unsafe_allow_html=True)
+            if not safe_asset:
+                st.info("💵 Will hold cash")
+            else:
+                st.success(f"🛡️ Using {safe_asset}")
+        
+        # Display default recommendation
+        if not safe_asset:
+            st.caption(
+                "💡 **Tip:** The recommended default is 'AGG' (U.S. Aggregate Bonds) for defensive periods. "
+                "You can also use 'SHY' (1-3 Year Treasuries) or 'BIL' (T-Bills) for lower duration risk."
+            )
     
     # Benchmark selection
     render_section_divider()
@@ -298,6 +318,10 @@ def render_configuration_summary():
     
     st.markdown("### 📝 Configuration Summary")
     
+    # Get safe asset display
+    safe_asset = st.session_state.get('safe_asset')
+    safe_asset_display = safe_asset if safe_asset else 'Cash (default: AGG)'
+    
     st.markdown(f"""
     <div class="card">
         <h4>Strategy Details</h4>
@@ -307,6 +331,7 @@ def render_configuration_summary():
             <li>🌐 <strong>Universe Size:</strong> {len(st.session_state.get('selected_symbols', []))} assets</li>
             <li>📈 <strong>Positions:</strong> {st.session_state.get('position_count', 0)}</li>
             <li>🔄 <strong>Rebalance:</strong> {st.session_state.get('rebalance_freq', 'Not set').title()}</li>
+            <li>🛡️ <strong>Safe Asset:</strong> {safe_asset_display}</li>
         </ul>
     </div>
     """, unsafe_allow_html=True)
