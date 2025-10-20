@@ -10,11 +10,9 @@ Alpha Vantage is integrated as a **backup data source** with automatic failover.
 
 This ensures 99.9%+ uptime for data downloads.
 
-## Your API Key
+## Get Your API Key
 
-```
-VT0RO0SAME6YV9PC
-```
+Get a free API key at: https://www.alphavantage.co/support/#api-key
 
 **Free Tier Limits:**
 - 500 API requests per day
@@ -23,7 +21,13 @@ VT0RO0SAME6YV9PC
 
 ## Quick Start
 
-### 1. Test Alpha Vantage Connection
+### 1. Set Your API Key
+
+```bash
+export ALPHAVANTAGE_API_KEY=your_api_key_here
+```
+
+### 2. Test Alpha Vantage Connection
 
 ```bash
 cd dual_momentum_system
@@ -32,7 +36,7 @@ python3 examples/quick_alpha_vantage_test.py
 
 This will download data for SPY and verify your API key works.
 
-### 2. Run Full Demo
+### 3. Run Full Demo
 
 ```bash
 python3 examples/alpha_vantage_demo.py
@@ -44,7 +48,7 @@ This demonstrates:
 - Multi-source setup with failover
 - Integration patterns for backtesting
 
-### 3. Download Data for Analysis
+### 4. Download Data for Analysis
 
 ```bash
 python3 examples/backtest_with_alpha_vantage.py
@@ -58,20 +62,10 @@ This will:
 
 ## Configuration Methods
 
-### Method 1: Hardcode in Script (Current)
-
-```python
-from src.data_sources import AlphaVantageSource
-
-source = AlphaVantageSource({
-    'api_key': 'VT0RO0SAME6YV9PC'
-})
-```
-
-### Method 2: Environment Variable (Recommended)
+### Method 1: Environment Variable (Recommended)
 
 ```bash
-export ALPHAVANTAGE_API_KEY=VT0RO0SAME6YV9PC
+export ALPHAVANTAGE_API_KEY=your_api_key_here
 ```
 
 Then in your code:
@@ -83,27 +77,38 @@ from src.data_sources import AlphaVantageSource
 source = AlphaVantageSource()
 ```
 
-### Method 3: .env File (Best for Development)
+### Method 2: .env File (Best for Development)
 
 Create a `.env` file in the project root:
 
 ```bash
 cp .env.example .env
-# Edit .env to add your API key
+# Edit .env and replace YOUR_API_KEY_HERE with your actual key
 ```
 
-The `.env.example` file already contains your API key as a template.
+### Method 3: Direct Configuration (Not Recommended)
+
+Only use this for testing, never commit API keys to git:
+
+```python
+from src.data_sources import AlphaVantageSource
+
+source = AlphaVantageSource({
+    'api_key': 'your_api_key_here'  # NOT RECOMMENDED
+})
+```
 
 ## Production Usage (Recommended Pattern)
 
 Always use the multi-source provider for automatic failover:
 
 ```python
+import os
 from src.data_sources import get_default_data_source
 
-# Configure with Alpha Vantage as backup
+# Configure with Alpha Vantage as backup (reads from environment)
 config = {
-    'alphavantage_api_key': 'VT0RO0SAME6YV9PC'
+    'alphavantage_api_key': os.environ.get('ALPHAVANTAGE_API_KEY')
 }
 
 data_source = get_default_data_source(config)
@@ -154,13 +159,18 @@ Alpha Vantage supports:
 ### API Key Not Working
 
 ```python
+import os
 from src.data_sources import AlphaVantageSource
 
-source = AlphaVantageSource({'api_key': 'VT0RO0SAME6YV9PC'})
-if source.is_available():
-    print("✓ API key is valid")
+api_key = os.environ.get('ALPHAVANTAGE_API_KEY')
+if not api_key:
+    print("✗ ALPHAVANTAGE_API_KEY environment variable not set")
 else:
-    print("✗ API key issue - check internet connection")
+    source = AlphaVantageSource({'api_key': api_key})
+    if source.is_available():
+        print("✓ API key is valid")
+    else:
+        print("✗ API key issue - check internet connection")
 ```
 
 ### Rate Limit Exceeded
@@ -184,8 +194,10 @@ Check:
 ### Custom Rate Limits
 
 ```python
+import os
+
 source = AlphaVantageSource({
-    'api_key': 'VT0RO0SAME6YV9PC',
+    'api_key': os.environ.get('ALPHAVANTAGE_API_KEY'),
     'rate_limit': {
         'requests_per_minute': 5,
         'requests_per_day': 500
@@ -198,8 +210,10 @@ source = AlphaVantageSource({
 Data is automatically cached to avoid redundant API calls:
 
 ```python
+import os
+
 source = AlphaVantageSource({
-    'api_key': 'VT0RO0SAME6YV9PC',
+    'api_key': os.environ.get('ALPHAVANTAGE_API_KEY'),
     'cache_enabled': True  # Default: True
 })
 ```
@@ -207,8 +221,10 @@ source = AlphaVantageSource({
 ### Timeout Configuration
 
 ```python
+import os
+
 source = AlphaVantageSource({
-    'api_key': 'VT0RO0SAME6YV9PC',
+    'api_key': os.environ.get('ALPHAVANTAGE_API_KEY'),
     'timeout': 30  # seconds, default: 30
 })
 ```
@@ -220,12 +236,13 @@ See `examples/complete_backtest_example.py` for a full backtesting workflow usin
 Basic pattern:
 
 ```python
+import os
 from src.data_sources import get_default_data_source
 from src.strategies.dual_momentum import DualMomentumStrategy
 from src.backtesting.engine import BacktestEngine
 
 # 1. Setup data source
-config = {'alphavantage_api_key': 'VT0RO0SAME6YV9PC'}
+config = {'alphavantage_api_key': os.environ.get('ALPHAVANTAGE_API_KEY')}
 data_source = get_default_data_source(config)
 
 # 2. Download data
@@ -267,14 +284,15 @@ If you need more than 500 requests/day:
 
 ## Summary
 
-✅ Alpha Vantage is configured and ready to use  
-✅ API Key: `VT0RO0SAME6YV9PC`  
+✅ Alpha Vantage integration is configured and ready to use  
+✅ Get your free API key: https://www.alphavantage.co/support/#api-key  
 ✅ Free tier: 500 requests/day  
 ✅ Automatic failover from Yahoo Finance  
 ✅ Production-ready with caching and rate limiting  
 
-Start with the test script to verify everything works:
+Start by setting your API key and running the test:
 
 ```bash
+export ALPHAVANTAGE_API_KEY=your_api_key_here
 python3 examples/quick_alpha_vantage_test.py
 ```

@@ -8,11 +8,10 @@ crypto data with a free tier (500 requests/day, 5 requests/minute).
 
 Usage:
     # Set API key via environment variable
-    export ALPHAVANTAGE_API_KEY=VT0RO0SAME6YV9PC
+    export ALPHAVANTAGE_API_KEY=your_api_key_here
     python examples/alpha_vantage_demo.py
     
-    # Or run directly (API key is in the script)
-    python examples/alpha_vantage_demo.py
+Get a free API key at: https://www.alphavantage.co/support/#api-key
 """
 
 import sys
@@ -47,8 +46,14 @@ def demo_basic_usage():
     """Demonstrate basic Alpha Vantage usage."""
     print_section("Demo 1: Basic Alpha Vantage Data Download")
     
-    # Your API key
-    api_key = "VT0RO0SAME6YV9PC"
+    # Get API key from environment variable
+    import os
+    api_key = os.environ.get('ALPHAVANTAGE_API_KEY')
+    
+    if not api_key:
+        print("✗ Error: ALPHAVANTAGE_API_KEY environment variable not set")
+        print("  Set it with: export ALPHAVANTAGE_API_KEY=your_api_key_here")
+        return False
     
     # Create Alpha Vantage data source
     source = AlphaVantageSource({
@@ -105,7 +110,13 @@ def demo_multiple_symbols():
     """Demonstrate downloading multiple symbols."""
     print_section("Demo 2: Download Multiple Symbols")
     
-    api_key = "VT0RO0SAME6YV9PC"
+    import os
+    api_key = os.environ.get('ALPHAVANTAGE_API_KEY')
+    
+    if not api_key:
+        print("✗ Error: ALPHAVANTAGE_API_KEY not set")
+        return False
+    
     source = AlphaVantageSource({
         'api_key': api_key,
         'cache_enabled': True
@@ -152,9 +163,17 @@ def demo_with_multi_source():
     print("This is the recommended way to use Alpha Vantage in production.")
     print("It sets up automatic failover from Yahoo Finance to Alpha Vantage.\n")
     
+    # Get API key from environment
+    import os
+    api_key = os.environ.get('ALPHAVANTAGE_API_KEY')
+    
+    if not api_key:
+        print("✗ Error: ALPHAVANTAGE_API_KEY not set")
+        return False
+    
     # Configure multi-source with Alpha Vantage as backup
     config = {
-        'alphavantage_api_key': 'VT0RO0SAME6YV9PC'
+        'alphavantage_api_key': api_key
     }
     
     source = get_default_data_source(config)
@@ -204,7 +223,7 @@ from src.strategies.dual_momentum import DualMomentumStrategy
 
 # 1. Setup data source with Alpha Vantage
 config = {
-    'alphavantage_api_key': 'VT0RO0SAME6YV9PC'
+    'alphavantage_api_key': os.environ.get('ALPHAVANTAGE_API_KEY')
 }
 data_source = get_default_data_source(config)
 
@@ -254,9 +273,18 @@ def main():
     """Run all demos."""
     print_header("Alpha Vantage Data Download Demo")
     
+    import os
+    
     print("This demo shows how to use Alpha Vantage for market data in the")
     print("dual momentum trading system.\n")
-    print("API Key: VT0RO0SAME6YV9PC")
+    
+    api_key = os.environ.get('ALPHAVANTAGE_API_KEY')
+    if api_key:
+        print(f"API Key: {api_key[:8]}... (loaded from environment)")
+    else:
+        print("⚠️  API Key: Not set - some demos will be skipped")
+        print("   Set with: export ALPHAVANTAGE_API_KEY=your_api_key_here")
+    
     print("Free Tier: 500 requests/day, 5 requests/minute")
     
     demos = [
@@ -304,8 +332,9 @@ def main():
         print("  3. Consider setting ALPHAVANTAGE_API_KEY environment variable")
         print()
         print("Environment Variable Setup:")
-        print("  export ALPHAVANTAGE_API_KEY=VT0RO0SAME6YV9PC")
+        print("  export ALPHAVANTAGE_API_KEY=your_api_key_here")
         print("  # Or add to your .env file")
+        print("  # Get free key: https://www.alphavantage.co/support/#api-key")
         print()
         return 0
     else:

@@ -6,10 +6,13 @@ Simple script to verify Alpha Vantage API is working.
 This is a minimal test - use alpha_vantage_demo.py for full examples.
 
 Usage:
+    # Set API key via environment variable
+    export ALPHAVANTAGE_API_KEY=your_api_key_here
     python examples/quick_alpha_vantage_test.py
 """
 
 import sys
+import os
 from pathlib import Path
 from datetime import datetime, timedelta
 
@@ -25,8 +28,18 @@ def main():
     print("=" * 60)
     print()
     
-    # Your API key
-    api_key = "VT0RO0SAME6YV9PC"
+    # Get API key from environment variable
+    api_key = os.environ.get('ALPHAVANTAGE_API_KEY')
+    
+    if not api_key:
+        print("✗ Error: ALPHAVANTAGE_API_KEY environment variable not set")
+        print()
+        print("Please set your API key:")
+        print("  export ALPHAVANTAGE_API_KEY=your_api_key_here")
+        print()
+        print("Get a free API key at:")
+        print("  https://www.alphavantage.co/support/#api-key")
+        return 1
     
     # Create source
     print("1. Initializing Alpha Vantage source...")

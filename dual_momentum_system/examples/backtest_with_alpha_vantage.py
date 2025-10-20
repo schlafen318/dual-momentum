@@ -47,15 +47,25 @@ def run_data_download_with_alpha_vantage():
     # 1. Configure data source with Alpha Vantage
     print_section("Step 1: Configure Data Source")
     
-    config = {
-        'alphavantage_api_key': 'VT0RO0SAME6YV9PC'
-    }
+    import os
+    api_key = os.environ.get('ALPHAVANTAGE_API_KEY')
+    
+    config = {}
+    if api_key:
+        config['alphavantage_api_key'] = api_key
+        print(f"✓ Alpha Vantage API key loaded from environment")
+    else:
+        print("⚠️  ALPHAVANTAGE_API_KEY not set - will only use Yahoo Finance")
+        print("   Set with: export ALPHAVANTAGE_API_KEY=your_api_key_here")
     
     data_source = get_default_data_source(config)
     
-    print("✓ Multi-source data provider configured:")
+    print("\n✓ Multi-source data provider configured:")
     print(f"  - Primary: Yahoo Finance Direct (no API key needed)")
-    print(f"  - Backup: Alpha Vantage (API key configured)")
+    if api_key:
+        print(f"  - Backup: Alpha Vantage (API key configured)")
+    else:
+        print(f"  - Backup: Alpha Vantage (not configured - optional)")
     print()
     
     # Check availability
@@ -222,10 +232,10 @@ def main():
             print("  4. The system will automatically use Alpha Vantage if Yahoo fails")
             print()
             print("API Key Management:")
-            print("  - Current API key: VT0RO0SAME6YV9PC (hardcoded in script)")
-            print("  - Better: Set ALPHAVANTAGE_API_KEY environment variable")
+            print("  - Set ALPHAVANTAGE_API_KEY environment variable")
             print("  - Or create .env file with your API key")
             print("  - See .env.example for template")
+            print("  - Get free key: https://www.alphavantage.co/support/#api-key")
             print()
             print("For Complete Backtesting:")
             print("  python examples/complete_backtest_example.py")
