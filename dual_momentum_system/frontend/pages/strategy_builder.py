@@ -196,9 +196,14 @@ def render_strategy_configuration():
         safe_asset = st.text_input(
             "Safe Asset Symbol (optional)",
             value="",
-            help="Asset to hold when momentum is negative (e.g., 'SHY' for short-term bonds)"
+            placeholder="Default: None (cash)",
+            help="Asset to hold when momentum is negative. Common choices: AGG (aggregate bonds), SHY (short-term bonds), BIL (T-bills). If empty, portfolio holds cash during defensive periods."
         )
         st.session_state.safe_asset = safe_asset if safe_asset else None
+        
+        # Display default information
+        if not safe_asset:
+            st.caption("💡 Default: **Cash** (no safe asset ticker) - Recommended: **AGG** for bond allocation during downturns")
     
     # Benchmark selection
     render_section_divider()
@@ -312,6 +317,8 @@ def render_configuration_summary():
     """, unsafe_allow_html=True)
     
     benchmark = st.session_state.get('benchmark_symbol')
+    safe_asset = st.session_state.get('safe_asset')
+    safe_asset_display = safe_asset if safe_asset else 'Cash'
     st.markdown(f"""
     <div class="card">
         <h4>Parameters</h4>
@@ -319,6 +326,7 @@ def render_configuration_summary():
             <li>📏 <strong>Lookback:</strong> {st.session_state.get('lookback_period', 0)} days</li>
             <li>🎯 <strong>Threshold:</strong> {st.session_state.get('absolute_threshold', 0):.2f}</li>
             <li>📊 <strong>Vol. Adj.:</strong> {'Yes' if st.session_state.get('use_volatility', False) else 'No'}</li>
+            <li>🛡️ <strong>Safe Asset:</strong> {safe_asset_display}</li>
             <li>📈 <strong>Benchmark:</strong> {benchmark if benchmark else 'None'}</li>
         </ul>
     </div>
