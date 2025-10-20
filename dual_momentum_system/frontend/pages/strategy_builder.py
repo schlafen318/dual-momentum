@@ -440,9 +440,9 @@ def run_backtest():
         status_text.text("🔄 Initializing data source...")
         progress_bar.progress(10)
         
-        # Initialize real data source (Yahoo Finance)
-        from src.data_sources.yahoo_finance import YahooFinanceSource
-        data_source = YahooFinanceSource(config={'cache_enabled': True})
+        # Initialize real data source (Yahoo Finance Direct - Streamlit compatible)
+        from src.data_sources.yahoo_finance_direct import YahooFinanceDirectSource
+        data_source = YahooFinanceDirectSource(config={'cache_enabled': True})
         
         # Get asset class
         asset_class_str = st.session_state.get('asset_class', 'equity').lower()
