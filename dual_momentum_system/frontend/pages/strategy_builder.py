@@ -440,9 +440,26 @@ def run_backtest():
         status_text.text("🔄 Initializing data source...")
         progress_bar.progress(10)
         
-        # Initialize real data source (Yahoo Finance Direct - Streamlit compatible)
-        from src.data_sources.yahoo_finance_direct import YahooFinanceDirectSource
-        data_source = YahooFinanceDirectSource(config={'cache_enabled': True})
+        # Initialize multi-source data provider with automatic failover
+        from src.data_sources import get_default_data_source
+        import os
+        
+        # Get API keys from environment or Streamlit secrets if available
+        api_config = {}
+        if hasattr(st, 'secrets'):
+            if 'ALPHAVANTAGE_API_KEY' in st.secrets:
+                api_config['alphavantage_api_key'] = st.secrets['ALPHAVANTAGE_API_KEY']
+            if 'TWELVEDATA_API_KEY' in st.secrets:
+                api_config['twelvedata_api_key'] = st.secrets['TWELVEDATA_API_KEY']
+        
+        # Also check environment variables
+        if 'ALPHAVANTAGE_API_KEY' in os.environ:
+            api_config['alphavantage_api_key'] = os.environ['ALPHAVANTAGE_API_KEY']
+        if 'TWELVEDATA_API_KEY' in os.environ:
+            api_config['twelvedata_api_key'] = os.environ['TWELVEDATA_API_KEY']
+        
+        # Create multi-source provider (Yahoo + optional alternatives)
+        data_source = get_default_data_source(api_config)
         
         # Get asset class
         asset_class_str = st.session_state.get('asset_class', 'equity').lower()
@@ -628,7 +645,7 @@ def fetch_real_data(
         symbols: List of symbols to fetch
         start_date: Start date
         end_date: End date
-        data_source: YahooFinanceSource instance
+        data_source: Multi-source data provider with automatic failover
         asset_instance: Asset class instance for normalization
         status_text: Optional Streamlit text element for progress updates
     

@@ -71,14 +71,16 @@ def main():
     print("[STEP 3] Loading Data...")
     print("-" * 80)
     
-    # Get data source
-    YahooFinance = plugin_manager.get_data_source('YahooFinanceSource')
-    if not YahooFinance:
-        print("✗ Yahoo Finance data source not available")
-        return
+    # Get multi-source data provider with automatic failover
+    from src.data_sources import get_default_data_source
+    data_source = get_default_data_source()
+    print(f"✓ Using multi-source data provider with {len(data_source.sources)} source(s)")
     
-    data_source = YahooFinance(config={'cache_enabled': True})
-    print(f"✓ Using data source: {data_source.get_name()}")
+    # Show source status
+    source_status = data_source.get_source_status()
+    for source_name, is_available in source_status.items():
+        status = "✓ Available" if is_available else "✗ Unavailable"
+        print(f"  - {source_name}: {status}")
     
     # Get asset class
     EquityAsset = plugin_manager.get_asset_class('EquityAsset')
