@@ -1,0 +1,40 @@
+name: Test Alpha Vantage Integration
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.10'
+    
+    - name: Install dependencies
+      run: |
+        cd dual_momentum_system
+        pip install -q pandas requests loguru
+    
+    - name: Test Alpha Vantage (with API key from secrets)
+      env:
+        ALPHAVANTAGE_API_KEY: ${{ secrets.ALPHAVANTAGE_API_KEY }}
+      run: |
+        cd dual_momentum_system
+        python3 examples/quick_alpha_vantage_test.py
+    
+    - name: Test Multi-source Download
+      env:
+        ALPHAVANTAGE_API_KEY: ${{ secrets.ALPHAVANTAGE_API_KEY }}
+      run: |
+        cd dual_momentum_system
+        python3 examples/backtest_with_alpha_vantage.py
