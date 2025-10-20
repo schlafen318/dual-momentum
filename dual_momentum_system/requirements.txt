@@ -10,7 +10,7 @@ scipy>=1.10.0
 # Backtesting & Financial Analysis
 vectorbt>=0.26.0
 quantstats>=0.0.62
-empyrical>=0.5.5
+empyrical-reloaded>=0.5.5  # Python 3.13 compatible fork of empyrical
 
 # Data Sources
 yfinance>=0.2.28
