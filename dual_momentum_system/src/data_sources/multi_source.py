@@ -85,54 +85,143 @@ class MultiSourceDataProvider(BaseDataSource):
         Raises:
             ConnectionError: If all sources fail
         """
+        fetch_start = time.time()
+        logger.info(f"[MULTI-SOURCE] Fetching {symbol} from {len(self.sources)} sources with failover")
+        logger.debug(f"[MULTI-SOURCE] Available sources: {[s.get_name() for s in self.sources]}")
+        
         # Check cache first
         cached_data = self.get_from_cache(symbol, start_date, end_date, timeframe)
         if cached_data is not None:
-            logger.debug(f"Using cached data for {symbol}")
+            logger.info(f"[MULTI-SOURCE CACHE HIT] {symbol}: Using cached data with {len(cached_data)} rows")
             return cached_data
+        else:
+            logger.debug(f"[MULTI-SOURCE CACHE MISS] {symbol}: No cached data, trying sources")
         
         errors = []
+        attempt_details = []
         
         for i, source in enumerate(self.sources):
+            source_name = source.get_name()
+            attempt_start = time.time()
+            
             try:
-                logger.debug(f"Trying source {i+1}/{len(self.sources)}: {source.get_name()}")
+                logger.info(f"[FAILOVER ATTEMPT {i+1}/{len(self.sources)}] Trying {source_name} for {symbol}")
                 
                 # Validate timeframe support (but skip is_available() check here
                 # to avoid making extra HTTP requests for each symbol)
                 if not source.validate_timeframe(timeframe):
-                    logger.warning(f"Source {source.get_name()} doesn't support timeframe {timeframe}")
-                    errors.append(f"{source.get_name()}: Timeframe not supported")
+                    reason = f"Timeframe '{timeframe}' not supported"
+                    attempt_duration = time.time() - attempt_start
+                    logger.warning(f"[FAILOVER SKIP] {source_name}: {reason} (checked in {attempt_duration:.2f}s)")
+                    errors.append(f"{source_name}: {reason}")
+                    attempt_details.append({
+                        'source': source_name,
+                        'status': 'skipped',
+                        'reason': reason,
+                        'duration': attempt_duration
+                    })
                     continue
                 
                 # Attempt to fetch data
                 # The actual fetch will fail naturally if the source is unavailable,
                 # so we don't need a separate is_available() check that makes extra requests
+                logger.debug(f"[FAILOVER ATTEMPT] {source_name}: Calling fetch_data()...")
                 data = source.fetch_data(symbol, start_date, end_date, timeframe)
+                attempt_duration = time.time() - attempt_start
                 
                 # Check if data is empty
                 if data is None or data.empty:
                     if self.retry_on_empty:
-                        logger.warning(f"Source {source.get_name()} returned empty data for {symbol}")
-                        errors.append(f"{source.get_name()}: Empty data")
+                        reason = "Empty data returned"
+                        logger.warning(f"[FAILOVER FAILED] {source_name}: {reason} (attempt took {attempt_duration:.2f}s)")
+                        errors.append(f"{source_name}: {reason}")
+                        attempt_details.append({
+                            'source': source_name,
+                            'status': 'empty',
+                            'reason': reason,
+                            'duration': attempt_duration
+                        })
                         continue
+                    else:
+                        logger.info(f"[FAILOVER EMPTY] {source_name}: Empty data but retry_on_empty=False, accepting result")
                 
                 # Success!
-                logger.info(f"✓ Successfully fetched {len(data)} rows for {symbol} from {source.get_name()}")
+                total_duration = time.time() - fetch_start
+                logger.info(f"[FAILOVER SUCCESS] ✓ {symbol}: Fetched {len(data)} rows from {source_name} (source: {attempt_duration:.2f}s, total: {total_duration:.2f}s)")
+                logger.info(f"[FAILOVER SUCCESS] Data range: {data.index[0]} to {data.index[-1]}")
+                
+                attempt_details.append({
+                    'source': source_name,
+                    'status': 'success',
+                    'rows': len(data),
+                    'duration': attempt_duration
+                })
+                
+                # Log attempt summary
+                if len(attempt_details) > 1:
+                    logger.info(f"[FAILOVER SUMMARY] Succeeded on attempt {i+1}/{len(self.sources)} after trying: {', '.join([a['source'] for a in attempt_details])}")
                 
                 # Add to cache
                 self.add_to_cache(symbol, start_date, end_date, timeframe, data)
                 
                 return data
                 
-            except Exception as e:
+            except ValueError as e:
+                # Configuration or validation errors
+                attempt_duration = time.time() - attempt_start
+                error_msg = str(e)
+                logger.warning(f"[FAILOVER VALIDATION ERROR] {source_name}: {error_msg} (attempt took {attempt_duration:.2f}s)")
+                errors.append(f"{source_name}: Validation - {error_msg}")
+                attempt_details.append({
+                    'source': source_name,
+                    'status': 'validation_error',
+                    'error': error_msg,
+                    'duration': attempt_duration
+                })
+                continue
+                
+            except ConnectionError as e:
+                # Network or API errors
+                attempt_duration = time.time() - attempt_start
+                error_msg = str(e)[:200]  # Truncate long error messages
                 if self.log_failures:
-                    logger.warning(f"Source {source.get_name()} failed for {symbol}: {e}")
-                errors.append(f"{source.get_name()}: {str(e)}")
+                    logger.warning(f"[FAILOVER CONNECTION ERROR] {source_name}: {error_msg} (attempt took {attempt_duration:.2f}s)")
+                errors.append(f"{source_name}: Connection - {error_msg}")
+                attempt_details.append({
+                    'source': source_name,
+                    'status': 'connection_error',
+                    'error': error_msg,
+                    'duration': attempt_duration
+                })
+                continue
+                
+            except Exception as e:
+                # Unexpected errors
+                attempt_duration = time.time() - attempt_start
+                error_type = type(e).__name__
+                error_msg = str(e)[:200]
+                if self.log_failures:
+                    logger.warning(f"[FAILOVER ERROR] {source_name}: {error_type}: {error_msg} (attempt took {attempt_duration:.2f}s)")
+                    logger.debug(f"[FAILOVER ERROR] Full error for {source_name}:", exc_info=True)
+                errors.append(f"{source_name}: {error_type} - {error_msg}")
+                attempt_details.append({
+                    'source': source_name,
+                    'status': 'error',
+                    'error_type': error_type,
+                    'error': error_msg,
+                    'duration': attempt_duration
+                })
                 continue
         
         # All sources failed
+        total_duration = time.time() - fetch_start
+        logger.error(f"[FAILOVER EXHAUSTED] All {len(self.sources)} sources failed for {symbol} after {total_duration:.2f}s")
+        logger.error(f"[FAILOVER EXHAUSTED] Attempt details:")
+        for detail in attempt_details:
+            logger.error(f"[FAILOVER EXHAUSTED]   - {detail['source']}: {detail['status']} ({detail['duration']:.2f}s)")
+        
         error_msg = f"All {len(self.sources)} data sources failed for {symbol}:\n" + "\n".join(f"  - {e}" for e in errors)
-        logger.error(error_msg)
+        logger.error(f"[FAILOVER EXHAUSTED] Detailed errors:\n{error_msg}")
         raise ConnectionError(error_msg)
     
     def fetch_multiple(
@@ -154,26 +243,54 @@ class MultiSourceDataProvider(BaseDataSource):
         Returns:
             Dictionary mapping symbols to DataFrames
         """
-        logger.info(f"Fetching {len(symbols)} symbols with multi-source failover")
+        batch_start = time.time()
+        logger.info(f"[MULTI-BATCH START] Fetching {len(symbols)} symbols with multi-source failover")
+        logger.info(f"[MULTI-BATCH START] Symbols: {', '.join(symbols)}")
+        logger.info(f"[MULTI-BATCH START] Sources: {', '.join([s.get_name() for s in self.sources])}")
         
         result = {}
         failed = []
+        source_usage = {source.get_name(): 0 for source in self.sources}
         
-        for symbol in symbols:
+        for i, symbol in enumerate(symbols):
+            symbol_start = time.time()
             try:
+                logger.info(f"[MULTI-BATCH] Processing {i+1}/{len(symbols)}: {symbol}")
                 df = self.fetch_data(symbol, start_date, end_date, timeframe)
+                
                 if df is not None and not df.empty:
                     result[symbol] = df
+                    symbol_duration = time.time() - symbol_start
+                    logger.info(f"[MULTI-BATCH SUCCESS] {symbol}: {len(df)} rows ({symbol_duration:.2f}s)")
                 else:
-                    failed.append(symbol)
+                    failed.append((symbol, "Empty data from all sources"))
+                    logger.warning(f"[MULTI-BATCH FAILED] {symbol}: Empty data")
+                    
+            except ConnectionError as e:
+                symbol_duration = time.time() - symbol_start
+                error_msg = str(e)[:200]
+                failed.append((symbol, error_msg))
+                logger.error(f"[MULTI-BATCH FAILED] {symbol}: {error_msg} ({symbol_duration:.2f}s)")
+                continue
+                
             except Exception as e:
-                logger.error(f"Failed to fetch {symbol}: {e}")
-                failed.append(symbol)
+                symbol_duration = time.time() - symbol_start
+                error_type = type(e).__name__
+                error_msg = str(e)[:200]
+                failed.append((symbol, f"{error_type}: {error_msg}"))
+                logger.error(f"[MULTI-BATCH ERROR] {symbol}: {error_type}: {error_msg} ({symbol_duration:.2f}s)")
                 continue
         
-        logger.info(f"Successfully fetched {len(result)}/{len(symbols)} symbols")
+        batch_duration = time.time() - batch_start
+        success_rate = (len(result) / len(symbols) * 100) if symbols else 0
+        
+        logger.info(f"[MULTI-BATCH COMPLETE] Successfully fetched {len(result)}/{len(symbols)} symbols ({success_rate:.1f}%) in {batch_duration:.2f}s")
+        logger.info(f"[MULTI-BATCH COMPLETE] Average time per symbol: {batch_duration/len(symbols):.2f}s")
+        
         if failed:
-            logger.warning(f"Failed symbols: {', '.join(failed)}")
+            logger.warning(f"[MULTI-BATCH FAILED] Failed to fetch {len(failed)} symbols:")
+            for symbol, reason in failed:
+                logger.warning(f"[MULTI-BATCH FAILED]   - {symbol}: {reason}")
         
         return result
     

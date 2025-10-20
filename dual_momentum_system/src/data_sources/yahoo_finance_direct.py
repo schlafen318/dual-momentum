@@ -84,18 +84,24 @@ class YahooFinanceDirectSource(BaseDataSource):
             ValueError: If symbol or timeframe is invalid
             ConnectionError: If unable to fetch data
         """
+        fetch_start_time = time.time()
+        logger.info(f"[FETCH START] Symbol: {symbol}, Date Range: {start_date.date()} to {end_date.date()}, Timeframe: {timeframe}")
+        
         # Check cache first
         cached_data = self.get_from_cache(symbol, start_date, end_date, timeframe)
         if cached_data is not None:
-            logger.debug(f"Using cached data for {symbol}")
+            logger.info(f"[CACHE HIT] {symbol}: Found {len(cached_data)} cached rows (elapsed: {time.time() - fetch_start_time:.2f}s)")
             return cached_data
+        else:
+            logger.debug(f"[CACHE MISS] {symbol}: No cached data found, fetching from API")
         
         # Validate timeframe
         if not self.validate_timeframe(timeframe):
+            logger.error(f"[VALIDATION ERROR] Unsupported timeframe '{timeframe}' for {symbol}. Supported: {self.get_supported_timeframes()}")
             raise ValueError(f"Unsupported timeframe: {timeframe}")
         
         try:
-            logger.info(f"Fetching {symbol} from Yahoo Finance (Direct): {start_date} to {end_date}")
+            logger.info(f"[API REQUEST] Initiating Yahoo Finance request for {symbol}")
             
             # Build request parameters
             params = {
@@ -106,53 +112,119 @@ class YahooFinanceDirectSource(BaseDataSource):
                 'includeAdjustedClose': 'true'
             }
             
-            # Make request with retries
             url = f"{self.BASE_URL}{symbol}"
+            logger.debug(f"[REQUEST DETAILS] URL: {url}")
+            logger.debug(f"[REQUEST DETAILS] Params: {params}")
+            logger.debug(f"[REQUEST DETAILS] Timeout: {self.timeout}s, Max Retries: {self.max_retries}")
+            
+            # Make request with retries
+            request_start = time.time()
             data = self._make_request_with_retry(url, params)
+            request_duration = time.time() - request_start
             
             if not data:
-                logger.warning(f"No data returned for {symbol}")
+                logger.error(f"[API ERROR] No data returned for {symbol} after {request_duration:.2f}s")
                 return pd.DataFrame()
+            
+            logger.info(f"[API SUCCESS] Received response for {symbol} in {request_duration:.2f}s")
+            logger.debug(f"[RESPONSE STRUCTURE] Keys: {list(data.keys())}")
             
             # Parse response
+            parse_start = time.time()
             df = self._parse_chart_response(data)
+            parse_duration = time.time() - parse_start
             
             if df.empty:
-                logger.warning(f"Empty dataframe after parsing for {symbol}")
+                logger.warning(f"[PARSE WARNING] Empty dataframe after parsing {symbol} (parse time: {parse_duration:.2f}s)")
+                logger.debug(f"[PARSE WARNING] Response data: {str(data)[:500]}...")
                 return pd.DataFrame()
+            
+            # Validate data quality
+            logger.debug(f"[DATA VALIDATION] {symbol}: Shape={df.shape}, Columns={list(df.columns)}")
+            logger.debug(f"[DATA VALIDATION] {symbol}: Date range={df.index[0]} to {df.index[-1]}")
+            
+            null_counts = df.isnull().sum()
+            if null_counts.any():
+                logger.warning(f"[DATA QUALITY] {symbol}: Null values detected: {null_counts[null_counts > 0].to_dict()}")
             
             # Add to cache
             self.add_to_cache(symbol, start_date, end_date, timeframe, df)
             
-            logger.debug(f"Successfully fetched {len(df)} rows for {symbol}")
+            total_duration = time.time() - fetch_start_time
+            logger.info(f"[FETCH SUCCESS] {symbol}: {len(df)} rows fetched successfully (total: {total_duration:.2f}s, parse: {parse_duration:.2f}s)")
             return df
             
         except Exception as e:
-            logger.error(f"Error fetching data for {symbol}: {e}")
+            total_duration = time.time() - fetch_start_time
+            logger.error(f"[FETCH FAILED] {symbol}: {type(e).__name__}: {e} (elapsed: {total_duration:.2f}s)")
+            logger.exception(f"[FETCH FAILED] Full traceback for {symbol}:")
             raise ConnectionError(f"Failed to fetch data from Yahoo Finance: {e}")
     
     def _make_request_with_retry(self, url: str, params: Dict) -> Optional[Dict]:
         """Make HTTP request with retry logic."""
         for attempt in range(self.max_retries):
             try:
+                logger.debug(f"[HTTP REQUEST] Attempt {attempt + 1}/{self.max_retries}: GET {url}")
+                request_time = time.time()
+                
                 response = self.session.get(
                     url,
                     params=params,
                     timeout=self.timeout
                 )
-                response.raise_for_status()
-                return response.json()
                 
-            except requests.exceptions.RequestException as e:
-                logger.warning(f"Request attempt {attempt + 1} failed: {e}")
+                response_time = time.time() - request_time
+                logger.debug(f"[HTTP RESPONSE] Status: {response.status_code}, Time: {response_time:.2f}s, Size: {len(response.content)} bytes")
+                logger.debug(f"[HTTP RESPONSE] Headers: {dict(response.headers)}")
+                
+                response.raise_for_status()
+                
+                json_data = response.json()
+                logger.debug(f"[HTTP RESPONSE] Successfully parsed JSON response")
+                return json_data
+                
+            except requests.exceptions.Timeout as e:
+                logger.warning(f"[HTTP TIMEOUT] Attempt {attempt + 1}/{self.max_retries}: Request timed out after {self.timeout}s: {e}")
+                if attempt < self.max_retries - 1:
+                    time.sleep(self.retry_delay)
+                else:
+                    logger.error(f"[HTTP FAILED] All {self.max_retries} attempts timed out")
+                    raise
+                    
+            except requests.exceptions.HTTPError as e:
+                status_code = e.response.status_code if e.response else None
+                response_body = e.response.text[:500] if e.response else None
+                
+                logger.warning(f"[HTTP ERROR] Attempt {attempt + 1}/{self.max_retries}: HTTP {status_code}: {e}")
+                logger.debug(f"[HTTP ERROR] Response body: {response_body}")
+                
                 if attempt < self.max_retries - 1:
                     # Increase delay for rate limit errors
                     delay = self.retry_delay
-                    if 'Too Many Requests' in str(e) or '429' in str(e):
+                    if status_code == 429 or 'Too Many Requests' in str(e):
                         delay = self.retry_delay * 2
-                        logger.info(f"Rate limit detected, waiting {delay}s before retry")
+                        logger.info(f"[RATE LIMIT] Detected 429 error, waiting {delay}s before retry")
+                    elif status_code and 500 <= status_code < 600:
+                        logger.info(f"[SERVER ERROR] Server error {status_code}, waiting {delay}s before retry")
                     time.sleep(delay)
                 else:
+                    logger.error(f"[HTTP FAILED] All {self.max_retries} attempts failed with HTTP errors")
+                    raise
+                    
+            except requests.exceptions.ConnectionError as e:
+                logger.warning(f"[CONNECTION ERROR] Attempt {attempt + 1}/{self.max_retries}: {e}")
+                if attempt < self.max_retries - 1:
+                    time.sleep(self.retry_delay)
+                else:
+                    logger.error(f"[CONNECTION FAILED] Could not establish connection after {self.max_retries} attempts")
+                    raise
+                    
+            except requests.exceptions.RequestException as e:
+                logger.warning(f"[REQUEST ERROR] Attempt {attempt + 1}/{self.max_retries}: {type(e).__name__}: {e}")
+                if attempt < self.max_retries - 1:
+                    time.sleep(self.retry_delay)
+                else:
+                    logger.error(f"[REQUEST FAILED] All {self.max_retries} attempts failed")
                     raise
         
         return None
@@ -160,23 +232,45 @@ class YahooFinanceDirectSource(BaseDataSource):
     def _parse_chart_response(self, data: Dict) -> pd.DataFrame:
         """Parse Yahoo Finance chart API response."""
         try:
+            logger.debug(f"[PARSE START] Parsing chart response")
+            
+            # Check for error in response
+            if 'chart' in data and 'error' in data['chart']:
+                error_info = data['chart']['error']
+                logger.error(f"[PARSE ERROR] API returned error: {error_info}")
+                return pd.DataFrame()
+            
             result = data.get('chart', {}).get('result', [])
             if not result:
+                logger.warning(f"[PARSE WARNING] No result in chart response. Available keys: {list(data.keys())}")
+                if 'chart' in data:
+                    logger.debug(f"[PARSE WARNING] Chart keys: {list(data['chart'].keys())}")
                 return pd.DataFrame()
             
             result = result[0]
+            logger.debug(f"[PARSE INFO] Result keys: {list(result.keys())}")
+            
+            # Extract metadata
+            meta = result.get('meta', {})
+            logger.debug(f"[PARSE INFO] Symbol: {meta.get('symbol')}, Currency: {meta.get('currency')}, Exchange: {meta.get('exchangeName')}")
+            logger.debug(f"[PARSE INFO] Regular market price: {meta.get('regularMarketPrice')}, Previous close: {meta.get('previousClose')}")
             
             # Extract timestamps
             timestamps = result.get('timestamp', [])
             if not timestamps:
+                logger.warning(f"[PARSE WARNING] No timestamps in result. Available keys: {list(result.keys())}")
                 return pd.DataFrame()
+            
+            logger.debug(f"[PARSE INFO] Found {len(timestamps)} timestamps")
             
             # Extract quotes
             quotes = result.get('indicators', {}).get('quote', [])
             if not quotes:
+                logger.warning(f"[PARSE WARNING] No quotes in indicators. Indicators keys: {list(result.get('indicators', {}).keys())}")
                 return pd.DataFrame()
             
             quote = quotes[0]
+            logger.debug(f"[PARSE INFO] Quote keys: {list(quote.keys())}")
             
             # Build dataframe
             df = pd.DataFrame({
@@ -187,6 +281,8 @@ class YahooFinanceDirectSource(BaseDataSource):
                 'volume': quote.get('volume', [])
             })
             
+            logger.debug(f"[PARSE INFO] Created dataframe with shape: {df.shape}")
+            
             # Add timestamps as index
             df.index = pd.to_datetime(timestamps, unit='s')
             df.index.name = 'Date'
@@ -195,14 +291,22 @@ class YahooFinanceDirectSource(BaseDataSource):
             adjclose = result.get('indicators', {}).get('adjclose', [])
             if adjclose and adjclose[0].get('adjclose'):
                 df['adjclose'] = adjclose[0]['adjclose']
+                logger.debug(f"[PARSE INFO] Added adjusted close column")
             
             # Remove rows with all NaN values
+            rows_before = len(df)
             df = df.dropna(how='all')
+            rows_after = len(df)
             
+            if rows_before != rows_after:
+                logger.debug(f"[PARSE INFO] Removed {rows_before - rows_after} rows with all NaN values")
+            
+            logger.debug(f"[PARSE SUCCESS] Final dataframe: {len(df)} rows, {len(df.columns)} columns")
             return df
             
         except Exception as e:
-            logger.error(f"Error parsing response: {e}")
+            logger.error(f"[PARSE EXCEPTION] {type(e).__name__}: {e}")
+            logger.exception(f"[PARSE EXCEPTION] Full traceback:")
             return pd.DataFrame()
     
     def get_supported_assets(self) -> List[str]:
@@ -394,28 +498,50 @@ class YahooFinanceDirectSource(BaseDataSource):
         Returns:
             Dictionary mapping symbols to DataFrames
         """
-        logger.info(f"Fetching {len(symbols)} symbols from Yahoo Finance (Direct)")
+        batch_start = time.time()
+        logger.info(f"[BATCH START] Fetching {len(symbols)} symbols from Yahoo Finance (Direct)")
+        logger.info(f"[BATCH START] Symbols: {', '.join(symbols)}")
+        logger.info(f"[BATCH START] Date range: {start_date.date()} to {end_date.date()}, Timeframe: {timeframe}")
         
         result = {}
+        failed = []
+        
         for i, symbol in enumerate(symbols):
             try:
+                logger.info(f"[BATCH PROGRESS] Processing {i+1}/{len(symbols)}: {symbol}")
                 df = self.fetch_data(symbol, start_date, end_date, timeframe)
                 if df is not None and not df.empty:
                     result[symbol] = df
+                    logger.info(f"[BATCH SUCCESS] {symbol}: {len(df)} rows retrieved")
+                else:
+                    failed.append((symbol, "Empty data"))
+                    logger.warning(f"[BATCH FAILED] {symbol}: Received empty data")
                 
                 # Add delay between requests to avoid rate limiting
                 # (except after the last symbol)
                 if i < len(symbols) - 1:
+                    logger.debug(f"[BATCH DELAY] Waiting {self.request_delay}s before next request")
                     time.sleep(self.request_delay)
                     
             except Exception as e:
-                logger.error(f"Error fetching {symbol}: {e}")
+                error_type = type(e).__name__
+                failed.append((symbol, f"{error_type}: {str(e)[:100]}"))
+                logger.error(f"[BATCH ERROR] {symbol}: {error_type}: {e}")
                 # Add delay even on error to avoid hammering the API
                 if i < len(symbols) - 1:
                     time.sleep(self.request_delay)
                 continue
         
-        logger.info(f"Successfully fetched {len(result)} symbols")
+        batch_duration = time.time() - batch_start
+        success_rate = (len(result) / len(symbols) * 100) if symbols else 0
+        
+        logger.info(f"[BATCH COMPLETE] Successfully fetched {len(result)}/{len(symbols)} symbols ({success_rate:.1f}%) in {batch_duration:.2f}s")
+        
+        if failed:
+            logger.warning(f"[BATCH FAILED] Failed to fetch {len(failed)} symbols:")
+            for symbol, reason in failed:
+                logger.warning(f"[BATCH FAILED]   - {symbol}: {reason}")
+        
         return result
     
     @classmethod
