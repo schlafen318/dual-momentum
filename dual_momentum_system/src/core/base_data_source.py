@@ -330,7 +330,10 @@ class BaseDataSource(ABC):
         Returns:
             Cache key string
         """
-        return f"{symbol}_{start_date.date()}_{end_date.date()}_{timeframe}"
+        # Handle both datetime and date objects
+        start = start_date.date() if hasattr(start_date, 'date') and callable(start_date.date) else start_date
+        end = end_date.date() if hasattr(end_date, 'date') and callable(end_date.date) else end_date
+        return f"{symbol}_{start}_{end}_{timeframe}"
     
     def get_from_cache(
         self,
