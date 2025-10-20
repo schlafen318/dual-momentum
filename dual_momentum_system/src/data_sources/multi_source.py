@@ -97,19 +97,16 @@ class MultiSourceDataProvider(BaseDataSource):
             try:
                 logger.debug(f"Trying source {i+1}/{len(self.sources)}: {source.get_name()}")
                 
-                # Check if source is available
-                if not source.is_available():
-                    logger.warning(f"Source {source.get_name()} is not available, skipping")
-                    errors.append(f"{source.get_name()}: Not available")
-                    continue
-                
-                # Validate timeframe support
+                # Validate timeframe support (but skip is_available() check here
+                # to avoid making extra HTTP requests for each symbol)
                 if not source.validate_timeframe(timeframe):
                     logger.warning(f"Source {source.get_name()} doesn't support timeframe {timeframe}")
                     errors.append(f"{source.get_name()}: Timeframe not supported")
                     continue
                 
                 # Attempt to fetch data
+                # The actual fetch will fail naturally if the source is unavailable,
+                # so we don't need a separate is_available() check that makes extra requests
                 data = source.fetch_data(symbol, start_date, end_date, timeframe)
                 
                 # Check if data is empty
