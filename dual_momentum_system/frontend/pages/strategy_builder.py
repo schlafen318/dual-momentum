@@ -653,44 +653,108 @@ def fetch_real_data(
     Returns:
         Dictionary of symbol -> PriceData with real market data
     """
+    from loguru import logger
+    
+    batch_start = time.time()
+    logger.info(f"[FRONTEND FETCH] Starting data fetch for {len(symbols)} symbols")
+    logger.info(f"[FRONTEND FETCH] Symbols: {', '.join(symbols)}")
+    logger.info(f"[FRONTEND FETCH] Date range: {start_date} to {end_date}")
+    logger.info(f"[FRONTEND FETCH] Data source type: {type(data_source).__name__}")
+    logger.info(f"[FRONTEND FETCH] Asset class: {type(asset_instance).__name__}")
+    
     price_data_dict = {}
     failed_symbols = []
+    fetch_times = []
     
     for i, symbol in enumerate(symbols):
+        symbol_start = time.time()
         try:
             if status_text:
-                status_text.text(f"📊 Fetching {symbol}...")
+                status_text.text(f"📊 Fetching {symbol}... ({i+1}/{len(symbols)})")
+            
+            logger.info(f"[FRONTEND FETCH] Processing symbol {i+1}/{len(symbols)}: {symbol}")
             
             # Fetch real data from Yahoo Finance
+            fetch_start = time.time()
             raw_data = data_source.fetch_data(
                 symbol=symbol,
                 start_date=start_date,
                 end_date=end_date,
                 timeframe='1d'
             )
+            fetch_duration = time.time() - fetch_start
             
             if not raw_data.empty:
+                logger.info(f"[FRONTEND FETCH] {symbol}: Received {len(raw_data)} rows in {fetch_duration:.2f}s")
+                logger.debug(f"[FRONTEND FETCH] {symbol}: Columns={list(raw_data.columns)}, Date range={raw_data.index[0]} to {raw_data.index[-1]}")
+                
                 # Normalize data using asset class
+                normalize_start = time.time()
                 normalized = asset_instance.normalize_data(raw_data, symbol)
+                normalize_duration = time.time() - normalize_start
+                
+                logger.debug(f"[FRONTEND FETCH] {symbol}: Normalized in {normalize_duration:.2f}s")
                 price_data_dict[symbol] = normalized
+                
+                symbol_total = time.time() - symbol_start
+                fetch_times.append(symbol_total)
+                logger.info(f"[FRONTEND SUCCESS] {symbol}: Complete in {symbol_total:.2f}s (fetch: {fetch_duration:.2f}s, normalize: {normalize_duration:.2f}s)")
             else:
+                logger.warning(f"[FRONTEND FAILED] {symbol}: Empty data returned after {fetch_duration:.2f}s")
                 failed_symbols.append(symbol)
             
             # Add small delay between requests to avoid rate limiting
             # (except after the last symbol)
             if i < len(symbols) - 1:
+                logger.debug(f"[FRONTEND DELAY] Waiting 0.5s before next symbol")
+                time.sleep(0.5)
+                
+        except ConnectionError as e:
+            symbol_duration = time.time() - symbol_start
+            error_msg = str(e)[:200]
+            logger.error(f"[FRONTEND CONNECTION ERROR] {symbol}: {error_msg} (after {symbol_duration:.2f}s)")
+            failed_symbols.append(symbol)
+            if status_text:
+                status_text.text(f"⚠️ Failed to fetch {symbol}: Connection error")
+            # Add delay even on error to avoid hammering the API
+            if i < len(symbols) - 1:
+                time.sleep(0.5)
+                
+        except ValueError as e:
+            symbol_duration = time.time() - symbol_start
+            error_msg = str(e)
+            logger.error(f"[FRONTEND VALIDATION ERROR] {symbol}: {error_msg} (after {symbol_duration:.2f}s)")
+            failed_symbols.append(symbol)
+            if status_text:
+                status_text.text(f"⚠️ Failed to fetch {symbol}: {error_msg}")
+            if i < len(symbols) - 1:
                 time.sleep(0.5)
                 
         except Exception as e:
+            symbol_duration = time.time() - symbol_start
+            error_type = type(e).__name__
+            error_msg = str(e)[:200]
+            logger.error(f"[FRONTEND ERROR] {symbol}: {error_type}: {error_msg} (after {symbol_duration:.2f}s)")
+            logger.exception(f"[FRONTEND ERROR] Full traceback for {symbol}:")
             failed_symbols.append(symbol)
             if status_text:
-                status_text.text(f"⚠️ Failed to fetch {symbol}: {str(e)}")
+                status_text.text(f"⚠️ Failed to fetch {symbol}: {error_type}")
             # Add delay even on error to avoid hammering the API
             if i < len(symbols) - 1:
                 time.sleep(0.5)
     
+    batch_duration = time.time() - batch_start
+    success_rate = (len(price_data_dict) / len(symbols) * 100) if symbols else 0
+    
+    logger.info(f"[FRONTEND COMPLETE] Fetched {len(price_data_dict)}/{len(symbols)} symbols ({success_rate:.1f}%) in {batch_duration:.2f}s")
+    
+    if fetch_times:
+        avg_time = sum(fetch_times) / len(fetch_times)
+        logger.info(f"[FRONTEND STATS] Average time per symbol: {avg_time:.2f}s, Min: {min(fetch_times):.2f}s, Max: {max(fetch_times):.2f}s")
+    
     # Show summary
     if failed_symbols:
+        logger.warning(f"[FRONTEND FAILED SUMMARY] Failed symbols: {', '.join(failed_symbols)}")
         st.warning(
             f"⚠️ Could not fetch data for: {', '.join(failed_symbols)}\n"
             f"These symbols will be excluded from the backtest."

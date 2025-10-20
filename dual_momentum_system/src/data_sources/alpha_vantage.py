@@ -138,72 +138,107 @@ class AlphaVantageSource(BaseDataSource):
             ValueError: If API key not configured or timeframe invalid
             ConnectionError: If unable to fetch data
         """
+        fetch_start = time.time()
+        logger.info(f"[ALPHA VANTAGE] Fetching {symbol} from {start_date.date()} to {end_date.date()}, timeframe: {timeframe}")
+        
         if not self.api_key:
+            logger.error(f"[ALPHA VANTAGE ERROR] API key not configured for {symbol}")
             raise ValueError("Alpha Vantage API key not configured")
         
         # Check cache first
         cached_data = self.get_from_cache(symbol, start_date, end_date, timeframe)
         if cached_data is not None:
-            logger.debug(f"Using cached data for {symbol}")
+            logger.info(f"[ALPHA VANTAGE CACHE HIT] {symbol}: Using {len(cached_data)} cached rows")
             return cached_data
         
         try:
-            logger.info(f"Fetching {symbol} from Alpha Vantage: {start_date} to {end_date}")
-            
             # Enforce rate limiting
+            rate_limit_start = time.time()
             self._enforce_rate_limit()
+            rate_limit_duration = time.time() - rate_limit_start
+            if rate_limit_duration > 0.1:
+                logger.info(f"[ALPHA VANTAGE RATE LIMIT] Waited {rate_limit_duration:.2f}s for rate limiting")
             
             # Map timeframe
             function, interval = self._map_timeframe(timeframe)
+            logger.debug(f"[ALPHA VANTAGE] {symbol}: Using function={function}, interval={interval}")
             
             # Build request parameters
             params = {
                 'function': function,
                 'symbol': symbol,
-                'apikey': self.api_key,
-                'outputsize': 'full',  # Get full data (up to 20 years)
+                'apikey': '***',  # Don't log the actual key
+                'outputsize': 'full',
                 'datatype': 'json'
             }
             
             if interval:
                 params['interval'] = interval
             
+            logger.debug(f"[ALPHA VANTAGE REQUEST] URL: {self.BASE_URL}")
+            logger.debug(f"[ALPHA VANTAGE REQUEST] Params: {params}")
+            
             # Make request
+            request_start = time.time()
             response = self.session.get(
                 self.BASE_URL,
-                params=params,
+                params={**params, 'apikey': self.api_key},  # Use real key for request
                 timeout=self.timeout
             )
+            request_duration = time.time() - request_start
+            
+            logger.info(f"[ALPHA VANTAGE RESPONSE] {symbol}: HTTP {response.status_code} in {request_duration:.2f}s, Size: {len(response.content)} bytes")
+            
             response.raise_for_status()
             data = response.json()
             
+            logger.debug(f"[ALPHA VANTAGE RESPONSE] {symbol}: Response keys: {list(data.keys())}")
+            
             # Check for API errors
             if 'Error Message' in data:
-                raise ConnectionError(f"Alpha Vantage error: {data['Error Message']}")
+                error_msg = data['Error Message']
+                logger.error(f"[ALPHA VANTAGE API ERROR] {symbol}: {error_msg}")
+                raise ConnectionError(f"Alpha Vantage error: {error_msg}")
             
             if 'Note' in data:
                 # Rate limit message
-                logger.warning(f"Alpha Vantage rate limit: {data['Note']}")
+                note_msg = data['Note']
+                logger.warning(f"[ALPHA VANTAGE RATE LIMIT] {symbol}: {note_msg}")
                 raise ConnectionError("Alpha Vantage rate limit exceeded")
             
+            if 'Information' in data:
+                info_msg = data['Information']
+                logger.warning(f"[ALPHA VANTAGE INFO] {symbol}: {info_msg}")
+            
             # Parse response
+            parse_start = time.time()
             df = self._parse_response(data, function)
+            parse_duration = time.time() - parse_start
             
             if df.empty:
-                logger.warning(f"Empty dataframe after parsing for {symbol}")
+                logger.warning(f"[ALPHA VANTAGE EMPTY] {symbol}: Empty dataframe after parsing (parse time: {parse_duration:.2f}s)")
                 return pd.DataFrame()
             
+            logger.debug(f"[ALPHA VANTAGE PARSE] {symbol}: Parsed {len(df)} rows in {parse_duration:.2f}s")
+            
             # Filter by date range
+            rows_before = len(df)
             df = df[(df.index >= start_date) & (df.index <= end_date)]
+            rows_after = len(df)
+            
+            if rows_before != rows_after:
+                logger.debug(f"[ALPHA VANTAGE FILTER] {symbol}: Filtered {rows_before} -> {rows_after} rows for date range")
             
             # Add to cache
             self.add_to_cache(symbol, start_date, end_date, timeframe, df)
             
-            logger.debug(f"Successfully fetched {len(df)} rows for {symbol}")
+            total_duration = time.time() - fetch_start
+            logger.info(f"[ALPHA VANTAGE SUCCESS] {symbol}: {len(df)} rows in {total_duration:.2f}s (request: {request_duration:.2f}s, parse: {parse_duration:.2f}s)")
             return df
             
         except Exception as e:
-            logger.error(f"Error fetching data for {symbol}: {e}")
+            total_duration = time.time() - fetch_start
+            logger.error(f"[ALPHA VANTAGE FAILED] {symbol}: {type(e).__name__}: {e} (elapsed: {total_duration:.2f}s)")
             raise ConnectionError(f"Failed to fetch data from Alpha Vantage: {e}")
     
     def _parse_response(self, data: Dict, function: str) -> pd.DataFrame:

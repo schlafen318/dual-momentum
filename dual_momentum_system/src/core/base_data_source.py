@@ -11,6 +11,7 @@ from datetime import datetime, timedelta
 from typing import Any, Dict, List, Optional, Set
 
 import pandas as pd
+from loguru import logger
 
 from .types import AssetType
 
@@ -199,13 +200,24 @@ class BaseDataSource(ABC):
             >>> print(data.keys())
             dict_keys(['AAPL', 'MSFT'])
         """
+        logger.info(f"[BASE FETCH_MULTIPLE] Fetching {len(symbols)} symbols using default sequential method")
         result = {}
+        failed = []
+        
         for symbol in symbols:
             try:
-                result[symbol] = self.fetch_data(symbol, start_date, end_date, timeframe)
+                df = self.fetch_data(symbol, start_date, end_date, timeframe)
+                if df is not None and not df.empty:
+                    result[symbol] = df
+                else:
+                    failed.append(symbol)
+                    logger.warning(f"[BASE FETCH_MULTIPLE] {symbol}: Empty result")
             except Exception as e:
-                print(f"Warning: Failed to fetch data for {symbol}: {e}")
+                failed.append(symbol)
+                logger.warning(f"[BASE FETCH_MULTIPLE] Failed to fetch {symbol}: {type(e).__name__}: {e}")
                 continue
+        
+        logger.info(f"[BASE FETCH_MULTIPLE] Completed: {len(result)} succeeded, {len(failed)} failed")
         return result
     
     def validate_symbol(self, symbol: str) -> bool:
@@ -355,10 +367,18 @@ class BaseDataSource(ABC):
             Cached DataFrame or None
         """
         if not self._cache_enabled:
+            logger.debug(f"[CACHE DISABLED] Caching is disabled for {self.get_name()}")
             return None
         
         cache_key = self.get_cache_key(symbol, start_date, end_date, timeframe)
-        return self._cache.get(cache_key)
+        cached_data = self._cache.get(cache_key)
+        
+        if cached_data is not None:
+            logger.debug(f"[CACHE HIT] {symbol}: Found in cache (key: {cache_key}, rows: {len(cached_data)})")
+        else:
+            logger.debug(f"[CACHE MISS] {symbol}: Not in cache (key: {cache_key})")
+        
+        return cached_data
     
     def add_to_cache(
         self,
@@ -379,14 +399,22 @@ class BaseDataSource(ABC):
             data: DataFrame to cache
         """
         if not self._cache_enabled:
+            logger.debug(f"[CACHE DISABLED] Not caching {symbol} (caching disabled)")
             return
         
         cache_key = self.get_cache_key(symbol, start_date, end_date, timeframe)
         self._cache[cache_key] = data.copy()
+        
+        # Calculate cache statistics
+        memory_usage = data.memory_usage(deep=True).sum() / 1024  # KB
+        logger.debug(f"[CACHE ADD] {symbol}: Cached {len(data)} rows (~{memory_usage:.1f} KB, key: {cache_key})")
+        logger.debug(f"[CACHE STATS] Total cached items: {len(self._cache)}")
     
     def clear_cache(self) -> None:
         """Clear all cached data."""
+        items_before = len(self._cache)
         self._cache.clear()
+        logger.info(f"[CACHE CLEAR] Cleared {items_before} cached items from {self.get_name()}")
     
     def get_rate_limit(self) -> Optional[Dict[str, Any]]:
         """
