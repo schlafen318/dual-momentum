@@ -45,7 +45,8 @@ class YahooFinanceDirectSource(BaseDataSource):
         
         self.timeout = self.config.get('timeout', 10)
         self.max_retries = self.config.get('max_retries', 3)
-        self.retry_delay = self.config.get('retry_delay', 1)
+        self.retry_delay = self.config.get('retry_delay', 2)
+        self.request_delay = self.config.get('request_delay', 0.5)
         self.session = requests.Session()
         self.session.headers.update({
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
@@ -145,7 +146,12 @@ class YahooFinanceDirectSource(BaseDataSource):
             except requests.exceptions.RequestException as e:
                 logger.warning(f"Request attempt {attempt + 1} failed: {e}")
                 if attempt < self.max_retries - 1:
-                    time.sleep(self.retry_delay)
+                    # Increase delay for rate limit errors
+                    delay = self.retry_delay
+                    if 'Too Many Requests' in str(e) or '429' in str(e):
+                        delay = self.retry_delay * 2
+                        logger.info(f"Rate limit detected, waiting {delay}s before retry")
+                    time.sleep(delay)
                 else:
                     raise
         
@@ -391,13 +397,22 @@ class YahooFinanceDirectSource(BaseDataSource):
         logger.info(f"Fetching {len(symbols)} symbols from Yahoo Finance (Direct)")
         
         result = {}
-        for symbol in symbols:
+        for i, symbol in enumerate(symbols):
             try:
                 df = self.fetch_data(symbol, start_date, end_date, timeframe)
                 if df is not None and not df.empty:
                     result[symbol] = df
+                
+                # Add delay between requests to avoid rate limiting
+                # (except after the last symbol)
+                if i < len(symbols) - 1:
+                    time.sleep(self.request_delay)
+                    
             except Exception as e:
                 logger.error(f"Error fetching {symbol}: {e}")
+                # Add delay even on error to avoid hammering the API
+                if i < len(symbols) - 1:
+                    time.sleep(self.request_delay)
                 continue
         
         logger.info(f"Successfully fetched {len(result)} symbols")
