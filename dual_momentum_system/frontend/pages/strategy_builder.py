@@ -11,6 +11,7 @@ from datetime import datetime, timedelta
 from typing import Dict, Any, List
 import sys
 from pathlib import Path
+import time
 
 # Add project root to path
 project_root = Path(__file__).parent.parent.parent
@@ -655,7 +656,7 @@ def fetch_real_data(
     price_data_dict = {}
     failed_symbols = []
     
-    for symbol in symbols:
+    for i, symbol in enumerate(symbols):
         try:
             if status_text:
                 status_text.text(f"📊 Fetching {symbol}...")
@@ -674,11 +675,19 @@ def fetch_real_data(
                 price_data_dict[symbol] = normalized
             else:
                 failed_symbols.append(symbol)
+            
+            # Add small delay between requests to avoid rate limiting
+            # (except after the last symbol)
+            if i < len(symbols) - 1:
+                time.sleep(0.5)
                 
         except Exception as e:
             failed_symbols.append(symbol)
             if status_text:
                 status_text.text(f"⚠️ Failed to fetch {symbol}: {str(e)}")
+            # Add delay even on error to avoid hammering the API
+            if i < len(symbols) - 1:
+                time.sleep(0.5)
     
     # Show summary
     if failed_symbols:
