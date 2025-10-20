@@ -19,7 +19,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent))
 
 from src.backtesting.engine import BacktestEngine
-from src.data_sources.yahoo_finance import YahooFinanceSource
+from src.data_sources.yahoo_finance_direct import YahooFinanceDirectSource
 from src.asset_classes.equity import EquityAsset
 from src.strategies.dual_momentum import DualMomentumStrategy
 
@@ -45,7 +45,7 @@ def verify_data_download():
     """Verify price data download."""
     print_section("TEST 1: Data Download")
     
-    ds = YahooFinanceSource({'cache_enabled': True})
+    ds = YahooFinanceDirectSource({'cache_enabled': True})
     asset = EquityAsset()
     
     end = datetime.now()
@@ -76,7 +76,7 @@ def verify_data_normalization():
     """Verify data normalization."""
     print_section("TEST 2: Data Normalization")
     
-    ds = YahooFinanceSource({'cache_enabled': True})
+    ds = YahooFinanceDirectSource({'cache_enabled': True})
     asset = EquityAsset()
     
     end = datetime.now()
@@ -107,7 +107,7 @@ def verify_data_integrity():
     """Verify data integrity."""
     print_section("TEST 3: Data Integrity")
     
-    ds = YahooFinanceSource({'cache_enabled': True})
+    ds = YahooFinanceDirectSource({'cache_enabled': True})
     asset = EquityAsset()
     
     end = datetime.now()
@@ -160,7 +160,7 @@ def verify_backtesting_integration():
     """Verify backtesting integration with bug fixes."""
     print_section("TEST 4: Backtesting Integration (Bug Fixes)")
     
-    ds = YahooFinanceSource({'cache_enabled': True})
+    ds = YahooFinanceDirectSource({'cache_enabled': True})
     asset = EquityAsset()
     
     end = datetime.now()

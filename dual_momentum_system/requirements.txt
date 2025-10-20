@@ -13,7 +13,7 @@ quantstats>=0.0.62
 empyrical-reloaded>=0.5.5  # Python 3.13 compatible fork of empyrical
 
 # Data Sources
-yfinance>=0.2.28
+# yfinance>=0.2.28  # Replaced with direct HTTP implementation for Streamlit compatibility
 ccxt>=4.0.0
 requests>=2.31.0
 

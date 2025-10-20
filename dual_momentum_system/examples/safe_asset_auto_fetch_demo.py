@@ -17,7 +17,7 @@ from loguru import logger
 import warnings
 warnings.filterwarnings('ignore')
 
-from src.data_sources.yahoo_finance import YahooFinanceSource
+from src.data_sources.yahoo_finance_direct import YahooFinanceDirectSource
 from src.asset_classes.equity import EquityAsset
 from src.strategies.dual_momentum import DualMomentumStrategy
 from src.backtesting.engine import BacktestEngine
@@ -33,7 +33,7 @@ def demo_manual_approach():
     print()
     
     # Setup
-    data_source = YahooFinanceSource({'cache_enabled': True})
+    data_source = YahooFinanceDirectSource({'cache_enabled': True})
     asset_class = EquityAsset()
     end_date = datetime.now()
     start_date = end_date - timedelta(days=400)  # ~16 months
@@ -100,7 +100,7 @@ def demo_convenience_function():
     print()
     
     # Setup
-    data_source = YahooFinanceSource({'cache_enabled': True})
+    data_source = YahooFinanceDirectSource({'cache_enabled': True})
     asset_class = EquityAsset()
     end_date = datetime.now()
     start_date = end_date - timedelta(days=400)
@@ -158,7 +158,7 @@ def demo_safe_asset_already_in_universe():
     print()
     
     # Setup
-    data_source = YahooFinanceSource({'cache_enabled': True})
+    data_source = YahooFinanceDirectSource({'cache_enabled': True})
     asset_class = EquityAsset()
     end_date = datetime.now()
     start_date = end_date - timedelta(days=400)
