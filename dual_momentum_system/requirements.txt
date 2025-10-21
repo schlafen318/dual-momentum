@@ -13,7 +13,9 @@ quantstats>=0.0.62
 empyrical-reloaded>=0.5.5  # Python 3.13 compatible fork of empyrical
 
 # Data Sources
-yfinance>=0.2.28
+# yfinance>=0.2.28  # OPTIONAL: Only needed for local development. Commented out for Streamlit Cloud compatibility.
+                     # The system automatically uses YahooFinanceDirectSource (which only needs requests) on cloud platforms.
+                     # Uncomment this line if you want to use yfinance locally (it may work better on some local setups).
 ccxt>=4.0.0
 requests>=2.31.0
 
