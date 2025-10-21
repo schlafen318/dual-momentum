@@ -345,17 +345,17 @@ def render_charts(results):
         ))
         
         # Add benchmark if available
-        if has_benchmark:
+        if hasattr(results, 'benchmark_curve') and results.benchmark_curve is not None:
             try:
-                benchmark_data = st.session_state.benchmark_data
-                benchmark_prices = benchmark_data.data['close']
+                # Use the indexed benchmark curve from results (already properly aligned and indexed)
+                benchmark_curve = results.benchmark_curve
                 
-                # Normalize benchmark to start at same value as portfolio
-                initial_capital = results.initial_capital
-                benchmark_normalized = benchmark_prices / benchmark_prices.iloc[0] * initial_capital
+                # Convert to DataFrame for plotting
+                benchmark_df = benchmark_curve.reset_index()
+                benchmark_df.columns = ['Date', 'Value']
                 
                 # Align with strategy dates
-                benchmark_aligned = benchmark_normalized.reindex(equity_df['Date']).fillna(method='ffill')
+                benchmark_aligned = benchmark_curve.reindex(equity_df['Date']).ffill()
                 
                 fig.add_trace(go.Scatter(
                     x=equity_df['Date'],
@@ -389,14 +389,13 @@ def render_charts(results):
         st.plotly_chart(fig, width='stretch')
     
     # Returns comparison chart
-    if has_benchmark:
+    if hasattr(results, 'benchmark_curve') and results.benchmark_curve is not None:
         st.markdown("#### Cumulative Returns Comparison")
         
         try:
             strategy_returns = results.returns
-            benchmark_data = st.session_state.benchmark_data
-            benchmark_prices = benchmark_data.data['close']
-            benchmark_returns = benchmark_prices.pct_change().dropna()
+            benchmark_curve = results.benchmark_curve
+            benchmark_returns = benchmark_curve.pct_change().dropna()
             
             # Align returns
             strategy_returns_aligned, benchmark_returns_aligned = strategy_returns.align(

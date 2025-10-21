@@ -316,6 +316,7 @@ class BacktestResult:
     trades: pd.DataFrame
     metrics: Dict[str, float]
     equity_curve: pd.Series
+    benchmark_curve: Optional[pd.Series] = None
     metadata: Dict[str, Any] = field(default_factory=dict)
     
     @property

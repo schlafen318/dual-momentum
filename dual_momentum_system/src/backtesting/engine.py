@@ -1035,6 +1035,7 @@ class BacktestEngine:
         
         # Calculate benchmark returns if provided
         benchmark_returns = None
+        benchmark_curve = None
         if benchmark_data is not None:
             benchmark_prices = benchmark_data.data['close'].reindex(equity_series.index).ffill()
             
@@ -1046,6 +1047,9 @@ class BacktestEngine:
                 
                 # Create indexed benchmark values starting from strategy's notional value
                 benchmark_indexed = (benchmark_prices / benchmark_start_price) * strategy_start_value
+                
+                # Store the indexed benchmark curve for charting
+                benchmark_curve = benchmark_indexed
                 
                 # Calculate returns from the indexed benchmark
                 benchmark_returns = benchmark_indexed.pct_change().dropna()
@@ -1059,6 +1063,7 @@ class BacktestEngine:
                 logger.info(f"   Both strategy and benchmark start with same notional value: ${strategy_start_value:,.2f}")
             else:
                 benchmark_returns = benchmark_prices.pct_change().dropna()
+                benchmark_curve = benchmark_prices
                 logger.warning("⚠️ Could not index benchmark - using raw price returns")
         else:
             logger.info("📊 No benchmark data provided for comparison")
@@ -1111,6 +1116,7 @@ class BacktestEngine:
             trades=trades_df,
             metrics=metrics,
             equity_curve=equity_series,
+            benchmark_curve=benchmark_curve,
             metadata={
                 'commission': self.commission,
                 'slippage': self.slippage,
