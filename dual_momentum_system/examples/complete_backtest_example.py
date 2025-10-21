@@ -279,14 +279,23 @@ def main():
     print(f"Sharpe Ratio: {results.metrics['sharpe_ratio']:.2f}")
     print(f"Max Drawdown: {results.metrics['max_drawdown']:.2%}")
     
-    # Benchmark comparison (SPY)
-    if 'SPY' in price_data:
-        spy_returns = price_data['SPY'].get_returns()
-        spy_total = (1 + spy_returns).prod() - 1
-        outperformance = results.total_return - spy_total
+    # Benchmark comparison (SPY) - use the benchmark data from results
+    if 'benchmark_return' in results.metrics:
+        benchmark_total = results.metrics['benchmark_return']
+        outperformance = results.total_return - benchmark_total
         
-        print(f"\nBenchmark (SPY): {spy_total:.2%}")
+        print(f"\nBenchmark: {benchmark_total:.2%}")
         print(f"Outperformance: {outperformance:+.2%}")
+        
+        # Additional benchmark metrics if available
+        if 'alpha' in results.metrics:
+            print(f"Alpha: {results.metrics['alpha']:.2%}")
+        if 'beta' in results.metrics:
+            print(f"Beta: {results.metrics['beta']:.2f}")
+        if 'information_ratio' in results.metrics:
+            print(f"Information Ratio: {results.metrics['information_ratio']:.2f}")
+    else:
+        print("\nNo benchmark data available for comparison")
     
     print("\n" + "=" * 80)
     print("✓ Example completed successfully!")

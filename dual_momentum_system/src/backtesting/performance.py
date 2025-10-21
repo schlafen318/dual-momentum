@@ -512,6 +512,9 @@ class PerformanceCalculator:
         annual_strategy_return = (1 + aligned_returns).prod() ** (self.periods_per_year / len(aligned_returns)) - 1
         annual_benchmark_return = (1 + aligned_benchmark).prod() ** (self.periods_per_year / len(aligned_benchmark)) - 1
         
+        # Store benchmark return for easy access
+        metrics['benchmark_return'] = float(annual_benchmark_return)
+        
         expected_return = risk_free_rate + metrics['beta'] * (annual_benchmark_return - risk_free_rate)
         metrics['alpha'] = float(annual_strategy_return - expected_return)
         

@@ -7,6 +7,7 @@ trade execution simulation, portfolio tracking, and results generation.
 
 from datetime import datetime
 from typing import Any, Dict, List, Optional, Union
+from pathlib import Path
 
 import pandas as pd
 import numpy as np
@@ -77,6 +78,44 @@ class BacktestEngine:
             f"{commission:.2%} commission, {slippage:.2%} slippage"
         )
     
+    def _setup_logging(self, strategy_name: str, start_date: datetime, end_date: datetime) -> str:
+        """
+        Set up file logging for backtest.
+        
+        Args:
+            strategy_name: Name of the strategy being backtested
+            start_date: Start date of backtest
+            end_date: End date of backtest
+        
+        Returns:
+            Path to the log file
+        """
+        # Create logs directory if it doesn't exist
+        logs_dir = Path("logs")
+        logs_dir.mkdir(exist_ok=True)
+        
+        # Create log filename with timestamp and strategy name
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        safe_strategy_name = strategy_name.replace(" ", "_").replace("/", "_")
+        log_filename = f"backtest_{safe_strategy_name}_{timestamp}.log"
+        log_file_path = logs_dir / log_filename
+        
+        # Add file handler to logger
+        logger.add(
+            log_file_path,
+            format="{time:YYYY-MM-DD HH:mm:ss.SSS} | {level: <8} | {name}:{function}:{line} - {message}",
+            level="DEBUG",
+            rotation="10 MB",  # Rotate if file gets too large
+            retention="7 days",  # Keep logs for 7 days
+            compression="zip"  # Compress old logs
+        )
+        
+        logger.info(f"Backtest logging enabled: {log_file_path}")
+        logger.info(f"Strategy: {strategy_name}")
+        logger.info(f"Period: {start_date.strftime('%Y-%m-%d')} to {end_date.strftime('%Y-%m-%d')}")
+        
+        return str(log_file_path)
+    
     def run(
         self,
         strategy: BaseStrategy,
@@ -101,6 +140,9 @@ class BacktestEngine:
             BacktestResult with performance metrics and trade history
         """
         logger.info(f"Starting backtest for {strategy.get_name()}")
+        
+        # Set up file logging
+        log_file_path = self._setup_logging(strategy.get_name(), start_date or datetime.now(), end_date or datetime.now())
         
         # Reset state
         self._reset()
@@ -158,8 +200,9 @@ class BacktestEngine:
         # Validate safe asset availability
         self._validate_safe_asset_data(strategy, aligned_data)
         
-        # Track last rebalance date
+        # Track rebalance dates
         last_rebalance = None
+        first_rebalance_date = None
         
         # Iterate through each timestamp
         for i, current_date in enumerate(date_index):
@@ -201,6 +244,11 @@ class BacktestEngine:
                 if not sufficient_data:
                     # Skip rebalancing - not enough historical data yet
                     continue
+                
+                # Track first rebalancing date
+                if first_rebalance_date is None:
+                    first_rebalance_date = current_date
+                    logger.info(f"📊 Performance tracking starts from first rebalancing: {current_date.strftime('%Y-%m-%d')}")
                 
                 # Log rebalancing start
                 logger.info(f"🔄 REBALANCING on {current_date.strftime('%Y-%m-%d')}")
@@ -271,7 +319,7 @@ class BacktestEngine:
         # Generate results
         results = self._generate_results(
             strategy.get_name(),
-            date_index[0],
+            first_rebalance_date if first_rebalance_date is not None else date_index[0],
             date_index[-1],
             benchmark_data
         )
@@ -280,6 +328,7 @@ class BacktestEngine:
             f"Backtest complete. Final value: ${results.final_capital:,.2f} "
             f"({results.total_return:.2%} return)"
         )
+        logger.info(f"Detailed backtest log saved to: {log_file_path}")
         
         return results
     
@@ -494,9 +543,12 @@ class BacktestEngine:
         if len(self.position_history) <= 3:
             logger.debug(f"Position snapshot #{len(self.position_history)}: {num_positions} positions, cash=${self.cash:,.2f}")
     
-    def _create_positions_dataframe(self) -> pd.DataFrame:
+    def _create_positions_dataframe(self, start_date: Optional[datetime] = None) -> pd.DataFrame:
         """
         Convert position history into a structured DataFrame.
+        
+        Args:
+            start_date: Optional start date to filter position history to performance period
         
         Returns:
             DataFrame with position history organized for allocation tracking
@@ -515,6 +567,16 @@ class BacktestEngine:
         except Exception as e:
             logger.error(f"Failed to create DataFrame from position_history: {e}")
             return pd.DataFrame()
+        
+        # Filter to performance period if start_date is provided
+        if start_date is not None and 'timestamp' in positions_df.columns:
+            original_count = len(positions_df)
+            positions_df = positions_df[positions_df['timestamp'] >= start_date]
+            filtered_count = len(positions_df)
+            if filtered_count < original_count:
+                logger.debug(f"Filtered position history from {original_count} to {filtered_count} records (performance period)")
+            else:
+                logger.debug("No position history filtering needed")
         
         # Extract all unique symbols from the column names
         value_columns = [col for col in positions_df.columns if col.endswith('_value')]
@@ -574,7 +636,16 @@ class BacktestEngine:
             portfolio_value: Current portfolio value
             risk_manager: Risk manager for position sizing
         """
-        # We'll close positions after building target weights so we know intended holdings
+        # Close all existing positions first to free up cash for rebalancing
+        if self.positions:
+            logger.info("   Closing existing positions for rebalancing:")
+            for symbol in list(self.positions.keys()):
+                pos = self.positions[symbol]
+                market_value = pos.quantity * pos.current_price
+                pnl = (pos.current_price - pos.entry_price) * pos.quantity
+                logger.info(f"     {symbol}: {pos.quantity:.2f} shares @ ${pos.current_price:.2f} (Value: ${market_value:,.2f}, P&L: ${pnl:,.2f})")
+                self._close_position(symbol, current_date, aligned_data)
+            logger.info(f"   Proceeds from sales added to cash. New cash: ${self.cash:,.2f}")
         
         # Determine allocation weights in two steps:
         # 1) Decide included assets count vs desired position_count
@@ -933,6 +1004,13 @@ class BacktestEngine:
         # Create equity curve series
         equity_series = pd.Series(self.equity_curve, index=self.timestamps)
         
+        # Filter data to start from the first rebalancing date (performance measurement period)
+        if start_date in equity_series.index:
+            equity_series = equity_series.loc[start_date:]
+            logger.info(f"📊 Performance metrics calculated from {start_date.strftime('%Y-%m-%d')} to {end_date.strftime('%Y-%m-%d')}")
+        else:
+            logger.warning(f"⚠️ Start date {start_date.strftime('%Y-%m-%d')} not found in equity curve, using full period")
+        
         # Calculate returns
         returns = equity_series.pct_change().dropna()
         
@@ -958,8 +1036,32 @@ class BacktestEngine:
         # Calculate benchmark returns if provided
         benchmark_returns = None
         if benchmark_data is not None:
-            benchmark_prices = benchmark_data.data['close'].reindex(equity_series.index).fillna(method='ffill')
-            benchmark_returns = benchmark_prices.pct_change().dropna()
+            benchmark_prices = benchmark_data.data['close'].reindex(equity_series.index).ffill()
+            
+            # Index benchmark to start from same notional value as strategy on day 1
+            if len(benchmark_prices) > 0 and len(equity_series) > 0:
+                # Get the starting values
+                strategy_start_value = equity_series.iloc[0]
+                benchmark_start_price = benchmark_prices.iloc[0]
+                
+                # Create indexed benchmark values starting from strategy's notional value
+                benchmark_indexed = (benchmark_prices / benchmark_start_price) * strategy_start_value
+                
+                # Calculate returns from the indexed benchmark
+                benchmark_returns = benchmark_indexed.pct_change().dropna()
+                
+                # Log benchmark alignment and indexing for verification
+                logger.info(f"📊 Benchmark data aligned and indexed to performance period:")
+                logger.info(f"   Strategy start value: ${strategy_start_value:,.2f}")
+                logger.info(f"   Benchmark start price: ${benchmark_start_price:.2f}")
+                logger.info(f"   Strategy returns: {len(returns)} periods ({returns.index[0].strftime('%Y-%m-%d')} to {returns.index[-1].strftime('%Y-%m-%d')})")
+                logger.info(f"   Benchmark returns: {len(benchmark_returns)} periods ({benchmark_returns.index[0].strftime('%Y-%m-%d')} to {benchmark_returns.index[-1].strftime('%Y-%m-%d')})")
+                logger.info(f"   Both strategy and benchmark start with same notional value: ${strategy_start_value:,.2f}")
+            else:
+                benchmark_returns = benchmark_prices.pct_change().dropna()
+                logger.warning("⚠️ Could not index benchmark - using raw price returns")
+        else:
+            logger.info("📊 No benchmark data provided for comparison")
         
         # Calculate metrics
         from .performance import PerformanceCalculator
@@ -971,8 +1073,8 @@ class BacktestEngine:
             benchmark_returns=benchmark_returns
         )
         
-        # Convert position history to DataFrame
-        positions_df = self._create_positions_dataframe()
+        # Convert position history to DataFrame (filtered to performance period)
+        positions_df = self._create_positions_dataframe(start_date)
         
         # Debug logging for position data
         logger.info("=" * 60)
