@@ -447,13 +447,19 @@ def run_backtest():
         
         # Get API keys from environment or Streamlit secrets if available
         api_config = {}
-        if hasattr(st, 'secrets'):
-            if 'ALPHAVANTAGE_API_KEY' in st.secrets:
-                api_config['alphavantage_api_key'] = st.secrets['ALPHAVANTAGE_API_KEY']
-            if 'TWELVEDATA_API_KEY' in st.secrets:
-                api_config['twelvedata_api_key'] = st.secrets['TWELVEDATA_API_KEY']
         
-        # Also check environment variables
+        # Try to get from Streamlit secrets (safe handling)
+        try:
+            if hasattr(st, 'secrets') and st.secrets:
+                if 'ALPHAVANTAGE_API_KEY' in st.secrets:
+                    api_config['alphavantage_api_key'] = st.secrets['ALPHAVANTAGE_API_KEY']
+                if 'TWELVEDATA_API_KEY' in st.secrets:
+                    api_config['twelvedata_api_key'] = st.secrets['TWELVEDATA_API_KEY']
+        except (FileNotFoundError, RuntimeError):
+            # Secrets file not found or empty - this is fine, we'll use env vars or just Yahoo
+            pass
+        
+        # Also check environment variables (these take precedence)
         if 'ALPHAVANTAGE_API_KEY' in os.environ:
             api_config['alphavantage_api_key'] = os.environ['ALPHAVANTAGE_API_KEY']
         if 'TWELVEDATA_API_KEY' in os.environ:
