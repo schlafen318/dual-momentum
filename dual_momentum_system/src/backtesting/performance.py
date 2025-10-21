@@ -23,7 +23,7 @@ class PerformanceCalculator:
     def __init__(self, periods_per_year: int = 252):
         """
         Initialize performance calculator.
-        
+        self.periods_per_year = periods_per_year
         Args:
             periods_per_year: Number of periods per year for annualization
                              (252 for daily, 12 for monthly, 52 for weekly)
@@ -58,7 +58,13 @@ class PerformanceCalculator:
         # Return metrics
         metrics['total_return'] = self.total_return(equity_curve)
         metrics['annual_return'] = self.annual_return(returns)
+        # Alias used by dashboard
+        metrics['annualized_return'] = metrics['annual_return']
+        # CAGR using equity curve span
+        metrics['cagr'] = self.cagr(equity_curve)
         metrics['annual_volatility'] = self.annual_volatility(returns)
+        # Alias used by dashboard
+        metrics['volatility'] = metrics['annual_volatility']
         
         # Risk metrics
         metrics['max_drawdown'] = self.max_drawdown(equity_curve)
@@ -79,6 +85,10 @@ class PerformanceCalculator:
         metrics['best_day'] = float(returns.max()) if len(returns) > 0 else 0.0
         metrics['worst_day'] = float(returns.min()) if len(returns) > 0 else 0.0
         metrics['num_periods'] = len(returns)
+        
+        # Monthly metrics (best/worst/positive months)
+        monthly = self.monthly_metrics(returns)
+        metrics.update(monthly)
         
         # Benchmark comparison metrics
         if benchmark_returns is not None and len(benchmark_returns) > 0:
@@ -128,6 +138,53 @@ class PerformanceCalculator:
         
         annual_return = (1 + cumulative_return) ** (1 / num_years) - 1
         return annual_return
+
+    def cagr(self, equity_curve: pd.Series) -> float:
+        """
+        Calculate Compound Annual Growth Rate from equity curve.
+        """
+        if len(equity_curve) < 2:
+            return 0.0
+        start_value = equity_curve.iloc[0]
+        end_value = equity_curve.iloc[-1]
+        if start_value <= 0 or end_value <= 0:
+            return 0.0
+        try:
+            time_diff = equity_curve.index[-1] - equity_curve.index[0]
+            years = time_diff.total_seconds() / (365.25 * 24 * 3600)
+            if years <= 0:
+                return 0.0
+            return float((end_value / start_value) ** (1 / years) - 1)
+        except Exception:
+            return 0.0
+
+    def monthly_metrics(self, returns: pd.Series) -> Dict[str, float]:
+        """
+        Calculate monthly best/worst returns and % positive months.
+        Returns:
+            Dict with keys: best_month, worst_month, positive_months
+            - best_month/worst_month are decimals (e.g., 0.05 for +5%)
+            - positive_months is a percentage value (0-100)
+        """
+        out = {
+            'best_month': 0.0,
+            'worst_month': 0.0,
+            'positive_months': 0.0,
+        }
+        if len(returns) == 0:
+            return out
+        try:
+            # Only compute if index supports resampling and we have enough points
+            if hasattr(returns.index, 'to_period') and len(returns) > 20:
+                monthly = returns.resample('ME').apply(lambda x: (1 + x).prod() - 1 if len(x) > 0 else 0)
+                if len(monthly) > 0:
+                    out['best_month'] = float(monthly.max())
+                    out['worst_month'] = float(monthly.min())
+                    out['positive_months'] = float((monthly > 0).sum() / len(monthly) * 100)
+        except Exception:
+            # Keep defaults on any failure
+            pass
+        return out
     
     def annual_volatility(self, returns: pd.Series) -> float:
         """

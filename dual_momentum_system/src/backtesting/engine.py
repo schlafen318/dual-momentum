@@ -243,7 +243,8 @@ class BacktestEngine:
                         current_date,
                         aligned_data,
                         portfolio_value,
-                        risk_manager
+                        risk_manager,
+                        strategy
                     )
                     
                     # Log position changes after execution
@@ -560,7 +561,8 @@ class BacktestEngine:
         current_date: datetime,
         aligned_data: Dict[str, pd.DataFrame],
         portfolio_value: float,
-        risk_manager: Optional[BaseRiskManager]
+        risk_manager: Optional[BaseRiskManager],
+        strategy: Optional[BaseStrategy] = None
     ) -> None:
         """
         Execute trading signals.
@@ -572,18 +574,79 @@ class BacktestEngine:
             portfolio_value: Current portfolio value
             risk_manager: Risk manager for position sizing
         """
-        # First, close positions not in new signals
-        signal_symbols = {s.symbol for s in signals if s.direction != 0}
-        positions_to_close = [
-            symbol for symbol in self.positions.keys()
-            if symbol not in signal_symbols
-        ]
+        # We'll close positions after building target weights so we know intended holdings
         
-        for symbol in positions_to_close:
-            self._close_position(symbol, current_date, aligned_data)
+        # Determine allocation weights in two steps:
+        # 1) Decide included assets count vs desired position_count
+        # 2) Allocate 100% across included risk assets if enough pass; otherwise
+        #    assign remaining share to the safe asset (if available). Cash only when
+        #    no safe asset is available.
+
+        # Separate risk vs safe
+        safe_symbol = getattr(strategy, 'safe_asset', None) if strategy is not None else None
+        risk_signals: List[Signal] = []
+        safe_signal: Optional[Signal] = None
+        for s in signals:
+            if safe_symbol and s.symbol == safe_symbol:
+                safe_signal = s
+            else:
+                risk_signals.append(s)
+
+        # Determine desired number of positions
+        desired_positions = getattr(strategy, 'config', {}).get('position_count', len(risk_signals)) if strategy is not None else len(risk_signals)
+        desired_positions = max(1, desired_positions)
+
+        # Include at most desired_positions risk assets (highest strength first)
+        risk_signals_sorted = sorted(risk_signals, key=lambda s: getattr(s, 'strength', 0.0), reverse=True)
+        included_risk = risk_signals_sorted[:desired_positions]
+        included_count = len(included_risk)
+
+        # Compute shares
+        risk_share = 1.0 if included_count >= desired_positions else (included_count / float(desired_positions))
+        safe_share = 0.0
+        if safe_signal is not None and included_count < desired_positions:
+            safe_share = 1.0 - risk_share
+
+        # Risk weights by strength (fallback equal if strengths sum to 0)
+        total_strength = sum(max(0.0, min(1.0, s.strength)) for s in included_risk)
+        normalized_weights: Dict[str, float] = {}
+        if included_count > 0:
+            if total_strength > 0:
+                for s in included_risk:
+                    normalized_weights[s.symbol] = (max(0.0, min(1.0, s.strength)) / total_strength) * risk_share
+            else:
+                equal = risk_share / included_count
+                for s in included_risk:
+                    normalized_weights[s.symbol] = equal
         
-        # Then, open/adjust positions based on signals
-        for signal in signals:
+        if safe_share > 0 and safe_signal is not None:
+            normalized_weights[safe_signal.symbol] = safe_share
+        
+        # If no included assets and safe not available, weights remain empty (cash)
+
+        # Then, open/adjust positions based on weights
+        ordered_signals: List[Signal] = []
+        # Maintain stable order: all risk signals first, then safe (if any)
+        if included_risk:
+            ordered_signals.extend(included_risk)
+        if safe_signal is not None and safe_signal.symbol in normalized_weights:
+            ordered_signals.append(safe_signal)
+        
+        remaining_cash = self.cash
+        total_signals = len(ordered_signals)
+        # Precompute scaling factor and log target weights
+        est_total_required = 0.0
+        for s2 in ordered_signals:
+            pct2 = normalized_weights.get(s2.symbol, 0.0)
+            est_total_required += portfolio_value * pct2 * (1 + self.commission)
+        scaling_factor = min(1.0, remaining_cash / est_total_required) if est_total_required > 0 else 0.0
+        logger.info(
+            f"[ORDER SIZING] {current_date.strftime('%Y-%m-%d')}: PV=${portfolio_value:,.2f}, Cash=${remaining_cash:,.2f}, Comm={self.commission:.4%}, Slip={self.slippage:.4%}, Scale={scaling_factor:.6f}"
+        )
+        logger.info("[ORDER SIZING] Weights: " + ", ".join([f"{sym}={normalized_weights[sym]*100:.2f}%" for sym in normalized_weights.keys()]))
+        batch_total_cost = 0.0
+        
+        for idx, signal in enumerate(ordered_signals):
             if signal.direction == 0:
                 continue
             
@@ -607,17 +670,18 @@ class BacktestEngine:
             else:
                 execution_price = current_price * (1 - self.slippage)
             
-            # Calculate position size
-            if risk_manager:
-                position_size_dollars = risk_manager.calculate_position_size(
-                    signal,
-                    portfolio_value,
-                    self.positions
-                )
+            # Determine target allocation percent from normalized weights
+            target_pct = normalized_weights.get(signal.symbol, 0.0)
+            # Calculate desired spend such that sum(cost) == cash (proportional scaling)
+            desired_dollars = portfolio_value * target_pct
+            # Apply scaling factor (and remove commission impact for notional sizing)
+            desired_size = desired_dollars * scaling_factor / (1 + self.commission)
+            
+            if risk_manager and desired_size > 0:
+                rm_cap = risk_manager.calculate_position_size(signal, portfolio_value, self.positions) if hasattr(risk_manager, 'calculate_position_size') else desired_size
+                position_size_dollars = max(0.0, min(desired_size, rm_cap))
             else:
-                # Simple equal weight
-                target_pct = signal.strength / len(signals)
-                position_size_dollars = portfolio_value * target_pct
+                position_size_dollars = max(0.0, desired_size)
             
             # Calculate shares to buy
             shares = position_size_dollars / execution_price
@@ -666,10 +730,17 @@ class BacktestEngine:
                     total_cost = position_size_dollars + commission_cost
             
             # Check if we have enough cash (with small tolerance for floating point precision)
-            if total_cost > self.cash + 1e-6:
+            if total_cost > remaining_cash + 1e-6 or position_size_dollars <= 0:
                 logger.warning(f"     ❌ SKIPPED {direction_str} {signal.symbol} - Insufficient cash")
-                logger.warning(f"        Required: ${total_cost:,.2f}, Available: ${self.cash:,.2f}")
+                logger.warning(f"        Required: ${total_cost:,.2f}, Available: ${remaining_cash:,.2f}")
                 continue
+            
+            # Deduct from remaining tracker now (engine cash updates after execution)
+            remaining_cash = max(0.0, remaining_cash - total_cost)
+            batch_total_cost += total_cost
+            logger.info(
+                f"  {signal.symbol}: target={target_pct*100:.2f}%, desired=${desired_dollars:,.2f}, scaled=${position_size_dollars:,.2f}, price=${execution_price:,.4f}, shares={shares:.6f}, cost=${total_cost:,.2f}, cash_left=${remaining_cash:,.2f}"
+            )
             
             # Execute trade
             if signal.symbol in self.positions:
@@ -691,9 +762,11 @@ class BacktestEngine:
                 )
                 logger.info(f"        ✅ Position opened successfully")
             
-            # Deduct cash
+            # Deduct cash (keep engine cash in sync with remaining tracker)
             self.cash -= total_cost
             logger.info(f"        💰 Cash remaining: ${self.cash:,.2f}")
+
+        logger.info(f"[ORDER SIZING] Batch total cost=${batch_total_cost:,.2f}, Cash end=${self.cash:,.2f}")
     
     def _open_position(
         self,

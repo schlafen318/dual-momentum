@@ -24,9 +24,10 @@ def get_default_data_source(config=None):
     Get the default data source with failover support.
     
     This returns a MultiSourceDataProvider that tries:
-    1. Yahoo Finance Direct (free, no API key needed)
-    2. Alpha Vantage (if API key configured)
-    3. Twelve Data (if API key configured)
+    1. Yahoo Finance via yfinance (if available)
+    2. Yahoo Finance Direct (fallback, no API key needed)
+    3. Alpha Vantage (if API key configured)
+    4. Twelve Data (if API key configured)
     
     Args:
         config: Optional configuration dict with API keys:
@@ -50,7 +51,11 @@ def get_default_data_source(config=None):
     
     sources = []
     
-    # Primary: Yahoo Finance Direct (always available, no API key needed)
+    # Primary: Yahoo Finance via yfinance if available
+    if _YFINANCE_AVAILABLE and YahooFinanceSource is not None:
+        sources.append(YahooFinanceSource({'cache_enabled': True}))
+    
+    # Fallback: Yahoo Finance Direct (always available, no API key needed)
     sources.append(YahooFinanceDirectSource({'cache_enabled': True}))
     
     # Backup 1: Alpha Vantage (if API key provided)

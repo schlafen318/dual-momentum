@@ -85,7 +85,24 @@ class YahooFinanceDirectSource(BaseDataSource):
             ConnectionError: If unable to fetch data
         """
         fetch_start_time = time.time()
-        logger.info(f"[FETCH START] Symbol: {symbol}, Date Range: {start_date.date()} to {end_date.date()}, Timeframe: {timeframe}")
+        # Normalize date/datetime inputs
+        if hasattr(start_date, 'date') and not isinstance(start_date, datetime):
+            try:
+                start_date = datetime.combine(start_date, datetime.min.time())  # type: ignore[arg-type]
+            except Exception:
+                pass
+        if hasattr(end_date, 'date') and not isinstance(end_date, datetime):
+            try:
+                end_date = datetime.combine(end_date, datetime.max.time())  # type: ignore[arg-type]
+            except Exception:
+                pass
+        # Robust logging for mixed date types
+        try:
+            start_for_log = start_date.date() if isinstance(start_date, datetime) else start_date
+            end_for_log = end_date.date() if isinstance(end_date, datetime) else end_date
+            logger.info(f"[FETCH START] Symbol: {symbol}, Date Range: {start_for_log} to {end_for_log}, Timeframe: {timeframe}")
+        except Exception:
+            logger.info(f"[FETCH START] Symbol: {symbol}, Timeframe: {timeframe}")
         
         # Check cache first
         cached_data = self.get_from_cache(symbol, start_date, end_date, timeframe)
@@ -501,7 +518,13 @@ class YahooFinanceDirectSource(BaseDataSource):
         batch_start = time.time()
         logger.info(f"[BATCH START] Fetching {len(symbols)} symbols from Yahoo Finance (Direct)")
         logger.info(f"[BATCH START] Symbols: {', '.join(symbols)}")
-        logger.info(f"[BATCH START] Date range: {start_date.date()} to {end_date.date()}, Timeframe: {timeframe}")
+        # Robust logging for mixed date types
+        try:
+            start_for_log = start_date.date() if isinstance(start_date, datetime) else start_date
+            end_for_log = end_date.date() if isinstance(end_date, datetime) else end_date
+            logger.info(f"[BATCH START] Date range: {start_for_log} to {end_for_log}, Timeframe: {timeframe}")
+        except Exception:
+            logger.info(f"[BATCH START] Timeframe: {timeframe}")
         
         result = {}
         failed = []

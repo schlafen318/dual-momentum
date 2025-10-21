@@ -139,7 +139,13 @@ class AlphaVantageSource(BaseDataSource):
             ConnectionError: If unable to fetch data
         """
         fetch_start = time.time()
-        logger.info(f"[ALPHA VANTAGE] Fetching {symbol} from {start_date.date()} to {end_date.date()}, timeframe: {timeframe}")
+        # Robust logging for mixed date types
+        try:
+            start_for_log = start_date.date() if isinstance(start_date, datetime) else start_date
+            end_for_log = end_date.date() if isinstance(end_date, datetime) else end_date
+            logger.info(f"[ALPHA VANTAGE] Fetching {symbol} from {start_for_log} to {end_for_log}, timeframe: {timeframe}")
+        except Exception:
+            logger.info(f"[ALPHA VANTAGE] Fetching {symbol}, timeframe: {timeframe}")
         
         if not self.api_key:
             logger.error(f"[ALPHA VANTAGE ERROR] API key not configured for {symbol}")
