@@ -19,15 +19,22 @@ This code **is fully compatible** with Railway and can be deployed **without any
 
 ## What You Need to Do
 
-### Minimal Deployment (3 steps):
+### Deployment Steps (Fixed for Railway):
 ```bash
-# 1. Push to GitHub
+# 1. Commit the Railway configuration files at repo root
+git add start.sh Procfile runtime.txt requirements.txt railway.json RAILWAY_FIX.md
+git commit -m "Add Railway deployment configuration"
+
+# 2. Push to GitHub  
 git push origin main
 
-# 2. Go to railway.app and connect your repo
+# 3. Go to railway.app and connect your repo
+# Railway will now find all necessary config files at the root
 
-# 3. Railway auto-deploys (done!)
+# 4. Railway auto-deploys (done!)
 ```
+
+**Note**: The "start.sh not found" error has been fixed by adding config files to the repository root.
 
 ### Optional Configuration:
 - Add `ALPHAVANTAGE_API_KEY` environment variable (if using Alpha Vantage)
