@@ -445,15 +445,11 @@ def run_backtest():
         from src.data_sources import get_default_data_source
         import os
         
-        # Get API keys from environment or Streamlit secrets if available
+        # Get API keys from Railway environment variables
+        # Railway automatically injects variables set in the dashboard as environment variables
         api_config = {}
-        if hasattr(st, 'secrets'):
-            if 'ALPHAVANTAGE_API_KEY' in st.secrets:
-                api_config['alphavantage_api_key'] = st.secrets['ALPHAVANTAGE_API_KEY']
-            if 'TWELVEDATA_API_KEY' in st.secrets:
-                api_config['twelvedata_api_key'] = st.secrets['TWELVEDATA_API_KEY']
         
-        # Also check environment variables
+        # Check Railway environment variables (primary method for cloud deployment)
         if 'ALPHAVANTAGE_API_KEY' in os.environ:
             api_config['alphavantage_api_key'] = os.environ['ALPHAVANTAGE_API_KEY']
         if 'TWELVEDATA_API_KEY' in os.environ:

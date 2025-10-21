@@ -173,7 +173,7 @@ def get_data_source():
     return YahooFinanceDirectSource({'cache_enabled': True})
 ```
 
-**After (recommended):**
+**After (recommended for Railway/Cloud):**
 ```python
 import streamlit as st
 from src.data_sources import get_default_data_source
@@ -181,21 +181,19 @@ import os
 
 @st.cache_resource
 def get_data_source():
-    # Get API keys from Streamlit secrets or environment
+    # Get API keys from Railway environment variables
+    # Railway automatically injects variables set in dashboard as os.environ
     config = {}
-    if 'ALPHAVANTAGE_API_KEY' in st.secrets or 'ALPHAVANTAGE_API_KEY' in os.environ:
-        config['alphavantage_api_key'] = (
-            st.secrets.get('ALPHAVANTAGE_API_KEY') or 
-            os.environ.get('ALPHAVANTAGE_API_KEY')
-        )
-    if 'TWELVEDATA_API_KEY' in st.secrets or 'TWELVEDATA_API_KEY' in os.environ:
-        config['twelvedata_api_key'] = (
-            st.secrets.get('TWELVEDATA_API_KEY') or 
-            os.environ.get('TWELVEDATA_API_KEY')
-        )
+    if 'ALPHAVANTAGE_API_KEY' in os.environ:
+        config['alphavantage_api_key'] = os.environ['ALPHAVANTAGE_API_KEY']
+    if 'TWELVEDATA_API_KEY' in os.environ:
+        config['twelvedata_api_key'] = os.environ['TWELVEDATA_API_KEY']
     
     return get_default_data_source(config)
 ```
+
+**Note:** For Railway deployments, set API keys in Railway Dashboard → Variables.
+Railway automatically injects them as environment variables.
 
 ## Configuration Options
 
