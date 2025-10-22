@@ -54,8 +54,13 @@ def main():
     
     # Sidebar navigation
     with st.sidebar:
-        st.image("https://via.placeholder.com/200x80/1f77b4/ffffff?text=Dual+Momentum", 
-                 width='stretch')
+        # App branding header
+        st.markdown("""
+        <div style='text-align: center; padding: 1rem 0; background: linear-gradient(90deg, #1f77b4 0%, #2ca02c 100%); border-radius: 8px; margin-bottom: 1rem;'>
+            <h2 style='color: white; margin: 0;'>📈 Dual Momentum</h2>
+            <p style='color: rgba(255,255,255,0.9); margin: 0; font-size: 0.9rem;'>Backtesting Platform</p>
+        </div>
+        """, unsafe_allow_html=True)
         
         st.markdown("---")
         
@@ -109,19 +114,19 @@ def main():
     
     # Route to appropriate page
     if page == "🏠 Home":
-        from frontend.pages import home
+        from frontend.views import home
         home.render()
     elif page == "🛠️ Strategy Builder":
-        from frontend.pages import strategy_builder
+        from frontend.views import strategy_builder
         strategy_builder.render()
     elif page == "📊 Backtest Results":
-        from frontend.pages import backtest_results
+        from frontend.views import backtest_results
         backtest_results.render()
     elif page == "🔄 Compare Strategies":
-        from frontend.pages import compare_strategies
+        from frontend.views import compare_strategies
         compare_strategies.render()
     elif page == "🗂️ Asset Universe Manager":
-        from frontend.pages import asset_universe_manager
+        from frontend.views import asset_universe_manager
         asset_universe_manager.render()
 
 
