@@ -602,20 +602,15 @@ def run_backtest():
             'timestamp': datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         }
         
-        # Success message
-        st.success("✅ Backtest completed successfully! Navigate to Backtest Results to view analysis.")
+        # Success message and automatic redirect to results
+        st.success("✅ Backtest completed successfully! Redirecting to results...")
         
-        # Option to add to comparison
-        col1, col2 = st.columns(2)
-        with col1:
-            if st.button("📊 View Results", width='stretch'):
-                st.session_state.navigate_to = "📊 Backtest Results"
-                st.rerun()
-        with col2:
-            if st.button("➕ Add to Comparison", width='stretch'):
-                strategy_name = f"{st.session_state.strategy_type} - {datetime.now().strftime('%H:%M:%S')}"
-                add_to_comparison(results, strategy_name)
-                st.success(f"Added '{strategy_name}' to comparison!")
+        # Small delay to show the success message
+        time.sleep(0.5)
+        
+        # Automatically navigate to results page
+        st.session_state.navigate_to = "📊 Backtest Results"
+        st.rerun()
         
     except Exception as e:
         st.error(f"❌ Backtest failed: {str(e)}")
