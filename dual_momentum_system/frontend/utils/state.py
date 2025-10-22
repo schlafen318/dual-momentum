@@ -8,6 +8,12 @@ import streamlit as st
 from typing import Any, Dict, List
 import json
 from pathlib import Path
+import sys
+
+# Add src to path for imports
+sys.path.insert(0, str(Path(__file__).parent.parent.parent / 'src'))
+
+from config.universe_loader import get_universe_loader
 
 
 def initialize_session_state():
@@ -40,62 +46,65 @@ def initialize_session_state():
 
 def load_asset_universes() -> Dict[str, Dict[str, Any]]:
     """
-    Load saved asset universes from file.
+    Load asset universes from YAML configuration file.
+    
+    Loads all pre-built universes from config/ASSET_UNIVERSES.yaml using the
+    backend UniverseLoader, then merges with any custom user-created universes
+    from data/asset_universes.json.
     
     Returns:
-        Dictionary of asset universes
+        Dictionary of asset universes in frontend format
     """
-    universes_file = Path(__file__).parent.parent.parent / 'data' / 'asset_universes.json'
-    
-    # Default universes
-    default_universes = {
-        "US Large Cap": {
-            "description": "S&P 500 sector representatives",
-            "asset_class": "equity",
-            "symbols": ["SPY", "QQQ", "IWM", "DIA"],
-            "benchmark": "SPY"
-        },
-        "Global Equities": {
-            "description": "Global equity market ETFs",
-            "asset_class": "equity",
-            "symbols": ["VTI", "VEA", "VWO", "EEM"],
-            "benchmark": "VT"
-        },
-        "Crypto Major": {
-            "description": "Major cryptocurrencies",
-            "asset_class": "crypto",
-            "symbols": ["BTC/USD", "ETH/USD", "BNB/USD"],
-            "benchmark": "BTC/USD"
-        },
-        "Commodities": {
-            "description": "Major commodity futures",
-            "asset_class": "commodity",
-            "symbols": ["GC", "CL", "NG", "SI"],
-            "benchmark": "GC"
-        },
-        "Fixed Income": {
-            "description": "Bond ETFs across duration",
-            "asset_class": "bond",
-            "symbols": ["TLT", "IEF", "SHY", "AGG"],
-            "benchmark": "AGG"
-        },
-        "FX Majors": {
-            "description": "Major currency pairs",
-            "asset_class": "fx",
-            "symbols": ["EUR/USD", "GBP/USD", "USD/JPY", "AUD/USD"],
-            "benchmark": "EUR/USD"
+    # Load all universes from YAML using the backend loader
+    try:
+        loader = get_universe_loader()
+        universes = {}
+        
+        # Convert all YAML universes to frontend format
+        for universe_id in loader.list_universes():
+            universe = loader.get_universe(universe_id)
+            if universe:
+                # Use the universe name as the key for better display
+                universes[universe.name] = {
+                    'description': universe.description,
+                    'asset_class': universe.asset_class,
+                    'symbols': universe.symbols,
+                    'benchmark': universe.benchmark,
+                    'metadata': universe.metadata,
+                    'universe_id': universe_id  # Store original ID for reference
+                }
+        
+        # Also load custom user-created universes from JSON if they exist
+        custom_file = Path(__file__).parent.parent.parent / 'data' / 'asset_universes.json'
+        if custom_file.exists():
+            try:
+                with open(custom_file, 'r') as f:
+                    custom_universes = json.load(f)
+                    # Merge custom universes (they take precedence)
+                    universes.update(custom_universes)
+            except Exception as e:
+                # Log but don't fail if custom file is corrupted
+                print(f"Warning: Could not load custom universes from {custom_file}: {e}")
+        
+        return universes
+        
+    except Exception as e:
+        # Fallback to minimal defaults if YAML loading fails
+        print(f"Error loading universes from YAML: {e}")
+        return {
+            "US Large Cap": {
+                "description": "S&P 500 sector representatives",
+                "asset_class": "equity",
+                "symbols": ["SPY", "QQQ", "IWM", "DIA"],
+                "benchmark": "SPY"
+            },
+            "Global Equities": {
+                "description": "Global equity market ETFs",
+                "asset_class": "equity",
+                "symbols": ["VTI", "VEA", "VWO", "EEM"],
+                "benchmark": "VT"
+            }
         }
-    }
-    
-    # Try to load from file, otherwise use defaults
-    if universes_file.exists():
-        try:
-            with open(universes_file, 'r') as f:
-                return json.load(f)
-        except Exception:
-            return default_universes
-    
-    return default_universes
 
 
 def save_asset_universes(universes: Dict[str, Dict[str, Any]]):
