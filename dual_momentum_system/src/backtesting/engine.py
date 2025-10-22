@@ -50,6 +50,7 @@ class BacktestEngine:
         commission: float = 0.001,
         slippage: float = 0.0005,
         risk_free_rate: float = 0.0,
+        benchmark_include_costs: bool = False,
     ):
         """
         Initialize backtesting engine.
@@ -59,11 +60,15 @@ class BacktestEngine:
             commission: Commission rate (e.g., 0.001 = 0.1%)
             slippage: Slippage rate (e.g., 0.0005 = 0.05%)
             risk_free_rate: Annual risk-free rate for Sharpe calculation
+            benchmark_include_costs: Whether to apply transaction costs to benchmark.
+                - False (default): Passive benchmark, no costs (standard academic approach)
+                - True: Include entry/exit costs for fair comparison with strategy
         """
         self.initial_capital = initial_capital
         self.commission = commission
         self.slippage = slippage
         self.risk_free_rate = risk_free_rate
+        self.benchmark_include_costs = benchmark_include_costs
         
         # State tracking
         self.cash = initial_capital
@@ -77,6 +82,10 @@ class BacktestEngine:
             f"Initialized BacktestEngine with ${initial_capital:,.2f} capital, "
             f"{commission:.2%} commission, {slippage:.2%} slippage"
         )
+        if benchmark_include_costs:
+            logger.info("Benchmark will include transaction costs for fair comparison")
+        else:
+            logger.info("Benchmark uses passive buy-and-hold (no transaction costs)")
     
     def _setup_logging(self, strategy_name: str, start_date: datetime, end_date: datetime) -> str:
         """
@@ -636,16 +645,36 @@ class BacktestEngine:
             portfolio_value: Current portfolio value
             risk_manager: Risk manager for position sizing
         """
-        # Close all existing positions first to free up cash for rebalancing
-        if self.positions:
-            logger.info("   Closing existing positions for rebalancing:")
-            for symbol in list(self.positions.keys()):
+        # Determine which symbols are in the new signal set
+        signal_symbols = {signal.symbol for signal in signals if signal.direction != 0}
+        
+        # Close only positions that are NOT in the new signal set
+        # This avoids unnecessary transaction costs from closing and reopening the same position
+        positions_to_close = []
+        positions_to_keep = []
+        
+        for symbol in list(self.positions.keys()):
+            if symbol not in signal_symbols:
+                positions_to_close.append(symbol)
+            else:
+                positions_to_keep.append(symbol)
+        
+        if positions_to_close:
+            logger.info("   Closing positions no longer in signals:")
+            for symbol in positions_to_close:
                 pos = self.positions[symbol]
                 market_value = pos.quantity * pos.current_price
                 pnl = (pos.current_price - pos.entry_price) * pos.quantity
                 logger.info(f"     {symbol}: {pos.quantity:.2f} shares @ ${pos.current_price:.2f} (Value: ${market_value:,.2f}, P&L: ${pnl:,.2f})")
                 self._close_position(symbol, current_date, aligned_data)
             logger.info(f"   Proceeds from sales added to cash. New cash: ${self.cash:,.2f}")
+        
+        if positions_to_keep:
+            logger.info("   Keeping existing positions:")
+            for symbol in positions_to_keep:
+                pos = self.positions[symbol]
+                market_value = pos.quantity * pos.current_price
+                logger.info(f"     {symbol}: {pos.quantity:.2f} shares @ ${pos.current_price:.2f} (Value: ${market_value:,.2f})")
         
         # Determine allocation weights in two steps:
         # 1) Decide included assets count vs desired position_count
@@ -705,16 +734,44 @@ class BacktestEngine:
         
         remaining_cash = self.cash
         total_signals = len(ordered_signals)
+        
+        # Calculate current position values for assets we're keeping
+        kept_position_values = {}
+        for symbol in self.positions.keys():
+            if symbol in signal_symbols:
+                pos = self.positions[symbol]
+                kept_position_values[symbol] = pos.quantity * pos.current_price
+        
         # Precompute scaling factor and log target weights
+        # For assets we're keeping, we only need to adjust (buy/sell difference)
+        # For new assets, we need full capital
         est_total_required = 0.0
         for s2 in ordered_signals:
             pct2 = normalized_weights.get(s2.symbol, 0.0)
-            est_total_required += portfolio_value * pct2 * (1 + self.commission)
-        scaling_factor = min(1.0, remaining_cash / est_total_required) if est_total_required > 0 else 0.0
+            target_value = portfolio_value * pct2
+            
+            if s2.symbol in kept_position_values:
+                # Already have a position - only need cash if we're increasing
+                current_value = kept_position_values[s2.symbol]
+                if target_value > current_value:
+                    # Need to buy more
+                    additional_needed = (target_value - current_value) * (1 + self.commission)
+                    est_total_required += additional_needed
+                # If target < current, we'll sell and get cash back, so don't add to required
+            else:
+                # New position - need full amount
+                est_total_required += target_value * (1 + self.commission)
+        
+        scaling_factor = min(1.0, remaining_cash / est_total_required) if est_total_required > 0 else 1.0
         logger.info(
             f"[ORDER SIZING] {current_date.strftime('%Y-%m-%d')}: PV=${portfolio_value:,.2f}, Cash=${remaining_cash:,.2f}, Comm={self.commission:.4%}, Slip={self.slippage:.4%}, Scale={scaling_factor:.6f}"
         )
         logger.info("[ORDER SIZING] Weights: " + ", ".join([f"{sym}={normalized_weights[sym]*100:.2f}%" for sym in normalized_weights.keys()]))
+        
+        # Log kept positions
+        if kept_position_values:
+            logger.info(f"[ORDER SIZING] Keeping {len(kept_position_values)} existing positions (may adjust sizes)")
+        
         batch_total_cost = 0.0
         
         for idx, signal in enumerate(ordered_signals):
@@ -743,23 +800,54 @@ class BacktestEngine:
             
             # Determine target allocation percent from normalized weights
             target_pct = normalized_weights.get(signal.symbol, 0.0)
-            # Calculate desired spend such that sum(cost) == cash (proportional scaling)
-            desired_dollars = portfolio_value * target_pct
-            # Apply scaling factor (and remove commission impact for notional sizing)
-            desired_size = desired_dollars * scaling_factor / (1 + self.commission)
+            # Calculate target position value
+            target_value = portfolio_value * target_pct
             
-            if risk_manager and desired_size > 0:
-                rm_cap = risk_manager.calculate_position_size(signal, portfolio_value, self.positions) if hasattr(risk_manager, 'calculate_position_size') else desired_size
-                position_size_dollars = max(0.0, min(desired_size, rm_cap))
+            # Check if we already have this position
+            existing_position = self.positions.get(signal.symbol)
+            existing_value = 0.0
+            existing_shares = 0.0
+            
+            if existing_position:
+                existing_shares = existing_position.quantity
+                existing_value = existing_shares * current_price
+                logger.debug(f"      Existing position: {existing_shares:.2f} shares worth ${existing_value:,.2f}")
+            
+            # Calculate target shares
+            target_shares = target_value / execution_price if execution_price > 0 else 0
+            
+            # Apply risk manager constraints if present
+            if risk_manager and target_value > 0:
+                rm_cap = risk_manager.calculate_position_size(signal, portfolio_value, self.positions) if hasattr(risk_manager, 'calculate_position_size') else target_value
+                target_value = max(0.0, min(target_value, rm_cap))
+                target_shares = target_value / execution_price if execution_price > 0 else 0
+            
+            shares = target_shares
+            
+            # Calculate the actual cost we'll incur (only for the change in position)
+            if existing_position:
+                # We're adjusting an existing position
+                shares_diff = target_shares - existing_shares
+                trade_value = abs(shares_diff) * execution_price
+                commission_cost = trade_value * self.commission
+                
+                if shares_diff > 0:
+                    # Buying more
+                    total_cost = trade_value + commission_cost
+                    position_size_dollars = trade_value
+                elif shares_diff < 0:
+                    # Selling some
+                    total_cost = -trade_value + commission_cost  # Negative cost = we get cash back (minus commission)
+                    position_size_dollars = -trade_value
+                else:
+                    # No change
+                    total_cost = 0
+                    position_size_dollars = 0
             else:
-                position_size_dollars = max(0.0, desired_size)
-            
-            # Calculate shares to buy
-            shares = position_size_dollars / execution_price
-            
-            # Calculate commission
-            commission_cost = position_size_dollars * self.commission
-            total_cost = position_size_dollars + commission_cost
+                # New position - full cost
+                position_size_dollars = target_value
+                commission_cost = position_size_dollars * self.commission
+                total_cost = position_size_dollars + commission_cost
             
             # Log trade details with enhanced context
             direction_str = "BUY" if signal.direction > 0 else "SELL"
@@ -771,55 +859,78 @@ class BacktestEngine:
             if hasattr(signal, 'confidence'):
                 confidence_str = f" confidence={signal.confidence:.2f}"
             
-            logger.info(f"     📈 {direction_str} {signal.symbol}{reason_str}{blend_str}")
+            # Determine action type
+            if existing_position:
+                shares_diff = shares - existing_shares
+                if abs(shares_diff) < 0.01:  # Negligible change
+                    action_str = "HOLD"
+                elif shares_diff > 0:
+                    action_str = "ADD"
+                else:
+                    action_str = "REDUCE"
+            else:
+                action_str = "BUY"
+            
+            logger.info(f"     📈 {action_str} {signal.symbol}{reason_str}{blend_str}")
             logger.info(f"        Price: ${current_price:.2f} → ${execution_price:.2f} (slippage: {self.slippage:.3%})")
             logger.info(f"        Signal: strength={signal.strength:.2f}{confidence_str}")
-            logger.info(f"        Position Size: ${position_size_dollars:,.2f}")
-            logger.info(f"        Shares: {shares:.2f}")
+            logger.info(f"        Target Shares: {shares:.2f}")
+            
+            if existing_position:
+                logger.info(f"        Current Shares: {existing_shares:.2f}")
+                logger.info(f"        Share Change: {shares - existing_shares:+.2f}")
+            
             logger.info(f"        Commission: ${commission_cost:.2f}")
             logger.info(f"        Total Cost: ${total_cost:,.2f}")
             
-            # If total cost exceeds available cash, reduce position size
-            if total_cost > self.cash:
-                # Calculate maximum position size that fits within available cash
-                # position_size + (position_size * commission) <= cash
-                # position_size * (1 + commission) <= cash
-                # position_size <= cash / (1 + commission)
-                max_position_size = self.cash / (1 + self.commission)
-                position_size_dollars = min(position_size_dollars, max_position_size)
-                shares = position_size_dollars / execution_price
-                commission_cost = position_size_dollars * self.commission
-                total_cost = position_size_dollars + commission_cost
-                
-                # Ensure total cost doesn't exceed cash due to floating point precision
-                if total_cost > self.cash:
-                    # Reduce position size by a small amount to account for precision
-                    position_size_dollars = self.cash - (position_size_dollars * self.commission)
-                    position_size_dollars = max(0, position_size_dollars)  # Ensure non-negative
+            # Skip if no change needed
+            if existing_position and abs(shares - existing_shares) < 0.01:
+                logger.info(f"        ✅ No adjustment needed (already at target)")
+                continue
+            
+            # If buying and total cost exceeds available cash, reduce position size
+            if total_cost > self.cash and total_cost > 0:
+                if existing_position:
+                    # Can't afford the full adjustment
+                    logger.warning(f"     ⚠️  Cannot fully adjust {signal.symbol} - insufficient cash")
+                    logger.warning(f"        Required: ${total_cost:,.2f}, Available: ${self.cash:,.2f}")
+                    # Calculate what we can afford
+                    max_additional = self.cash / (1 + self.commission)
+                    shares = existing_shares + (max_additional / execution_price)
+                    shares_diff = shares - existing_shares
+                    trade_value = shares_diff * execution_price
+                    commission_cost = trade_value * self.commission
+                    total_cost = trade_value + commission_cost
+                    logger.info(f"        Adjusted to partial increase: {shares:.2f} shares")
+                else:
+                    # Calculate maximum position size that fits within available cash
+                    max_position_size = self.cash / (1 + self.commission)
+                    position_size_dollars = min(position_size_dollars, max_position_size)
                     shares = position_size_dollars / execution_price
                     commission_cost = position_size_dollars * self.commission
                     total_cost = position_size_dollars + commission_cost
+                    
+                    # Ensure total cost doesn't exceed cash due to floating point precision
+                    if total_cost > self.cash:
+                        position_size_dollars = self.cash / (1 + self.commission)
+                        position_size_dollars = max(0, position_size_dollars)
+                        shares = position_size_dollars / execution_price
+                        commission_cost = position_size_dollars * self.commission
+                        total_cost = position_size_dollars + commission_cost
             
             # Check if we have enough cash (with small tolerance for floating point precision)
-            if total_cost > remaining_cash + 1e-6 or position_size_dollars <= 0:
-                logger.warning(f"     ❌ SKIPPED {direction_str} {signal.symbol} - Insufficient cash")
-                logger.warning(f"        Required: ${total_cost:,.2f}, Available: ${remaining_cash:,.2f}")
+            if total_cost > self.cash + 1e-6 and total_cost > 0:
+                logger.warning(f"     ❌ SKIPPED {action_str} {signal.symbol} - Insufficient cash")
+                logger.warning(f"        Required: ${total_cost:,.2f}, Available: ${self.cash:,.2f}")
                 continue
-            
-            # Deduct from remaining tracker now (engine cash updates after execution)
-            remaining_cash = max(0.0, remaining_cash - total_cost)
-            batch_total_cost += total_cost
-            logger.info(
-                f"  {signal.symbol}: target={target_pct*100:.2f}%, desired=${desired_dollars:,.2f}, scaled=${position_size_dollars:,.2f}, price=${execution_price:,.4f}, shares={shares:.6f}, cost=${total_cost:,.2f}, cash_left=${remaining_cash:,.2f}"
-            )
             
             # Execute trade
             if signal.symbol in self.positions:
-                # Adjust existing position
+                # Adjust existing position (handles its own cash management)
                 self._adjust_position(
                     signal.symbol,
                     shares,
-                    execution_price,
+                    current_price,  # Pass current price, not execution price (adjust_position handles slippage)
                     current_date
                 )
                 logger.info(f"        ✅ Position adjusted successfully")
@@ -832,10 +943,14 @@ class BacktestEngine:
                     current_date
                 )
                 logger.info(f"        ✅ Position opened successfully")
+                # Deduct cash for new position
+                self.cash -= total_cost
             
-            # Deduct cash (keep engine cash in sync with remaining tracker)
-            self.cash -= total_cost
             logger.info(f"        💰 Cash remaining: ${self.cash:,.2f}")
+            
+            # Track for batch totals
+            remaining_cash = self.cash
+            batch_total_cost += abs(total_cost)
 
         logger.info(f"[ORDER SIZING] Batch total cost=${batch_total_cost:,.2f}, Cash end=${self.cash:,.2f}")
     
@@ -867,10 +982,58 @@ class BacktestEngine:
         price: float,
         timestamp: datetime
     ) -> None:
-        """Adjust an existing position (simplified - treats as close and reopen)."""
-        # For simplicity, close old and open new
-        self._close_position(symbol, timestamp, {symbol: pd.DataFrame({'close': [price]}, index=[timestamp])})
-        self._open_position(symbol, new_quantity, price, timestamp)
+        """
+        Adjust an existing position by buying or selling shares.
+        
+        This method intelligently adjusts positions without closing and reopening,
+        which avoids unnecessary transaction costs when rebalancing.
+        """
+        if symbol not in self.positions:
+            # No existing position, just open new one
+            self._open_position(symbol, new_quantity, price, timestamp)
+            return
+        
+        position = self.positions[symbol]
+        current_quantity = position.quantity
+        quantity_diff = new_quantity - current_quantity
+        
+        # Apply slippage
+        if quantity_diff > 0:
+            # Buying more shares
+            execution_price = price * (1 + self.slippage)
+        elif quantity_diff < 0:
+            # Selling some shares
+            execution_price = price * (1 - self.slippage)
+        else:
+            # No change needed
+            logger.debug(f"No adjustment needed for {symbol} (target quantity equals current)")
+            return
+        
+        # Calculate cost/proceeds
+        trade_value = abs(quantity_diff) * execution_price
+        commission_cost = trade_value * self.commission
+        
+        if quantity_diff > 0:
+            # Buying more - deduct from cash
+            total_cost = trade_value + commission_cost
+            if total_cost > self.cash:
+                logger.warning(f"Insufficient cash to adjust {symbol} position (need ${total_cost:,.2f}, have ${self.cash:,.2f})")
+                return
+            self.cash -= total_cost
+            logger.debug(f"Adjusting {symbol}: buying {quantity_diff:.2f} more shares at ${execution_price:.2f} (cost: ${total_cost:,.2f})")
+        else:
+            # Selling some - add to cash
+            net_proceeds = trade_value - commission_cost
+            self.cash += net_proceeds
+            logger.debug(f"Adjusting {symbol}: selling {abs(quantity_diff):.2f} shares at ${execution_price:.2f} (proceeds: ${net_proceeds:,.2f})")
+        
+        # Update position quantity and current price
+        position.quantity = new_quantity
+        position.current_price = price
+        position.current_timestamp = timestamp
+        
+        # Note: We keep the original entry_price and entry_timestamp
+        # This preserves the cost basis for P&L tracking
     
     def _close_position(
         self,
@@ -1048,6 +1211,21 @@ class BacktestEngine:
                 # Create indexed benchmark values starting from strategy's notional value
                 benchmark_indexed = (benchmark_prices / benchmark_start_price) * strategy_start_value
                 
+                # Apply transaction costs if configured
+                if self.benchmark_include_costs:
+                    # Apply entry cost (commission + slippage) to starting value
+                    entry_cost_factor = 1.0 - (self.commission + self.slippage)
+                    benchmark_indexed = benchmark_indexed * entry_cost_factor
+                    
+                    # Apply exit cost to final value
+                    exit_cost_factor = 1.0 - (self.commission + self.slippage)
+                    benchmark_indexed.iloc[-1] = benchmark_indexed.iloc[-1] * exit_cost_factor
+                    
+                    logger.info(f"📊 Applied transaction costs to benchmark:")
+                    logger.info(f"   Entry cost: {(self.commission + self.slippage):.4%}")
+                    logger.info(f"   Exit cost: {(self.commission + self.slippage):.4%}")
+                    logger.info(f"   Total impact: ~{2 * (self.commission + self.slippage):.4%}")
+                
                 # Store the indexed benchmark curve for charting
                 benchmark_curve = benchmark_indexed
                 
@@ -1058,6 +1236,10 @@ class BacktestEngine:
                 logger.info(f"📊 Benchmark data aligned and indexed to performance period:")
                 logger.info(f"   Strategy start value: ${strategy_start_value:,.2f}")
                 logger.info(f"   Benchmark start price: ${benchmark_start_price:.2f}")
+                if self.benchmark_include_costs:
+                    logger.info(f"   Benchmark includes transaction costs: YES")
+                else:
+                    logger.info(f"   Benchmark includes transaction costs: NO (passive buy-and-hold)")
                 logger.info(f"   Strategy returns: {len(returns)} periods ({returns.index[0].strftime('%Y-%m-%d')} to {returns.index[-1].strftime('%Y-%m-%d')})")
                 logger.info(f"   Benchmark returns: {len(benchmark_returns)} periods ({benchmark_returns.index[0].strftime('%Y-%m-%d')} to {benchmark_returns.index[-1].strftime('%Y-%m-%d')})")
                 logger.info(f"   Both strategy and benchmark start with same notional value: ${strategy_start_value:,.2f}")
@@ -1121,6 +1303,7 @@ class BacktestEngine:
                 'commission': self.commission,
                 'slippage': self.slippage,
                 'risk_free_rate': self.risk_free_rate,
+                'benchmark_include_costs': self.benchmark_include_costs,
             }
         )
         
