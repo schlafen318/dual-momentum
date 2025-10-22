@@ -7,34 +7,61 @@ Provides consistent, professional styling across all pages.
 import streamlit as st
 
 
-def apply_custom_css():
-    """Apply custom CSS styling to the dashboard."""
+def apply_custom_css(collapse_sidebar=False):
+    """Apply custom CSS styling to the dashboard.
     
-    st.markdown("""
-    <style>
-        /* Main container styling */
-        .main {
-            padding: 0rem 1rem;
+    Args:
+        collapse_sidebar: If True, applies CSS to collapse the sidebar
+    """
+    
+    # Sidebar collapse CSS (applied when page changes)
+    sidebar_collapse_css = ""
+    if collapse_sidebar:
+        sidebar_collapse_css = """
+        /* Auto-collapse sidebar on page change */
+        section[data-testid="stSidebar"] {
+            width: 0px !important;
+            min-width: 0px !important;
         }
         
+        section[data-testid="stSidebar"] > div {
+            width: 0px !important;
+            margin-left: -21rem !important;
+        }
+        
+        /* Show collapse button */
+        button[kind="header"] {
+            display: block !important;
+        }
+        """
+    
+    st.markdown(f"""
+    <style>
+        {sidebar_collapse_css}
+        
+        /* Main container styling */
+        .main {{
+            padding: 0rem 1rem;
+        }}
+        
         /* Header styling */
-        .page-header {
+        .page-header {{
             background: linear-gradient(90deg, #1f77b4 0%, #2ca02c 100%);
             padding: 2rem;
             border-radius: 10px;
             margin-bottom: 2rem;
             color: white;
-        }
+        }}
         
-        .page-header h1 {
+        .page-header h1 {{
             color: white !important;
             margin-bottom: 0.5rem;
-        }
+        }}
         
-        .page-header p {
+        .page-header p {{
             color: rgba(255, 255, 255, 0.9);
             font-size: 1.1rem;
-        }
+        }}
         
         /* Metric cards - Light mode default */
         .metric-card {
@@ -369,247 +396,247 @@ def apply_custom_css():
         }
         
         /* Dark mode support */
-        @media (prefers-color-scheme: dark) {
+        @media (prefers-color-scheme: dark) {{
             /* Card containers in dark mode */
-            .card {
+            .card {{
                 background: #1e1e1e !important;
                 box-shadow: 0 2px 8px rgba(0,0,0,0.4);
                 color: #e0e0e0 !important;
-            }
+            }}
             
-            .card h3 {
+            .card h3 {{
                 color: #4fc3f7 !important;
-            }
+            }}
             
-            .card p, .card ul, .card li {
+            .card p, .card ul, .card li {{
                 color: #e0e0e0 !important;
-            }
+            }}
             
             /* Metric cards in dark mode */
-            .metric-card {
+            .metric-card {{
                 background: #1e1e1e !important;
                 box-shadow: 0 2px 8px rgba(0,0,0,0.4);
-            }
+            }}
             
-            .metric-card h3 {
+            .metric-card h3 {{
                 color: #b0b0b0 !important;
-            }
+            }}
             
-            .metric-card .value {
+            .metric-card .value {{
                 color: #4fc3f7 !important;
-            }
+            }}
             
-            .metric-card.positive .value {
+            .metric-card.positive .value {{
                 color: #66bb6a !important;
-            }
+            }}
             
-            .metric-card.negative .value {
+            .metric-card.negative .value {{
                 color: #ef5350 !important;
-            }
+            }}
             
             /* Info boxes in dark mode */
-            .info-box {
+            .info-box {{
                 background: #1a237e !important;
                 color: #90caf9 !important;
                 border-left-color: #42a5f5;
-            }
+            }}
             
-            .warning-box {
+            .warning-box {{
                 background: #4a2c00 !important;
                 color: #ffb74d !important;
                 border-left-color: #ffa726;
-            }
+            }}
             
-            .success-box {
+            .success-box {{
                 background: #1b5e20 !important;
                 color: #81c784 !important;
                 border-left-color: #66bb6a;
-            }
+            }}
             
-            .error-box {
+            .error-box {{
                 background: #4a0000 !important;
                 color: #ef9a9a !important;
                 border-left-color: #ef5350;
-            }
+            }}
             
             /* Data tables in dark mode */
-            .dataframe th {
+            .dataframe th {{
                 background-color: #1565c0 !important;
-            }
+            }}
             
-            .dataframe td {
+            .dataframe td {{
                 border-bottom-color: #424242 !important;
                 color: #e0e0e0 !important;
-            }
+            }}
             
-            .dataframe tr:hover {
+            .dataframe tr:hover {{
                 background-color: #2a2a2a !important;
-            }
+            }}
             
             /* Expander in dark mode */
-            .streamlit-expanderHeader {
+            .streamlit-expanderHeader {{
                 background-color: #2a2a2a !important;
                 color: #e0e0e0 !important;
-            }
+            }}
             
             /* Section divider in dark mode */
-            .section-divider {
+            .section-divider {{
                 border-top-color: #424242;
-            }
+            }}
             
             /* Footer in dark mode */
-            .sidebar-footer {
+            .sidebar-footer {{
                 color: #b0b0b0 !important;
-            }
+            }}
             
             /* Colored highlight cards in dark mode */
-            .card-success {
+            .card-success {{
                 background: #1b5e20 !important;
                 color: #a5d6a7 !important;
-            }
+            }}
             
-            .card-success h4 {
+            .card-success h4 {{
                 color: #c8e6c9 !important;
-            }
+            }}
             
-            .card-success p {
+            .card-success p {{
                 color: #66bb6a !important;
-            }
+            }}
             
-            .card-info {
+            .card-info {{
                 background: #1a237e !important;
                 color: #90caf9 !important;
-            }
+            }}
             
-            .card-info h4 {
+            .card-info h4 {{
                 color: #bbdefb !important;
-            }
+            }}
             
-            .card-info p {
+            .card-info p {{
                 color: #42a5f5 !important;
-            }
+            }}
             
-            .card-warning {
+            .card-warning {{
                 background: #4a2c00 !important;
                 color: #ffcc80 !important;
-            }
+            }}
             
-            .card-warning h4 {
+            .card-warning h4 {{
                 color: #ffe0b2 !important;
-            }
+            }}
             
-            .card-warning p {
+            .card-warning p {{
                 color: #ffa726 !important;
-            }
-        }
+            }}
+        }}
         
         /* Force dark mode for Streamlit dark theme */
-        [data-theme="dark"] .card {
+        [data-theme="dark"] .card {{
             background: #1e1e1e !important;
             box-shadow: 0 2px 8px rgba(0,0,0,0.4);
             color: #e0e0e0 !important;
-        }
+        }}
         
         [data-theme="dark"] .card h3,
-        [data-theme="dark"] .card h4 {
+        [data-theme="dark"] .card h4 {{
             color: #4fc3f7 !important;
-        }
+        }}
         
         [data-theme="dark"] .card p,
         [data-theme="dark"] .card ul,
-        [data-theme="dark"] .card li {
+        [data-theme="dark"] .card li {{
             color: #e0e0e0 !important;
-        }
+        }}
         
-        [data-theme="dark"] .metric-card {
+        [data-theme="dark"] .metric-card {{
             background: #1e1e1e !important;
             box-shadow: 0 2px 8px rgba(0,0,0,0.4);
-        }
+        }}
         
-        [data-theme="dark"] .metric-card h3 {
+        [data-theme="dark"] .metric-card h3 {{
             color: #b0b0b0 !important;
-        }
+        }}
         
-        [data-theme="dark"] .metric-card .value {
+        [data-theme="dark"] .metric-card .value {{
             color: #4fc3f7 !important;
-        }
+        }}
         
-        [data-theme="dark"] .metric-card.positive .value {
+        [data-theme="dark"] .metric-card.positive .value {{
             color: #66bb6a !important;
-        }
+        }}
         
-        [data-theme="dark"] .metric-card.negative .value {
+        [data-theme="dark"] .metric-card.negative .value {{
             color: #ef5350 !important;
-        }
+        }}
         
-        [data-theme="dark"] .info-box {
+        [data-theme="dark"] .info-box {{
             background: #1a237e !important;
             color: #90caf9 !important;
             border-left-color: #42a5f5;
-        }
+        }}
         
-        [data-theme="dark"] .warning-box {
+        [data-theme="dark"] .warning-box {{
             background: #4a2c00 !important;
             color: #ffb74d !important;
             border-left-color: #ffa726;
-        }
+        }}
         
-        [data-theme="dark"] .success-box {
+        [data-theme="dark"] .success-box {{
             background: #1b5e20 !important;
             color: #81c784 !important;
             border-left-color: #66bb6a;
-        }
+        }}
         
-        [data-theme="dark"] .error-box {
+        [data-theme="dark"] .error-box {{
             background: #4a0000 !important;
             color: #ef9a9a !important;
             border-left-color: #ef5350;
-        }
+        }}
         
         /* Colored highlight cards in Streamlit dark theme */
-        [data-theme="dark"] .card-success {
+        [data-theme="dark"] .card-success {{
             background: #1b5e20 !important;
             color: #a5d6a7 !important;
-        }
+        }}
         
-        [data-theme="dark"] .card-success h4 {
+        [data-theme="dark"] .card-success h4 {{
             color: #c8e6c9 !important;
-        }
+        }}
         
-        [data-theme="dark"] .card-success p {
+        [data-theme="dark"] .card-success p {{
             color: #66bb6a !important;
-        }
+        }}
         
-        [data-theme="dark"] .card-info {
+        [data-theme="dark"] .card-info {{
             background: #1a237e !important;
             color: #90caf9 !important;
-        }
+        }}
         
-        [data-theme="dark"] .card-info h4 {
+        [data-theme="dark"] .card-info h4 {{
             color: #bbdefb !important;
-        }
+        }}
         
-        [data-theme="dark"] .card-info p {
+        [data-theme="dark"] .card-info p {{
             color: #42a5f5 !important;
-        }
+        }}
         
-        [data-theme="dark"] .card-warning {
+        [data-theme="dark"] .card-warning {{
             background: #4a2c00 !important;
             color: #ffcc80 !important;
-        }
+        }}
         
-        [data-theme="dark"] .card-warning h4 {
+        [data-theme="dark"] .card-warning h4 {{
             color: #ffe0b2 !important;
-        }
+        }}
         
-        [data-theme="dark"] .card-warning p {
+        [data-theme="dark"] .card-warning p {{
             color: #ffa726 !important;
-        }
+        }}
         
         /* Footer in Streamlit dark theme */
-        [data-theme="dark"] .sidebar-footer {
+        [data-theme="dark"] .sidebar-footer {{
             color: #b0b0b0 !important;
-        }
+        }}
     </style>
     """, unsafe_allow_html=True)
 
