@@ -443,7 +443,7 @@ def render_charts(results):
     st.markdown("#### Drawdown Analysis")
     
     if hasattr(results, 'equity_curve'):
-        # Calculate drawdown
+        # Calculate strategy drawdown
         equity = results.equity_curve
         running_max = equity.cummax()
         drawdown = (equity - running_max) / running_max * 100
@@ -457,18 +457,41 @@ def render_charts(results):
             x=drawdown_df['Date'],
             y=drawdown_df['Drawdown'],
             mode='lines',
-            name='Drawdown',
+            name='Strategy Drawdown',
             line=dict(color='#d62728', width=2),
             fill='tozeroy',
             fillcolor='rgba(214, 39, 40, 0.3)'
         ))
         
+        # Add benchmark drawdown if available
+        if hasattr(results, 'benchmark_curve') and results.benchmark_curve is not None:
+            try:
+                benchmark_curve = results.benchmark_curve
+                benchmark_running_max = benchmark_curve.cummax()
+                benchmark_drawdown = (benchmark_curve - benchmark_running_max) / benchmark_running_max * 100
+                
+                # Align with strategy dates
+                benchmark_drawdown_aligned = benchmark_drawdown.reindex(drawdown_df['Date']).ffill()
+                
+                fig.add_trace(go.Scatter(
+                    x=drawdown_df['Date'],
+                    y=benchmark_drawdown_aligned.values,
+                    mode='lines',
+                    name=f'Benchmark ({st.session_state.benchmark_symbol}) Drawdown',
+                    line=dict(color='#ff7f0e', width=2, dash='dash'),
+                    fill='tozeroy',
+                    fillcolor='rgba(255, 127, 14, 0.2)'
+                ))
+            except Exception as e:
+                pass  # Silently skip if benchmark drawdown can't be plotted
+        
         fig.update_layout(
-            title="Portfolio Drawdown",
+            title="Portfolio Drawdown - Strategy vs Benchmark",
             xaxis_title="Date",
             yaxis_title="Drawdown (%)",
             hovermode='x unified',
-            height=300
+            height=300,
+            showlegend=True
         )
         
         st.plotly_chart(fig, width='stretch')
