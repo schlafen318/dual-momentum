@@ -50,6 +50,7 @@ class BacktestEngine:
         commission: float = 0.001,
         slippage: float = 0.0005,
         risk_free_rate: float = 0.0,
+        benchmark_include_costs: bool = False,
     ):
         """
         Initialize backtesting engine.
@@ -59,11 +60,15 @@ class BacktestEngine:
             commission: Commission rate (e.g., 0.001 = 0.1%)
             slippage: Slippage rate (e.g., 0.0005 = 0.05%)
             risk_free_rate: Annual risk-free rate for Sharpe calculation
+            benchmark_include_costs: Whether to apply transaction costs to benchmark.
+                - False (default): Passive benchmark, no costs (standard academic approach)
+                - True: Include entry/exit costs for fair comparison with strategy
         """
         self.initial_capital = initial_capital
         self.commission = commission
         self.slippage = slippage
         self.risk_free_rate = risk_free_rate
+        self.benchmark_include_costs = benchmark_include_costs
         
         # State tracking
         self.cash = initial_capital
@@ -77,6 +82,10 @@ class BacktestEngine:
             f"Initialized BacktestEngine with ${initial_capital:,.2f} capital, "
             f"{commission:.2%} commission, {slippage:.2%} slippage"
         )
+        if benchmark_include_costs:
+            logger.info("Benchmark will include transaction costs for fair comparison")
+        else:
+            logger.info("Benchmark uses passive buy-and-hold (no transaction costs)")
     
     def _setup_logging(self, strategy_name: str, start_date: datetime, end_date: datetime) -> str:
         """
@@ -1202,6 +1211,21 @@ class BacktestEngine:
                 # Create indexed benchmark values starting from strategy's notional value
                 benchmark_indexed = (benchmark_prices / benchmark_start_price) * strategy_start_value
                 
+                # Apply transaction costs if configured
+                if self.benchmark_include_costs:
+                    # Apply entry cost (commission + slippage) to starting value
+                    entry_cost_factor = 1.0 - (self.commission + self.slippage)
+                    benchmark_indexed = benchmark_indexed * entry_cost_factor
+                    
+                    # Apply exit cost to final value
+                    exit_cost_factor = 1.0 - (self.commission + self.slippage)
+                    benchmark_indexed.iloc[-1] = benchmark_indexed.iloc[-1] * exit_cost_factor
+                    
+                    logger.info(f"📊 Applied transaction costs to benchmark:")
+                    logger.info(f"   Entry cost: {(self.commission + self.slippage):.4%}")
+                    logger.info(f"   Exit cost: {(self.commission + self.slippage):.4%}")
+                    logger.info(f"   Total impact: ~{2 * (self.commission + self.slippage):.4%}")
+                
                 # Store the indexed benchmark curve for charting
                 benchmark_curve = benchmark_indexed
                 
@@ -1212,6 +1236,10 @@ class BacktestEngine:
                 logger.info(f"📊 Benchmark data aligned and indexed to performance period:")
                 logger.info(f"   Strategy start value: ${strategy_start_value:,.2f}")
                 logger.info(f"   Benchmark start price: ${benchmark_start_price:.2f}")
+                if self.benchmark_include_costs:
+                    logger.info(f"   Benchmark includes transaction costs: YES")
+                else:
+                    logger.info(f"   Benchmark includes transaction costs: NO (passive buy-and-hold)")
                 logger.info(f"   Strategy returns: {len(returns)} periods ({returns.index[0].strftime('%Y-%m-%d')} to {returns.index[-1].strftime('%Y-%m-%d')})")
                 logger.info(f"   Benchmark returns: {len(benchmark_returns)} periods ({benchmark_returns.index[0].strftime('%Y-%m-%d')} to {benchmark_returns.index[-1].strftime('%Y-%m-%d')})")
                 logger.info(f"   Both strategy and benchmark start with same notional value: ${strategy_start_value:,.2f}")
@@ -1275,6 +1303,7 @@ class BacktestEngine:
                 'commission': self.commission,
                 'slippage': self.slippage,
                 'risk_free_rate': self.risk_free_rate,
+                'benchmark_include_costs': self.benchmark_include_costs,
             }
         )
         

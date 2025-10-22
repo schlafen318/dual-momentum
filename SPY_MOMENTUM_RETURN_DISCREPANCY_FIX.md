@@ -180,14 +180,54 @@ for s2 in ordered_signals:
    - Concentrated portfolios (SPY-only, or top 1-2 holdings)
    - Lower turnover strategies
 
+## Benchmark Transaction Costs
+
+**Important:** When comparing strategy to benchmark, consider whether benchmark should include transaction costs:
+
+### Default Approach (Recommended)
+- Benchmark = **passive buy-and-hold with no costs**
+- This is the standard academic approach
+- Strategy return will be ~0.30% lower than benchmark (due to entry/exit costs)
+- This is **expected and correct**
+
+### Alternative Approach
+- Benchmark = **includes same transaction costs as strategy**
+- More realistic for retail investor comparison
+- Set `benchmark_include_costs=True` when creating `BacktestEngine`
+- Strategy and benchmark returns should now be nearly identical for SPY-only with all buy signals
+
+**Example:**
+```python
+# Standard approach (default)
+engine = BacktestEngine(
+    initial_capital=100000,
+    commission=0.001,
+    slippage=0.0005,
+    benchmark_include_costs=False  # Passive benchmark
+)
+# Result: Strategy ≈ Benchmark - 0.30%
+
+# Fair comparison approach
+engine = BacktestEngine(
+    initial_capital=100000,
+    commission=0.001,
+    slippage=0.0005,
+    benchmark_include_costs=True  # Realistic benchmark
+)
+# Result: Strategy ≈ Benchmark (both pay same costs)
+```
+
+See `BENCHMARK_TRANSACTION_COSTS.md` for detailed explanation.
+
 ## Verification
 
 To verify the fix works correctly, you can:
 
-1. Run the test script: `python test_spy_momentum_fix.py`
-2. Check logs for "Keeping existing positions" messages
-3. Verify trade count = 2 for SPY-only strategy
-4. Compare strategy return to SPY buy-and-hold (should be within 0.3%)
+1. Check logs for "Keeping existing positions" messages
+2. Verify trade count = 2 for SPY-only strategy (1 entry + 1 exit)
+3. Compare strategy return to SPY buy-and-hold:
+   - With passive benchmark: Strategy ≈ Benchmark - 0.30%
+   - With realistic benchmark: Strategy ≈ Benchmark (within rounding)
 
 ## Files Modified
 
