@@ -39,6 +39,30 @@ gem_extended:
 # ============================================================================
 # GLOBAL SECTOR ROTATION
 # ============================================================================
+us_sectors:
+  name: "US Sectors - Complete GICS Coverage"
+  description: "All 11 US market sectors using SPDR Select Sector ETFs for rotation strategies"
+  asset_class: equity
+  benchmark: SPY
+  symbols:
+    - XLE      # Energy
+    - XLF      # Financials
+    - XLU      # Utilities
+    - XLI      # Industrials
+    - XLV      # Health Care
+    - XLK      # Technology
+    - XLB      # Materials
+    - XLP      # Consumer Staples
+    - XLY      # Consumer Discretionary
+    - XLRE     # Real Estate
+    - XLC      # Communication Services
+  metadata:
+    provider: "State Street SPDR"
+    sector_classification: "GICS (Global Industry Classification Standard)"
+    strategy_type: "Sector Rotation"
+    rebalance_recommended: monthly
+    note: "Ideal for tactical sector rotation and momentum strategies"
+
 global_sectors_us:
   name: "US Market Sectors (11 GICS Sectors)"
   description: "Complete US market sector coverage via SPDR Select Sector ETFs"
@@ -216,6 +240,28 @@ multi_asset_conservative:
 # ============================================================================
 # FACTOR-BASED STRATEGIES
 # ============================================================================
+us_equity_factors:
+  name: "US Equity Factors - Multi-Factor"
+  description: "Comprehensive US equity factor exposure across all major factors"
+  asset_class: equity
+  benchmark: SPY
+  symbols:
+    - MTUM     # iShares MSCI USA Momentum Factor
+    - VLUE     # iShares MSCI USA Value Factor
+    - QUAL     # iShares MSCI USA Quality Factor
+    - SIZE     # iShares MSCI USA Size Factor
+    - USMV     # iShares MSCI USA Min Volatility
+    - SPHQ     # Invesco S&P 500 Quality
+    - VTV      # Vanguard Value ETF
+    - VUG      # Vanguard Growth ETF
+    - SPHD     # Invesco S&P 500 High Dividend Low Volatility
+    - DFAS     # Dimensional US Small Cap
+  metadata:
+    factors: ["momentum", "value", "quality", "size", "low_volatility", "growth", "dividend"]
+    geographic_focus: "United States"
+    rebalance_recommended: monthly
+    note: "Multi-factor strategy combining various academic factors"
+
 factor_momentum:
   name: "Factor - Momentum"
   description: "Pure momentum factor exposure across asset classes"
@@ -439,6 +485,33 @@ global_income:
 # ============================================================================
 # GEOGRAPHIC FOCUS
 # ============================================================================
+global_equity_markets:
+  name: "Global Equity Markets - Geographic"
+  description: "Major global equity markets by geographic region for international diversification"
+  asset_class: equity
+  benchmark: VT  # Vanguard Total World Stock
+  symbols:
+    - SPY      # United States (S&P 500)
+    - VTI      # United States (Total Market)
+    - VEA      # Developed Markets ex-US
+    - VWO      # Emerging Markets
+    - VGK      # Europe
+    - VPL      # Pacific
+    - EWJ      # Japan
+    - EWG      # Germany
+    - EWU      # United Kingdom
+    - EWC      # Canada
+    - EWA      # Australia
+    - FXI      # China
+    - INDA     # India
+    - EWZ      # Brazil
+  metadata:
+    geographic_coverage: "Global"
+    strategy_type: "Geographic Diversification"
+    regions: ["North America", "Europe", "Asia Pacific", "Emerging Markets"]
+    rebalance_recommended: monthly
+    note: "Ideal for global tactical asset allocation and country rotation"
+
 us_market_cap:
   name: "US Market Cap Spectrum"
   description: "Full US equity market coverage by size"
