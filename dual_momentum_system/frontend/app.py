@@ -7,6 +7,7 @@ Professional multi-page dashboard for interactive backtesting of momentum strate
 import streamlit as st
 from pathlib import Path
 import sys
+import streamlit.components.v1 as components
 
 # Add project root to path
 project_root = Path(__file__).parent.parent
@@ -80,11 +81,18 @@ def main():
                 default_index = pages.index(st.session_state.navigate_to)
             del st.session_state.navigate_to
         
+        # Track previous page for auto-collapse detection
+        previous_page = st.session_state.get('current_page', pages[0])
+        
         page = st.radio(
             "Navigation",
             pages,
-            index=default_index
+            index=default_index,
+            key='page_navigation'
         )
+        
+        # Update current page in session state
+        st.session_state.current_page = page
         
         st.markdown("---")
         
@@ -111,6 +119,55 @@ def main():
             <p>v1.0.0</p>
         </div>
         """, unsafe_allow_html=True)
+    
+    # Auto-collapse sidebar after navigation (on page change)
+    if previous_page != page:
+        # Use components.html for more reliable JavaScript execution
+        collapse_sidebar_js = """
+            <script>
+                function collapseSidebar() {
+                    const doc = window.parent.document;
+                    
+                    // Method 1: Try to find and click the close button
+                    const buttons = doc.querySelectorAll('button[kind="header"]');
+                    for (let button of buttons) {
+                        const ariaLabel = button.getAttribute('aria-label');
+                        if (ariaLabel && (ariaLabel.toLowerCase().includes('close') || ariaLabel.toLowerCase().includes('collapse'))) {
+                            button.click();
+                            return;
+                        }
+                    }
+                    
+                    // Method 2: Try alternative selector
+                    const closeBtn = doc.querySelector('[data-testid="collapsedControl"]');
+                    if (closeBtn) {
+                        const parentBtn = closeBtn.closest('button');
+                        if (parentBtn) parentBtn.click();
+                        return;
+                    }
+                    
+                    // Method 3: Find button with SVG icon (Streamlit's close button)
+                    const allButtons = doc.querySelectorAll('button');
+                    for (let button of allButtons) {
+                        const svg = button.querySelector('svg');
+                        if (svg && button.parentElement && button.parentElement.parentElement) {
+                            const sidebar = doc.querySelector('[data-testid="stSidebar"]');
+                            if (sidebar && sidebar.contains(button)) {
+                                continue;
+                            }
+                            if (button.offsetParent !== null) {
+                                button.click();
+                                break;
+                            }
+                        }
+                    }
+                }
+                
+                // Try immediately and after a delay
+                setTimeout(collapseSidebar, 100);
+            </script>
+        """
+        components.html(collapse_sidebar_js, height=0)
     
     # Route to appropriate page
     if page == "🏠 Home":
