@@ -245,6 +245,9 @@ def render_configuration_tab():
                 'type': 'int',
                 'values': [126, 189, 252, 315],
             })
+            # Force stay on current page after rerun
+            if 'current_page' in st.session_state and st.session_state.current_page:
+                st.session_state.navigate_to = st.session_state.current_page
             st.rerun()
     
     with col2:
@@ -255,11 +258,17 @@ def render_configuration_tab():
                 {'id': 2, 'name': 'position_count', 'type': 'int', 'values': [1, 2, 3]},
                 {'id': 3, 'name': 'absolute_threshold', 'type': 'float', 'values': [0.0, 0.01, 0.02]},
             ]
+            # Force stay on current page after rerun
+            if 'current_page' in st.session_state and st.session_state.current_page:
+                st.session_state.navigate_to = st.session_state.current_page
             st.rerun()
     
     with col3:
         if st.button("🗑️ Clear All", use_container_width=True):
             st.session_state.tune_param_space = []
+            # Force stay on current page after rerun
+            if 'current_page' in st.session_state and st.session_state.current_page:
+                st.session_state.navigate_to = st.session_state.current_page
             st.rerun()
     
     # Display and edit parameters
@@ -320,6 +329,9 @@ def render_configuration_tab():
                         st.session_state.tune_param_space = [
                             p for p in st.session_state.tune_param_space if p.get('id') != param_id
                         ]
+                        # Force stay on current page after rerun
+                        if 'current_page' in st.session_state and st.session_state.current_page:
+                            st.session_state.navigate_to = st.session_state.current_page
                         st.rerun()
                 
                 # Values input
