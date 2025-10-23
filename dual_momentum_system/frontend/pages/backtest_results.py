@@ -1311,19 +1311,27 @@ def _prepare_tuning_from_backtest():
     current_position_count = strategy_config.get('position_count', 1)
     current_threshold = strategy_config.get('absolute_threshold', 0.0)
     
+    # Initialize parameter ID counter if not exists
+    if 'tune_param_id_counter' not in st.session_state:
+        st.session_state.tune_param_id_counter = 0
+    
     # Create parameter space with ranges around current values
+    st.session_state.tune_param_id_counter = 3
     st.session_state.tune_param_space = [
         {
+            'id': 1,
             'name': 'lookback_period',
             'type': 'int',
             'values': _generate_lookback_values(current_lookback)
         },
         {
+            'id': 2,
             'name': 'position_count',
             'type': 'int',
             'values': [1, 2, 3, 4] if current_position_count <= 4 else [1, 2, 3, 4, 5]
         },
         {
+            'id': 3,
             'name': 'absolute_threshold',
             'type': 'float',
             'values': [-0.02, -0.01, 0.0, 0.01, 0.02, 0.05]

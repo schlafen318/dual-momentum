@@ -204,33 +204,51 @@ def render_configuration_tab():
     if 'tune_param_space' not in st.session_state:
         st.session_state.tune_param_space = []
     
+    # Initialize parameter ID counter
+    if 'tune_param_id_counter' not in st.session_state:
+        st.session_state.tune_param_id_counter = 0
+    
     # Add parameter button
     col1, col2, col3 = st.columns([3, 1, 1])
     with col1:
         if st.button("➕ Add Parameter", use_container_width=True):
+            st.session_state.tune_param_id_counter += 1
             st.session_state.tune_param_space.append({
+                'id': st.session_state.tune_param_id_counter,
                 'name': 'lookback_period',
                 'type': 'int',
                 'values': [126, 189, 252, 315],
             })
+            st.rerun()
     
     with col2:
         if st.button("🔄 Reset to Defaults", use_container_width=True):
+            st.session_state.tune_param_id_counter = 3
             st.session_state.tune_param_space = [
-                {'name': 'lookback_period', 'type': 'int', 'values': [63, 126, 189, 252, 315]},
-                {'name': 'position_count', 'type': 'int', 'values': [1, 2, 3]},
-                {'name': 'absolute_threshold', 'type': 'float', 'values': [0.0, 0.01, 0.02]},
+                {'id': 1, 'name': 'lookback_period', 'type': 'int', 'values': [63, 126, 189, 252, 315]},
+                {'id': 2, 'name': 'position_count', 'type': 'int', 'values': [1, 2, 3]},
+                {'id': 3, 'name': 'absolute_threshold', 'type': 'float', 'values': [0.0, 0.01, 0.02]},
             ]
+            st.rerun()
     
     with col3:
         if st.button("🗑️ Clear All", use_container_width=True):
             st.session_state.tune_param_space = []
+            st.rerun()
     
     # Display and edit parameters
     if st.session_state.tune_param_space:
         st.markdown("---")
         
+        # Ensure all parameters have IDs (for backward compatibility)
         for idx, param in enumerate(st.session_state.tune_param_space):
+            if 'id' not in param:
+                st.session_state.tune_param_id_counter += 1
+                param['id'] = st.session_state.tune_param_id_counter
+        
+        for idx, param in enumerate(st.session_state.tune_param_space):
+            param_id = param.get('id', idx)
+            
             with st.expander(f"Parameter {idx + 1}: {param.get('name', 'Unnamed')}", expanded=True):
                 col1, col2, col3 = st.columns([2, 2, 1])
                 
@@ -244,7 +262,7 @@ def render_configuration_tab():
                             "use_volatility_adjustment",
                             "rebalance_frequency",
                         ],
-                        key=f"param_name_{idx}",
+                        key=f"param_name_{param_id}",
                         index=0 if 'name' not in param else [
                             "lookback_period",
                             "position_count",
@@ -265,14 +283,17 @@ def render_configuration_tab():
                     param_type = st.selectbox(
                         "Type",
                         options=["int", "float", "categorical"],
-                        key=f"param_type_{idx}",
+                        key=f"param_type_{param_id}",
                         index=["int", "float", "categorical"].index(param.get('type', 'int'))
                     )
                     param['type'] = param_type
                 
                 with col3:
-                    if st.button("🗑️", key=f"delete_param_{idx}", help="Delete this parameter"):
-                        st.session_state.tune_param_space.pop(idx)
+                    if st.button("🗑️", key=f"delete_param_{param_id}", help="Delete this parameter"):
+                        # Remove parameter by ID
+                        st.session_state.tune_param_space = [
+                            p for p in st.session_state.tune_param_space if p.get('id') != param_id
+                        ]
                         st.rerun()
                 
                 # Values input
@@ -280,7 +301,7 @@ def render_configuration_tab():
                     values_str = st.text_input(
                         "Values (comma-separated)",
                         value=", ".join(str(v) for v in param.get('values', [])),
-                        key=f"param_values_{idx}",
+                        key=f"param_values_{param_id}",
                         help="e.g., monthly, weekly, daily"
                     )
                     param['values'] = [v.strip() for v in values_str.split(',') if v.strip()]
@@ -289,7 +310,7 @@ def render_configuration_tab():
                     values_str = st.text_input(
                         "Values (comma-separated integers)",
                         value=", ".join(str(v) for v in param.get('values', [])),
-                        key=f"param_values_{idx}",
+                        key=f"param_values_{param_id}",
                         help="e.g., 126, 189, 252, 315"
                     )
                     try:
@@ -302,7 +323,7 @@ def render_configuration_tab():
                     values_str = st.text_input(
                         "Values (comma-separated floats)",
                         value=", ".join(str(v) for v in param.get('values', [])),
-                        key=f"param_values_{idx}",
+                        key=f"param_values_{param_id}",
                         help="e.g., 0.0, 0.01, 0.02, 0.05"
                     )
                     try:
