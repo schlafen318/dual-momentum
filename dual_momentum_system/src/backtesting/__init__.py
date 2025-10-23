@@ -8,11 +8,21 @@ and risk management components.
 from .engine import BacktestEngine
 from .performance import PerformanceCalculator
 from .basic_risk import BasicRiskManager
+from .hyperparameter_tuner import (
+    HyperparameterTuner,
+    ParameterSpace,
+    OptimizationResult,
+    create_default_param_space,
+)
 
 __all__ = [
     'BacktestEngine',
     'PerformanceCalculator',
     'BasicRiskManager',
+    'HyperparameterTuner',
+    'ParameterSpace',
+    'OptimizationResult',
+    'create_default_param_space',
 ]
 
 # Optional advanced analytics (require scipy)

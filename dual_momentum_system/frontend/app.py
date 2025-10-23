@@ -65,6 +65,7 @@ def main():
             "🛠️ Strategy Builder",
             "📊 Backtest Results",
             "🔄 Compare Strategies",
+            "🎯 Hyperparameter Tuning",
             "🗂️ Asset Universe Manager"
         ]
         
@@ -120,6 +121,9 @@ def main():
     elif page == "🔄 Compare Strategies":
         from frontend.pages import compare_strategies
         compare_strategies.render()
+    elif page == "🎯 Hyperparameter Tuning":
+        from frontend.pages import hyperparameter_tuning
+        hyperparameter_tuning.render()
     elif page == "🗂️ Asset Universe Manager":
         from frontend.pages import asset_universe_manager
         asset_universe_manager.render()

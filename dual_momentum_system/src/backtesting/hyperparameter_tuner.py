@@ -1,0 +1,814 @@
+"""
+Hyperparameter tuning module for backtesting optimization.
+
+Provides grid search, random search, and Bayesian optimization
+capabilities for finding optimal strategy parameters.
+"""
+
+from typing import Any, Callable, Dict, List, Optional, Tuple, Union
+from dataclasses import dataclass, field
+from datetime import datetime
+from pathlib import Path
+import json
+import pickle
+
+import pandas as pd
+import numpy as np
+from loguru import logger
+
+from ..core.base_strategy import BaseStrategy
+from ..core.types import PriceData, BacktestResult
+from .engine import BacktestEngine
+
+
+@dataclass
+class ParameterSpace:
+    """
+    Definition of a parameter search space.
+    
+    Attributes:
+        name: Parameter name
+        param_type: Type of parameter ('int', 'float', 'categorical')
+        values: List of discrete values (for categorical or grid search)
+        min_value: Minimum value (for continuous parameters)
+        max_value: Maximum value (for continuous parameters)
+        log_scale: Whether to use log scale for sampling
+    """
+    name: str
+    param_type: str  # 'int', 'float', 'categorical'
+    values: Optional[List[Any]] = None
+    min_value: Optional[float] = None
+    max_value: Optional[float] = None
+    log_scale: bool = False
+    
+    def validate(self) -> None:
+        """Validate parameter space configuration."""
+        if self.param_type == 'categorical':
+            if not self.values:
+                raise ValueError(f"Categorical parameter '{self.name}' must have values")
+        elif self.param_type in ['int', 'float']:
+            if self.min_value is None or self.max_value is None:
+                if not self.values:
+                    raise ValueError(
+                        f"Numeric parameter '{self.name}' must have min/max or explicit values"
+                    )
+            elif self.min_value >= self.max_value:
+                raise ValueError(
+                    f"Parameter '{self.name}' min_value must be < max_value"
+                )
+        else:
+            raise ValueError(
+                f"Invalid param_type '{self.param_type}'. Must be 'int', 'float', or 'categorical'"
+            )
+
+
+@dataclass
+class OptimizationResult:
+    """
+    Results from hyperparameter optimization.
+    
+    Attributes:
+        best_params: Best parameter configuration found
+        best_score: Best score achieved
+        best_backtest: Full backtest result for best parameters
+        all_results: DataFrame with all trials
+        optimization_time: Total time spent optimizing
+        n_trials: Number of trials completed
+        metric_name: Name of optimization metric
+        method: Optimization method used
+    """
+    best_params: Dict[str, Any]
+    best_score: float
+    best_backtest: BacktestResult
+    all_results: pd.DataFrame
+    optimization_time: float
+    n_trials: int
+    metric_name: str
+    method: str
+    metadata: Dict[str, Any] = field(default_factory=dict)
+
+
+class HyperparameterTuner:
+    """
+    Hyperparameter tuning engine for strategy optimization.
+    
+    Supports multiple optimization methods:
+    - Grid Search: Exhaustive search over discrete parameter grid
+    - Random Search: Random sampling from parameter distributions
+    - Bayesian Optimization: Efficient optimization using surrogate models
+    
+    Example:
+        >>> tuner = HyperparameterTuner(
+        ...     strategy_class=DualMomentumStrategy,
+        ...     backtest_engine=engine,
+        ...     price_data=data
+        ... )
+        >>> 
+        >>> param_space = [
+        ...     ParameterSpace('lookback_period', 'int', values=[126, 189, 252, 315]),
+        ...     ParameterSpace('position_count', 'int', values=[1, 2, 3]),
+        ... ]
+        >>> 
+        >>> results = tuner.grid_search(
+        ...     param_space=param_space,
+        ...     metric='sharpe_ratio',
+        ...     n_jobs=4
+        ... )
+    """
+    
+    def __init__(
+        self,
+        strategy_class: type,
+        backtest_engine: BacktestEngine,
+        price_data: Dict[str, PriceData],
+        base_config: Optional[Dict[str, Any]] = None,
+        start_date: Optional[datetime] = None,
+        end_date: Optional[datetime] = None,
+        benchmark_data: Optional[PriceData] = None,
+        risk_manager: Optional[Any] = None,
+    ):
+        """
+        Initialize hyperparameter tuner.
+        
+        Args:
+            strategy_class: Strategy class to optimize
+            backtest_engine: Backtesting engine instance
+            price_data: Historical price data
+            base_config: Base configuration (non-tuned parameters)
+            start_date: Backtest start date
+            end_date: Backtest end date
+            benchmark_data: Benchmark data for comparison
+            risk_manager: Risk manager instance
+        """
+        self.strategy_class = strategy_class
+        self.backtest_engine = backtest_engine
+        self.price_data = price_data
+        self.base_config = base_config or {}
+        self.start_date = start_date
+        self.end_date = end_date
+        self.benchmark_data = benchmark_data
+        self.risk_manager = risk_manager
+        
+        # Results tracking
+        self.trial_results: List[Dict[str, Any]] = []
+        
+        logger.info(
+            f"Initialized HyperparameterTuner for {strategy_class.__name__}"
+        )
+    
+    def grid_search(
+        self,
+        param_space: List[ParameterSpace],
+        metric: str = 'sharpe_ratio',
+        higher_is_better: bool = True,
+        n_jobs: int = 1,
+        verbose: bool = True,
+    ) -> OptimizationResult:
+        """
+        Perform grid search over parameter space.
+        
+        Args:
+            param_space: List of parameter spaces to search
+            metric: Metric to optimize
+            higher_is_better: Whether higher metric values are better
+            n_jobs: Number of parallel jobs (currently sequential)
+            verbose: Whether to print progress
+        
+        Returns:
+            OptimizationResult with best parameters and all results
+        """
+        logger.info("Starting grid search hyperparameter optimization")
+        logger.info(f"Optimizing metric: {metric} ({'maximize' if higher_is_better else 'minimize'})")
+        
+        # Validate parameter spaces
+        for ps in param_space:
+            ps.validate()
+        
+        # Generate all parameter combinations
+        param_combinations = self._generate_grid_combinations(param_space)
+        n_combinations = len(param_combinations)
+        
+        logger.info(f"Generated {n_combinations} parameter combinations")
+        
+        if verbose:
+            print(f"\n{'='*80}")
+            print(f"GRID SEARCH OPTIMIZATION")
+            print(f"{'='*80}")
+            print(f"Strategy: {self.strategy_class.__name__}")
+            print(f"Metric: {metric}")
+            print(f"Total combinations: {n_combinations}")
+            print(f"{'='*80}\n")
+        
+        # Reset trial results
+        self.trial_results = []
+        start_time = pd.Timestamp.now()
+        
+        # Evaluate each combination
+        best_score = -np.inf if higher_is_better else np.inf
+        best_params = None
+        best_backtest = None
+        
+        for idx, params in enumerate(param_combinations, 1):
+            if verbose:
+                print(f"\nTrial {idx}/{n_combinations}")
+                print(f"Parameters: {params}")
+            
+            # Run backtest
+            try:
+                score, backtest_result = self._evaluate_params(params, metric)
+                
+                # Track result
+                self.trial_results.append({
+                    'trial': idx,
+                    'params': params,
+                    'score': score,
+                    'backtest': backtest_result,
+                })
+                
+                # Update best
+                is_better = (
+                    (higher_is_better and score > best_score) or
+                    (not higher_is_better and score < best_score)
+                )
+                
+                if is_better:
+                    best_score = score
+                    best_params = params
+                    best_backtest = backtest_result
+                    
+                    if verbose:
+                        print(f"✓ New best! Score: {score:.4f}")
+                else:
+                    if verbose:
+                        print(f"  Score: {score:.4f}")
+            
+            except Exception as e:
+                logger.error(f"Error evaluating params {params}: {e}")
+                if verbose:
+                    print(f"✗ Error: {e}")
+                
+                # Track failed trial
+                self.trial_results.append({
+                    'trial': idx,
+                    'params': params,
+                    'score': np.nan,
+                    'error': str(e),
+                })
+        
+        end_time = pd.Timestamp.now()
+        optimization_time = (end_time - start_time).total_seconds()
+        
+        # Create results DataFrame
+        results_df = self._create_results_dataframe()
+        
+        if verbose:
+            print(f"\n{'='*80}")
+            print(f"OPTIMIZATION COMPLETE")
+            print(f"{'='*80}")
+            print(f"Best score: {best_score:.4f}")
+            print(f"Best parameters: {best_params}")
+            print(f"Time: {optimization_time:.2f}s")
+            print(f"{'='*80}\n")
+        
+        return OptimizationResult(
+            best_params=best_params,
+            best_score=best_score,
+            best_backtest=best_backtest,
+            all_results=results_df,
+            optimization_time=optimization_time,
+            n_trials=n_combinations,
+            metric_name=metric,
+            method='grid_search',
+            metadata={
+                'higher_is_better': higher_is_better,
+                'n_jobs': n_jobs,
+            }
+        )
+    
+    def random_search(
+        self,
+        param_space: List[ParameterSpace],
+        n_trials: int = 50,
+        metric: str = 'sharpe_ratio',
+        higher_is_better: bool = True,
+        random_state: Optional[int] = None,
+        verbose: bool = True,
+    ) -> OptimizationResult:
+        """
+        Perform random search over parameter space.
+        
+        Args:
+            param_space: List of parameter spaces to search
+            n_trials: Number of random trials
+            metric: Metric to optimize
+            higher_is_better: Whether higher metric values are better
+            random_state: Random seed for reproducibility
+            verbose: Whether to print progress
+        
+        Returns:
+            OptimizationResult with best parameters and all results
+        """
+        logger.info("Starting random search hyperparameter optimization")
+        logger.info(f"Optimizing metric: {metric} ({'maximize' if higher_is_better else 'minimize'})")
+        
+        # Validate parameter spaces
+        for ps in param_space:
+            ps.validate()
+        
+        # Set random seed
+        if random_state is not None:
+            np.random.seed(random_state)
+        
+        if verbose:
+            print(f"\n{'='*80}")
+            print(f"RANDOM SEARCH OPTIMIZATION")
+            print(f"{'='*80}")
+            print(f"Strategy: {self.strategy_class.__name__}")
+            print(f"Metric: {metric}")
+            print(f"Number of trials: {n_trials}")
+            print(f"{'='*80}\n")
+        
+        # Reset trial results
+        self.trial_results = []
+        start_time = pd.Timestamp.now()
+        
+        # Evaluate random combinations
+        best_score = -np.inf if higher_is_better else np.inf
+        best_params = None
+        best_backtest = None
+        
+        for idx in range(1, n_trials + 1):
+            # Sample random parameters
+            params = self._sample_random_params(param_space)
+            
+            if verbose:
+                print(f"\nTrial {idx}/{n_trials}")
+                print(f"Parameters: {params}")
+            
+            # Run backtest
+            try:
+                score, backtest_result = self._evaluate_params(params, metric)
+                
+                # Track result
+                self.trial_results.append({
+                    'trial': idx,
+                    'params': params,
+                    'score': score,
+                    'backtest': backtest_result,
+                })
+                
+                # Update best
+                is_better = (
+                    (higher_is_better and score > best_score) or
+                    (not higher_is_better and score < best_score)
+                )
+                
+                if is_better:
+                    best_score = score
+                    best_params = params
+                    best_backtest = backtest_result
+                    
+                    if verbose:
+                        print(f"✓ New best! Score: {score:.4f}")
+                else:
+                    if verbose:
+                        print(f"  Score: {score:.4f}")
+            
+            except Exception as e:
+                logger.error(f"Error evaluating params {params}: {e}")
+                if verbose:
+                    print(f"✗ Error: {e}")
+                
+                self.trial_results.append({
+                    'trial': idx,
+                    'params': params,
+                    'score': np.nan,
+                    'error': str(e),
+                })
+        
+        end_time = pd.Timestamp.now()
+        optimization_time = (end_time - start_time).total_seconds()
+        
+        # Create results DataFrame
+        results_df = self._create_results_dataframe()
+        
+        if verbose:
+            print(f"\n{'='*80}")
+            print(f"OPTIMIZATION COMPLETE")
+            print(f"{'='*80}")
+            print(f"Best score: {best_score:.4f}")
+            print(f"Best parameters: {best_params}")
+            print(f"Time: {optimization_time:.2f}s")
+            print(f"{'='*80}\n")
+        
+        return OptimizationResult(
+            best_params=best_params,
+            best_score=best_score,
+            best_backtest=best_backtest,
+            all_results=results_df,
+            optimization_time=optimization_time,
+            n_trials=n_trials,
+            metric_name=metric,
+            method='random_search',
+            metadata={
+                'higher_is_better': higher_is_better,
+                'random_state': random_state,
+            }
+        )
+    
+    def bayesian_optimization(
+        self,
+        param_space: List[ParameterSpace],
+        n_trials: int = 50,
+        n_initial_points: int = 10,
+        metric: str = 'sharpe_ratio',
+        higher_is_better: bool = True,
+        random_state: Optional[int] = None,
+        verbose: bool = True,
+    ) -> OptimizationResult:
+        """
+        Perform Bayesian optimization using Optuna.
+        
+        Args:
+            param_space: List of parameter spaces to search
+            n_trials: Number of optimization trials
+            n_initial_points: Number of random initial points
+            metric: Metric to optimize
+            higher_is_better: Whether higher metric values are better
+            random_state: Random seed for reproducibility
+            verbose: Whether to print progress
+        
+        Returns:
+            OptimizationResult with best parameters and all results
+        """
+        try:
+            import optuna
+            optuna.logging.set_verbosity(optuna.logging.WARNING)
+        except ImportError:
+            raise ImportError(
+                "Optuna is required for Bayesian optimization. "
+                "Install it with: pip install optuna"
+            )
+        
+        logger.info("Starting Bayesian optimization")
+        logger.info(f"Optimizing metric: {metric} ({'maximize' if higher_is_better else 'minimize'})")
+        
+        # Validate parameter spaces
+        for ps in param_space:
+            ps.validate()
+        
+        if verbose:
+            print(f"\n{'='*80}")
+            print(f"BAYESIAN OPTIMIZATION")
+            print(f"{'='*80}")
+            print(f"Strategy: {self.strategy_class.__name__}")
+            print(f"Metric: {metric}")
+            print(f"Number of trials: {n_trials}")
+            print(f"Initial random points: {n_initial_points}")
+            print(f"{'='*80}\n")
+        
+        # Reset trial results
+        self.trial_results = []
+        start_time = pd.Timestamp.now()
+        
+        # Create objective function
+        def objective(trial):
+            # Sample parameters
+            params = {}
+            for ps in param_space:
+                if ps.param_type == 'categorical':
+                    params[ps.name] = trial.suggest_categorical(ps.name, ps.values)
+                elif ps.param_type == 'int':
+                    if ps.values:
+                        params[ps.name] = trial.suggest_categorical(ps.name, ps.values)
+                    else:
+                        params[ps.name] = trial.suggest_int(
+                            ps.name, int(ps.min_value), int(ps.max_value),
+                            log=ps.log_scale
+                        )
+                elif ps.param_type == 'float':
+                    if ps.values:
+                        params[ps.name] = trial.suggest_categorical(ps.name, ps.values)
+                    else:
+                        params[ps.name] = trial.suggest_float(
+                            ps.name, ps.min_value, ps.max_value,
+                            log=ps.log_scale
+                        )
+            
+            if verbose:
+                print(f"\nTrial {trial.number + 1}/{n_trials}")
+                print(f"Parameters: {params}")
+            
+            # Evaluate parameters
+            try:
+                score, backtest_result = self._evaluate_params(params, metric)
+                
+                # Track result
+                self.trial_results.append({
+                    'trial': trial.number + 1,
+                    'params': params,
+                    'score': score,
+                    'backtest': backtest_result,
+                })
+                
+                if verbose:
+                    print(f"  Score: {score:.4f}")
+                
+                return score
+            
+            except Exception as e:
+                logger.error(f"Error in trial {trial.number}: {e}")
+                if verbose:
+                    print(f"✗ Error: {e}")
+                
+                self.trial_results.append({
+                    'trial': trial.number + 1,
+                    'params': params,
+                    'score': np.nan,
+                    'error': str(e),
+                })
+                
+                # Return worst possible value
+                return -np.inf if higher_is_better else np.inf
+        
+        # Create study
+        direction = 'maximize' if higher_is_better else 'minimize'
+        study = optuna.create_study(
+            direction=direction,
+            sampler=optuna.samplers.TPESampler(
+                n_startup_trials=n_initial_points,
+                seed=random_state
+            )
+        )
+        
+        # Optimize
+        study.optimize(objective, n_trials=n_trials, show_progress_bar=False)
+        
+        end_time = pd.Timestamp.now()
+        optimization_time = (end_time - start_time).total_seconds()
+        
+        # Get best results
+        best_params = study.best_params
+        best_score = study.best_value
+        
+        # Find best backtest result
+        best_backtest = None
+        for result in self.trial_results:
+            if result['params'] == best_params:
+                best_backtest = result.get('backtest')
+                break
+        
+        # Create results DataFrame
+        results_df = self._create_results_dataframe()
+        
+        if verbose:
+            print(f"\n{'='*80}")
+            print(f"OPTIMIZATION COMPLETE")
+            print(f"{'='*80}")
+            print(f"Best score: {best_score:.4f}")
+            print(f"Best parameters: {best_params}")
+            print(f"Time: {optimization_time:.2f}s")
+            print(f"{'='*80}\n")
+        
+        return OptimizationResult(
+            best_params=best_params,
+            best_score=best_score,
+            best_backtest=best_backtest,
+            all_results=results_df,
+            optimization_time=optimization_time,
+            n_trials=n_trials,
+            metric_name=metric,
+            method='bayesian_optimization',
+            metadata={
+                'higher_is_better': higher_is_better,
+                'n_initial_points': n_initial_points,
+                'random_state': random_state,
+            }
+        )
+    
+    def _evaluate_params(
+        self,
+        params: Dict[str, Any],
+        metric: str
+    ) -> Tuple[float, BacktestResult]:
+        """
+        Evaluate a parameter configuration.
+        
+        Args:
+            params: Parameter dictionary
+            metric: Metric to extract
+        
+        Returns:
+            Tuple of (score, backtest_result)
+        """
+        # Merge with base config
+        config = {**self.base_config, **params}
+        
+        # Create strategy instance
+        strategy = self.strategy_class(config)
+        
+        # Run backtest
+        backtest_result = self.backtest_engine.run(
+            strategy=strategy,
+            price_data=self.price_data,
+            risk_manager=self.risk_manager,
+            start_date=self.start_date,
+            end_date=self.end_date,
+            benchmark_data=self.benchmark_data,
+        )
+        
+        # Extract metric
+        score = backtest_result.metrics.get(metric, np.nan)
+        
+        if pd.isna(score):
+            logger.warning(f"Metric '{metric}' not found in results")
+            score = 0.0
+        
+        return score, backtest_result
+    
+    def _generate_grid_combinations(
+        self,
+        param_space: List[ParameterSpace]
+    ) -> List[Dict[str, Any]]:
+        """Generate all combinations for grid search."""
+        from itertools import product
+        
+        # Get all value lists
+        param_names = []
+        param_values_lists = []
+        
+        for ps in param_space:
+            param_names.append(ps.name)
+            
+            if ps.values:
+                param_values_lists.append(ps.values)
+            elif ps.param_type == 'int':
+                # Generate integer range
+                values = list(range(int(ps.min_value), int(ps.max_value) + 1))
+                param_values_lists.append(values)
+            else:
+                raise ValueError(
+                    f"Grid search requires explicit values for parameter '{ps.name}'"
+                )
+        
+        # Generate all combinations
+        combinations = []
+        for combo in product(*param_values_lists):
+            param_dict = dict(zip(param_names, combo))
+            combinations.append(param_dict)
+        
+        return combinations
+    
+    def _sample_random_params(
+        self,
+        param_space: List[ParameterSpace]
+    ) -> Dict[str, Any]:
+        """Sample random parameter configuration."""
+        params = {}
+        
+        for ps in param_space:
+            if ps.values:
+                # Sample from discrete values
+                params[ps.name] = np.random.choice(ps.values)
+            elif ps.param_type == 'int':
+                # Sample random integer
+                if ps.log_scale:
+                    log_min = np.log(ps.min_value)
+                    log_max = np.log(ps.max_value)
+                    log_val = np.random.uniform(log_min, log_max)
+                    params[ps.name] = int(np.exp(log_val))
+                else:
+                    params[ps.name] = np.random.randint(
+                        int(ps.min_value), int(ps.max_value) + 1
+                    )
+            elif ps.param_type == 'float':
+                # Sample random float
+                if ps.log_scale:
+                    log_min = np.log(ps.min_value)
+                    log_max = np.log(ps.max_value)
+                    log_val = np.random.uniform(log_min, log_max)
+                    params[ps.name] = np.exp(log_val)
+                else:
+                    params[ps.name] = np.random.uniform(ps.min_value, ps.max_value)
+        
+        return params
+    
+    def _create_results_dataframe(self) -> pd.DataFrame:
+        """Create DataFrame from trial results."""
+        if not self.trial_results:
+            return pd.DataFrame()
+        
+        rows = []
+        for result in self.trial_results:
+            row = {
+                'trial': result['trial'],
+                'score': result.get('score', np.nan),
+            }
+            
+            # Add parameters
+            if 'params' in result:
+                for key, value in result['params'].items():
+                    row[f'param_{key}'] = value
+            
+            # Add key metrics if backtest exists
+            if 'backtest' in result and result['backtest']:
+                bt = result['backtest']
+                row['total_return'] = bt.metrics.get('total_return', np.nan)
+                row['sharpe_ratio'] = bt.metrics.get('sharpe_ratio', np.nan)
+                row['max_drawdown'] = bt.metrics.get('max_drawdown', np.nan)
+                row['annual_return'] = bt.metrics.get('annual_return', np.nan)
+                row['volatility'] = bt.metrics.get('volatility', np.nan)
+            
+            # Add error if present
+            if 'error' in result:
+                row['error'] = result['error']
+            
+            rows.append(row)
+        
+        df = pd.DataFrame(rows)
+        return df
+    
+    def save_results(
+        self,
+        results: OptimizationResult,
+        output_dir: Union[str, Path],
+        prefix: str = 'optimization'
+    ) -> Dict[str, Path]:
+        """
+        Save optimization results to disk.
+        
+        Args:
+            results: Optimization results to save
+            output_dir: Output directory
+            prefix: Filename prefix
+        
+        Returns:
+            Dictionary mapping file types to paths
+        """
+        output_dir = Path(output_dir)
+        output_dir.mkdir(parents=True, exist_ok=True)
+        
+        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+        base_name = f"{prefix}_{results.method}_{timestamp}"
+        
+        saved_files = {}
+        
+        # Save results DataFrame as CSV
+        csv_path = output_dir / f"{base_name}_results.csv"
+        results.all_results.to_csv(csv_path, index=False)
+        saved_files['csv'] = csv_path
+        logger.info(f"Saved results to {csv_path}")
+        
+        # Save best parameters as JSON
+        json_path = output_dir / f"{base_name}_best_params.json"
+        with open(json_path, 'w') as f:
+            json.dump({
+                'best_params': results.best_params,
+                'best_score': float(results.best_score),
+                'metric': results.metric_name,
+                'method': results.method,
+                'n_trials': results.n_trials,
+                'optimization_time': results.optimization_time,
+            }, f, indent=2)
+        saved_files['json'] = json_path
+        logger.info(f"Saved best parameters to {json_path}")
+        
+        # Save full optimization result as pickle
+        pickle_path = output_dir / f"{base_name}_full_results.pkl"
+        with open(pickle_path, 'wb') as f:
+            pickle.dump(results, f)
+        saved_files['pickle'] = pickle_path
+        logger.info(f"Saved full results to {pickle_path}")
+        
+        return saved_files
+
+
+def create_default_param_space() -> List[ParameterSpace]:
+    """
+    Create default parameter space for dual momentum strategy.
+    
+    Returns:
+        List of ParameterSpace objects
+    """
+    return [
+        ParameterSpace(
+            name='lookback_period',
+            param_type='int',
+            values=[63, 126, 189, 252, 315, 378]  # 3, 6, 9, 12, 15, 18 months
+        ),
+        ParameterSpace(
+            name='position_count',
+            param_type='int',
+            values=[1, 2, 3, 4]
+        ),
+        ParameterSpace(
+            name='absolute_threshold',
+            param_type='float',
+            values=[-0.05, 0.0, 0.01, 0.02, 0.05]
+        ),
+        ParameterSpace(
+            name='use_volatility_adjustment',
+            param_type='categorical',
+            values=[True, False]
+        ),
+    ]
