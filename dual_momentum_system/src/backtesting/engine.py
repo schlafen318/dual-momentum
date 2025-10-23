@@ -774,7 +774,34 @@ class BacktestEngine:
         
         batch_total_cost = 0.0
         
-        for idx, signal in enumerate(ordered_signals):
+        # CRITICAL: Execute sells before buys to ensure cash availability
+        # Separate signals into sells (reductions) and buys (increases/new positions)
+        sell_signals = []
+        buy_signals = []
+        
+        for signal in ordered_signals:
+            if signal.symbol in self.positions:
+                # Existing position - check if we're reducing or increasing
+                existing_position = self.positions[signal.symbol]
+                target_pct = normalized_weights.get(signal.symbol, 0.0)
+                target_value = portfolio_value * target_pct
+                current_price = float(aligned_data[signal.symbol].loc[current_date, 'close'])
+                execution_price = current_price * (1 + self.slippage)
+                target_shares = target_value / execution_price if execution_price > 0 else 0
+                
+                if target_shares < existing_position.quantity:
+                    sell_signals.append(signal)  # Reducing position
+                else:
+                    buy_signals.append(signal)   # Increasing position
+            else:
+                buy_signals.append(signal)  # New position
+        
+        # Process in order: sells first, then buys
+        execution_order = sell_signals + buy_signals
+        
+        logger.info(f"[EXECUTION ORDER] Sells first: {[s.symbol for s in sell_signals]}, then buys: {[s.symbol for s in buy_signals]}")
+        
+        for idx, signal in enumerate(execution_order):
             if signal.direction == 0:
                 continue
             

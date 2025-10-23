@@ -1,0 +1,93 @@
+# Pre-commit hooks to catch issues before they're committed
+# Install: pip install pre-commit && pre-commit install
+
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.5.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-yaml
+      - id: check-added-large-files
+        args: ['--maxkb=1000']
+      - id: check-json
+      - id: check-merge-conflict
+      - id: debug-statements
+      - id: mixed-line-ending
+
+  - repo: https://github.com/psf/black
+    rev: 23.11.0
+    hooks:
+      - id: black
+        language_version: python3
+        files: ^(src|tests)/.*\.py$
+
+  - repo: https://github.com/pycqa/flake8
+    rev: 6.1.0
+    hooks:
+      - id: flake8
+        args: ['--max-line-length=120', '--extend-ignore=E203,W503']
+        files: ^(src|tests)/.*\.py$
+
+  - repo: https://github.com/pycqa/isort
+    rev: 5.12.0
+    hooks:
+      - id: isort
+        args: ['--profile', 'black']
+        files: ^(src|tests)/.*\.py$
+
+  - repo: local
+    hooks:
+      # Run critical tests before commit
+      - id: test-rebalancing-execution-order
+        name: Test sell-before-buy execution order
+        entry: bash -c 'cd dual_momentum_system && pytest tests/test_rebalancing_execution_order.py::TestRebalancingExecutionOrder::test_sell_before_buy_execution_order -v'
+        language: system
+        pass_filenames: false
+        files: ^dual_momentum_system/src/backtesting/engine\.py$
+      
+      - id: test-cash-management
+        name: Test cash management
+        entry: bash -c 'cd dual_momentum_system && pytest tests/test_cash_management_integration.py::TestCashManagementIntegration::test_cash_never_goes_negative -v'
+        language: system
+        pass_filenames: false
+        files: ^dual_momentum_system/src/backtesting/engine\.py$
+      
+      - id: check-test-coverage
+        name: Check test coverage for modified files
+        entry: bash -c 'cd dual_momentum_system && pytest --cov=src --cov-report=term-missing --cov-fail-under=70'
+        language: system
+        pass_filenames: false
+        files: ^dual_momentum_system/src/.*\.py$
+      
+      - id: check-docstrings
+        name: Check that tests have docstrings
+        entry: python
+        language: system
+        pass_filenames: false
+        files: ^dual_momentum_system/tests/test_.*\.py$
+        args:
+          - -c
+          - |
+            import ast
+            import sys
+            from pathlib import Path
+            
+            missing_docs = []
+            for test_file in Path('dual_momentum_system/tests').rglob('test_*.py'):
+                try:
+                    tree = ast.parse(test_file.read_text())
+                    for node in ast.walk(tree):
+                        if isinstance(node, ast.FunctionDef) and node.name.startswith('test_'):
+                            if not ast.get_docstring(node):
+                                missing_docs.append(f'{test_file.name}::{node.name}')
+                except SyntaxError:
+                    continue
+            
+            if missing_docs:
+                print('❌ Tests missing docstrings:')
+                for item in missing_docs[:10]:
+                    print(f'  - {item}')
+                if len(missing_docs) > 10:
+                    print(f'  ... and {len(missing_docs) - 10} more')
+                sys.exit(1)
