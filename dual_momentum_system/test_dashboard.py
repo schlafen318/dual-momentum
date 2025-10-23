@@ -23,7 +23,7 @@ def test_imports():
         print("  ✓ Utility modules (styling, state)")
         
         # Test pages
-        from frontend.pages import (
+        from frontend.page_modules import (
             home,
             strategy_builder,
             backtest_results,
@@ -56,12 +56,12 @@ def test_file_structure():
         "frontend/utils/styling.py",
         "frontend/utils/state.py",
         "frontend/utils/__init__.py",
-        "frontend/pages/__init__.py",
-        "frontend/pages/home.py",
-        "frontend/pages/strategy_builder.py",
-        "frontend/pages/backtest_results.py",
-        "frontend/pages/compare_strategies.py",
-        "frontend/pages/asset_universe_manager.py",
+        "frontend/page_modules/__init__.py",
+        "frontend/page_modules/home.py",
+        "frontend/page_modules/strategy_builder.py",
+        "frontend/page_modules/backtest_results.py",
+        "frontend/page_modules/compare_strategies.py",
+        "frontend/page_modules/asset_universe_manager.py",
         "frontend/requirements.txt",
         "frontend/README.md"
     ]
