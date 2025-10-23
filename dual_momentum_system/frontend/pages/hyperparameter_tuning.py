@@ -69,6 +69,16 @@ def render_configuration_tab():
     
     st.header("Optimization Configuration")
     
+    # Show banner if settings are pre-populated from backtest
+    if st.session_state.get('tune_universe') and not st.session_state.get('_tune_banner_shown'):
+        st.success("""
+        ✅ **Configuration pre-populated from your backtest!**
+        
+        Review the settings below - date range, capital, transaction costs, and asset universe 
+        have been automatically filled from your previous backtest.
+        """)
+        st.session_state._tune_banner_shown = True
+    
     col1, col2 = st.columns(2)
     
     with col1:
@@ -120,11 +130,27 @@ def render_configuration_tab():
         st.session_state.tune_slippage = slippage
         
         # Benchmark
+        pre_populated_benchmark = st.session_state.get('tune_benchmark')
+        benchmark_options = ["SPY", "QQQ", "AGG", "None"]
+        
+        # Determine default index for benchmark
+        if pre_populated_benchmark and pre_populated_benchmark in benchmark_options:
+            default_benchmark_index = benchmark_options.index(pre_populated_benchmark)
+        elif pre_populated_benchmark is None:
+            default_benchmark_index = benchmark_options.index("None")
+        else:
+            # If benchmark is not in standard list, add it
+            if pre_populated_benchmark and pre_populated_benchmark not in benchmark_options:
+                benchmark_options.insert(0, pre_populated_benchmark)
+                default_benchmark_index = 0
+            else:
+                default_benchmark_index = 0
+        
         benchmark_symbol = st.selectbox(
             "Benchmark",
-            options=["SPY", "QQQ", "AGG", "None"],
-            index=0,
-            help="Benchmark for comparison"
+            options=benchmark_options,
+            index=default_benchmark_index,
+            help="Benchmark for comparison (pre-populated from backtest)" if pre_populated_benchmark else "Benchmark for comparison"
         )
         st.session_state.tune_benchmark = None if benchmark_symbol == "None" else benchmark_symbol
     
@@ -385,30 +411,61 @@ def render_optimization_tab():
     # Asset universe selection
     st.subheader("Asset Universe")
     
+    # Show info if pre-populated from backtest
+    if st.session_state.get('tuning_from_backtest') or st.session_state.get('tune_universe'):
+        pre_populated_universe = st.session_state.get('tune_universe', [])
+        if pre_populated_universe:
+            st.info(f"📊 **Assets from your backtest**: {', '.join(pre_populated_universe)}")
+    
+    # Check if universe was pre-populated from backtest
+    pre_populated_universe = st.session_state.get('tune_universe', [])
+    default_universe = ["SPY", "EFA", "EEM", "AGG", "TLT", "GLD"]
+    
+    # Determine if we should default to Custom
+    if pre_populated_universe and pre_populated_universe != default_universe:
+        default_option_index = 1  # Custom
+        default_custom_value = ", ".join(pre_populated_universe)
+    else:
+        default_option_index = 0  # Default
+        default_custom_value = "SPY, EFA, EEM, AGG, TLT, GLD"
+    
     universe_option = st.radio(
         "Select Universe",
         options=["Default (SPY, EFA, EEM, AGG, TLT, GLD)", "Custom"],
-        horizontal=True
+        index=default_option_index,
+        horizontal=True,
+        help="Pre-populated with assets from your backtest" if pre_populated_universe else None
     )
     
     if universe_option == "Custom":
         universe_input = st.text_input(
             "Enter symbols (comma-separated)",
-            value="SPY, EFA, EEM, AGG, TLT, GLD",
+            value=default_custom_value,
             help="Enter ticker symbols separated by commas"
         )
         universe = [s.strip().upper() for s in universe_input.split(',') if s.strip()]
     else:
-        universe = ["SPY", "EFA", "EEM", "AGG", "TLT", "GLD"]
+        universe = default_universe
     
     st.session_state.tune_universe = universe
     
     # Safe asset
+    pre_populated_safe_asset = st.session_state.get('tune_safe_asset')
+    safe_asset_options = ["AGG", "TLT", "SHY", "BIL", "None"]
+    
+    # Determine default index for safe asset
+    if pre_populated_safe_asset and pre_populated_safe_asset in safe_asset_options:
+        default_safe_asset_index = safe_asset_options.index(pre_populated_safe_asset)
+    elif pre_populated_safe_asset is None:
+        default_safe_asset_index = safe_asset_options.index("None")
+    else:
+        default_safe_asset_index = 0
+    
     safe_asset = st.selectbox(
         "Safe Asset",
-        options=["AGG", "TLT", "SHY", "BIL", "None"],
-        index=0,
-        help="Asset to hold during defensive periods"
+        options=safe_asset_options,
+        index=default_safe_asset_index,
+        help="Asset to hold during defensive periods (pre-populated from backtest)" if pre_populated_safe_asset else "Asset to hold during defensive periods"
     )
     st.session_state.tune_safe_asset = None if safe_asset == "None" else safe_asset
     
