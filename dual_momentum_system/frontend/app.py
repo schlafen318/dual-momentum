@@ -140,22 +140,22 @@ def main():
     
     # Route to appropriate page
     if page == "🏠 Home":
-        from frontend.pages import home
+        from frontend.page_modules import home
         home.render()
     elif page == "🛠️ Strategy Builder":
-        from frontend.pages import strategy_builder
+        from frontend.page_modules import strategy_builder
         strategy_builder.render()
     elif page == "📊 Backtest Results":
-        from frontend.pages import backtest_results
+        from frontend.page_modules import backtest_results
         backtest_results.render()
     elif page == "🔄 Compare Strategies":
-        from frontend.pages import compare_strategies
+        from frontend.page_modules import compare_strategies
         compare_strategies.render()
     elif page == "🎯 Hyperparameter Tuning":
-        from frontend.pages import hyperparameter_tuning
+        from frontend.page_modules import hyperparameter_tuning
         hyperparameter_tuning.render()
     elif page == "🗂️ Asset Universe Manager":
-        from frontend.pages import asset_universe_manager
+        from frontend.page_modules import asset_universe_manager
         asset_universe_manager.render()
     
     # Auto-hide sidebar AFTER page content loads (if page changed)
