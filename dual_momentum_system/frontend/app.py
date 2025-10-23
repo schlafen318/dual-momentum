@@ -27,8 +27,6 @@ def main():
         layout="wide",
         initial_sidebar_state="expanded",
         menu_items={
-            'Get Help': 'https://github.com/yourusername/dual-momentum',
-            'Report a bug': "https://github.com/yourusername/dual-momentum/issues",
             'About': """
             # Dual Momentum Backtesting Dashboard
             
@@ -64,8 +62,14 @@ def main():
     
     # Sidebar navigation
     with st.sidebar:
-        st.image("https://via.placeholder.com/200x80/1f77b4/ffffff?text=Dual+Momentum", 
-                 width='stretch')
+        # App title
+        st.markdown("""
+        <div style='text-align: center; padding: 1rem 0;'>
+            <h1 style='color: #1f77b4; margin: 0;'>📈</h1>
+            <h3 style='margin: 0.5rem 0 0 0;'>Dual Momentum</h3>
+            <p style='font-size: 0.8rem; color: #888; margin: 0.25rem 0 0 0;'>Backtesting Dashboard</p>
+        </div>
+        """, unsafe_allow_html=True)
         
         st.markdown("---")
         
