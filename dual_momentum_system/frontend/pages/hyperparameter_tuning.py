@@ -32,9 +32,20 @@ def render():
     """Render the hyperparameter tuning page."""
     
     st.title("🎯 Hyperparameter Tuning")
-    st.markdown("""
-    Optimize strategy parameters to maximize performance metrics using various optimization methods.
-    """)
+    
+    # Check if we came from backtest results
+    if st.session_state.get('tuning_from_backtest', False):
+        # Show informational message
+        if 'tuning_message' in st.session_state:
+            st.info(st.session_state.tuning_message)
+            # Clear the message after showing it once
+            del st.session_state.tuning_message
+        # Clear the flag
+        st.session_state.tuning_from_backtest = False
+    else:
+        st.markdown("""
+        Optimize strategy parameters to maximize performance metrics using various optimization methods.
+        """)
     
     # Create tabs for different sections
     tab1, tab2, tab3 = st.tabs([
@@ -688,6 +699,44 @@ def render_results_tab():
             
             fig.update_layout(height=500)
             st.plotly_chart(fig, use_container_width=True)
+    
+    # Apply best parameters and re-run backtest
+    st.markdown("---")
+    st.subheader("🚀 Apply Tuned Parameters")
+    
+    col1, col2, col3 = st.columns([2, 1, 1])
+    
+    with col1:
+        st.markdown("""
+        Apply the best parameters found during optimization and run a new backtest to see the improved results.
+        """)
+    
+    with col2:
+        if st.button("📊 View in Results Page", use_container_width=True, type="primary"):
+            # Store the best backtest in session state
+            st.session_state.backtest_results = results.best_backtest
+            # Update last backtest params with best parameters
+            if 'last_backtest_params' not in st.session_state:
+                st.session_state.last_backtest_params = {}
+            st.session_state.last_backtest_params['strategy_config'] = results.best_params
+            st.session_state.last_backtest_params['optimization_source'] = True
+            # Navigate to results page
+            st.session_state.navigate_to = "📊 Backtest Results"
+            st.success("✅ Navigating to backtest results with optimized parameters!")
+            st.rerun()
+    
+    with col3:
+        if st.button("🔄 Re-run with Best Params", use_container_width=True):
+            # Pre-populate strategy builder with best parameters
+            st.session_state.apply_tuned_params = results.best_params
+            st.session_state.tuned_params_source = {
+                'score': results.best_score,
+                'metric': results.metric_name,
+                'method': results.method
+            }
+            st.session_state.navigate_to = "🛠️ Strategy Builder"
+            st.success("✅ Navigating to strategy builder with optimized parameters!")
+            st.rerun()
     
     # Download results
     st.markdown("---")
