@@ -46,11 +46,21 @@ def main():
         }
     )
     
-    # Apply custom styling
-    apply_custom_css()
-    
     # Initialize session state
     initialize_session_state()
+    
+    # Track current page for auto-hide sidebar functionality
+    if 'current_page' not in st.session_state:
+        st.session_state.current_page = None
+    if 'previous_page' not in st.session_state:
+        st.session_state.previous_page = None
+    if 'page_changed' not in st.session_state:
+        st.session_state.page_changed = False
+    if 'first_load' not in st.session_state:
+        st.session_state.first_load = True
+    
+    # Apply custom styling (no sidebar collapse on CSS - we'll use JS instead)
+    apply_custom_css(collapse_sidebar=False)
     
     # Sidebar navigation
     with st.sidebar:
@@ -59,7 +69,9 @@ def main():
         
         st.markdown("---")
         
-        # Navigation
+        # Navigation menu
+        st.markdown("### 🧭 Navigation")
+        
         pages = [
             "🏠 Home",
             "🛠️ Strategy Builder",
@@ -77,10 +89,24 @@ def main():
             del st.session_state.navigate_to
         
         page = st.radio(
-            "Navigation",
+            "Select Page",
             pages,
-            index=default_index
+            index=default_index,
+            label_visibility="collapsed"
         )
+        
+        # Track page changes for auto-hide functionality
+        if st.session_state.current_page != page:
+            st.session_state.previous_page = st.session_state.current_page
+            st.session_state.current_page = page
+            # Only set page_changed if this is not the first load
+            if not st.session_state.first_load:
+                st.session_state.page_changed = True
+            else:
+                st.session_state.page_changed = False
+                st.session_state.first_load = False
+        else:
+            st.session_state.page_changed = False
         
         st.markdown("---")
         
@@ -127,6 +153,27 @@ def main():
     elif page == "🗂️ Asset Universe Manager":
         from frontend.pages import asset_universe_manager
         asset_universe_manager.render()
+    
+    # Auto-hide sidebar AFTER page content loads (if page changed)
+    if st.session_state.get('page_changed', False):
+        # Use HTML/JS to trigger sidebar collapse after content renders
+        st.markdown("""
+        <script>
+            // Wait for DOM and page content to be ready
+            setTimeout(function() {
+                const sidebar = window.parent.document.querySelector('[data-testid="stSidebar"]');
+                const collapseBtn = window.parent.document.querySelector('[data-testid="collapsedControl"]');
+                
+                // Check if sidebar is expanded and collapse it
+                if (sidebar && collapseBtn) {
+                    const sidebarWidth = window.getComputedStyle(sidebar).width;
+                    if (parseFloat(sidebarWidth) > 0) {
+                        collapseBtn.click();
+                    }
+                }
+            }, 200);
+        </script>
+        """, unsafe_allow_html=True)
 
 
 if __name__ == "__main__":

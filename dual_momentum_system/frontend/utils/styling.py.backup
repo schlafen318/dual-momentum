@@ -64,102 +64,102 @@ def apply_custom_css(collapse_sidebar=False):
         }}
         
         /* Metric cards - Light mode default */
-        .metric-card {{
+        .metric-card {
             background: #ffffff;
             padding: 1.5rem;
             border-radius: 8px;
             box-shadow: 0 2px 4px rgba(0,0,0,0.1);
             border-left: 4px solid #1f77b4;
             margin-bottom: 1rem;
-        }}
+        }
         
-        .metric-card h3 {{
+        .metric-card h3 {
             color: #333333;
             margin-bottom: 0.5rem;
             font-size: 0.9rem;
             text-transform: uppercase;
             letter-spacing: 0.5px;
-        }}
+        }
         
-        .metric-card .value {{
+        .metric-card .value {
             font-size: 2rem;
             font-weight: bold;
             color: #1f77b4;
-        }}
+        }
         
         /* Ensure light mode metric cards have light background */
-        [data-theme="light"] .metric-card {{
+        [data-theme="light"] .metric-card {
             background: #ffffff !important;
-        }}
+        }
         
-        [data-theme="light"] .metric-card h3 {{
+        [data-theme="light"] .metric-card h3 {
             color: #333333 !important;
-        }}
+        }
         
-        [data-theme="light"] .metric-card .value {{
+        [data-theme="light"] .metric-card .value {
             color: #1f77b4 !important;
-        }}
+        }
         
-        .metric-card .delta {{
+        .metric-card .delta {
             font-size: 0.9rem;
             margin-top: 0.5rem;
-        }}
+        }
         
-        .metric-card.positive {{
+        .metric-card.positive {
             border-left-color: #2ca02c;
-        }}
+        }
         
-        .metric-card.positive .value {{
+        .metric-card.positive .value {
             color: #2ca02c;
-        }}
+        }
         
-        .metric-card.negative {{
+        .metric-card.negative {
             border-left-color: #d62728;
-        }}
+        }
         
-        .metric-card.negative .value {{
+        .metric-card.negative .value {
             color: #d62728;
-        }}
+        }
         
         /* Info boxes */
-        .info-box {{
+        .info-box {
             background: #e3f2fd;
             border-left: 4px solid #2196f3;
             padding: 1rem;
             border-radius: 4px;
             margin: 1rem 0;
             color: #1565c0;
-        }}
+        }
         
-        .warning-box {{
+        .warning-box {
             background: #fff3e0;
             border-left: 4px solid #ff9800;
             padding: 1rem;
             border-radius: 4px;
             margin: 1rem 0;
             color: #e65100;
-        }}
+        }
         
-        .success-box {{
+        .success-box {
             background: #e8f5e9;
             border-left: 4px solid #4caf50;
             padding: 1rem;
             border-radius: 4px;
             margin: 1rem 0;
             color: #2e7d32;
-        }}
+        }
         
-        .error-box {{
+        .error-box {
             background: #ffebee;
             border-left: 4px solid #f44336;
             padding: 1rem;
             border-radius: 4px;
             margin: 1rem 0;
             color: #c62828;
-        }}
+        }
         
         /* Buttons */
-        .stButton > button {{
+        .stButton > button {
             width: 100%;
             background: linear-gradient(90deg, #1f77b4 0%, #2ca02c 100%);
             color: white;
@@ -168,232 +168,232 @@ def apply_custom_css(collapse_sidebar=False):
             border-radius: 5px;
             font-weight: bold;
             transition: all 0.3s ease;
-        }}
+        }
         
-        .stButton > button:hover {{
+        .stButton > button:hover {
             box-shadow: 0 4px 8px rgba(0,0,0,0.2);
             transform: translateY(-2px);
-        }}
+        }
         
         /* Data tables */
-        .dataframe {{
+        .dataframe {
             font-size: 0.9rem;
-        }}
+        }
         
-        .dataframe th {{
+        .dataframe th {
             background-color: #1f77b4 !important;
             color: white !important;
             font-weight: bold;
             text-align: left;
             padding: 0.75rem;
-        }}
+        }
         
-        .dataframe td {{
+        .dataframe td {
             padding: 0.5rem 0.75rem;
             border-bottom: 1px solid #e0e0e0;
-        }}
+        }
         
-        .dataframe tr:hover {{
+        .dataframe tr:hover {
             background-color: #f5f5f5;
-        }}
+        }
         
         /* Expander styling */
-        .streamlit-expanderHeader {{
+        .streamlit-expanderHeader {
             background-color: #f8f9fa;
             border-radius: 5px;
             font-weight: bold;
-        }}
+        }
         
         /* Tooltips */
-        .tooltip {{
+        .tooltip {
             position: relative;
             display: inline-block;
             cursor: help;
             color: #1f77b4;
-        }}
+        }
         
         /* Tabs */
-        .stTabs [data-baseweb="tab-list"] {{
+        .stTabs [data-baseweb="tab-list"] {
             gap: 2rem;
-        }}
+        }
         
-        .stTabs [data-baseweb="tab"] {{
+        .stTabs [data-baseweb="tab"] {
             height: 3rem;
             padding: 0 1.5rem;
             background-color: transparent;
             border-radius: 5px 5px 0 0;
-        }}
+        }
         
-        .stTabs [aria-selected="true"] {{
+        .stTabs [aria-selected="true"] {
             background-color: #1f77b4;
             color: white;
-        }}
+        }
         
         /* Sidebar styling */
-        .css-1d391kg {{
+        .css-1d391kg {
             background-color: #f8f9fa;
-        }}
+        }
         
         /* Hide Streamlit branding */
-        #MainMenu {{visibility: hidden;}}
-        footer {{visibility: hidden;}}
+        #MainMenu {visibility: hidden;}
+        footer {visibility: hidden;}
         
         /* Card container - Light mode default */
-        .card {{
+        .card {
             background: #ffffff;
             padding: 1.5rem;
             border-radius: 8px;
             box-shadow: 0 2px 4px rgba(0,0,0,0.1);
             margin-bottom: 1rem;
             color: #333333;
-        }}
+        }
         
-        .card h3, .card h4 {{
+        .card h3, .card h4 {
             color: #1f77b4;
-        }}
+        }
         
-        .card p, .card ul, .card li {{
+        .card p, .card ul, .card li {
             color: #333333;
-        }}
+        }
         
         /* Ensure light mode cards have light background */
-        [data-theme="light"] .card {{
+        [data-theme="light"] .card {
             background: #ffffff !important;
             color: #333333 !important;
-        }}
+        }
         
         [data-theme="light"] .card h3,
-        [data-theme="light"] .card h4 {{
+        [data-theme="light"] .card h4 {
             color: #1f77b4 !important;
-        }}
+        }
         
         [data-theme="light"] .card p,
         [data-theme="light"] .card ul,
-        [data-theme="light"] .card li {{
+        [data-theme="light"] .card li {
             color: #333333 !important;
-        }}
+        }
         
         /* Footer styling */
-        .sidebar-footer {{
+        .sidebar-footer {
             text-align: center;
             color: #888;
             font-size: 0.8em;
-        }}
+        }
         
         /* Section divider */
-        .section-divider {{
+        .section-divider {
             border-top: 2px solid #e0e0e0;
             margin: 2rem 0;
-        }}
+        }
         
         /* Status badges */
-        .badge {{
+        .badge {
             display: inline-block;
             padding: 0.25rem 0.75rem;
             border-radius: 12px;
             font-size: 0.85rem;
             font-weight: bold;
-        }}
+        }
         
-        .badge-success {{
+        .badge-success {
             background-color: #4caf50;
             color: white;
-        }}
+        }
         
-        .badge-warning {{
+        .badge-warning {
             background-color: #ff9800;
             color: white;
-        }}
+        }
         
-        .badge-error {{
+        .badge-error {
             background-color: #f44336;
             color: white;
-        }}
+        }
         
-        .badge-info {{
+        .badge-info {
             background-color: #2196f3;
             color: white;
-        }}
+        }
         
         /* Colored highlight cards - Light mode default */
-        .card-success {{
+        .card-success {
             background: #e8f5e9;
             color: #2e7d32;
-        }}
+        }
         
-        .card-success h4 {{
+        .card-success h4 {
             color: #1b5e20;
-        }}
+        }
         
-        .card-success p {{
+        .card-success p {
             color: #2ca02c;
-        }}
+        }
         
-        .card-info {{
+        .card-info {
             background: #e3f2fd;
             color: #1565c0;
-        }}
+        }
         
-        .card-info h4 {{
+        .card-info h4 {
             color: #0d47a1;
-        }}
+        }
         
-        .card-info p {{
+        .card-info p {
             color: #1f77b4;
-        }}
+        }
         
-        .card-warning {{
+        .card-warning {
             background: #fff3e0;
             color: #e65100;
-        }}
+        }
         
-        .card-warning h4 {{
+        .card-warning h4 {
             color: #bf360c;
-        }}
+        }
         
-        .card-warning p {{
+        .card-warning p {
             color: #ff9800;
-        }}
+        }
         
         /* Ensure colored cards work in light mode */
-        [data-theme="light"] .card-success {{
+        [data-theme="light"] .card-success {
             background: #e8f5e9 !important;
             color: #2e7d32 !important;
-        }}
+        }
         
-        [data-theme="light"] .card-success h4 {{
+        [data-theme="light"] .card-success h4 {
             color: #1b5e20 !important;
-        }}
+        }
         
-        [data-theme="light"] .card-success p {{
+        [data-theme="light"] .card-success p {
             color: #2ca02c !important;
-        }}
+        }
         
-        [data-theme="light"] .card-info {{
+        [data-theme="light"] .card-info {
             background: #e3f2fd !important;
             color: #1565c0 !important;
-        }}
+        }
         
-        [data-theme="light"] .card-info h4 {{
+        [data-theme="light"] .card-info h4 {
             color: #0d47a1 !important;
-        }}
+        }
         
-        [data-theme="light"] .card-info p {{
+        [data-theme="light"] .card-info p {
             color: #1f77b4 !important;
-        }}
+        }
         
-        [data-theme="light"] .card-warning {{
+        [data-theme="light"] .card-warning {
             background: #fff3e0 !important;
             color: #e65100 !important;
-        }}
+        }
         
-        [data-theme="light"] .card-warning h4 {{
+        [data-theme="light"] .card-warning h4 {
             color: #bf360c !important;
-        }}
+        }
         
-        [data-theme="light"] .card-warning p {{
+        [data-theme="light"] .card-warning p {
             color: #ff9800 !important;
-        }}
+        }
         
         /* Dark mode support */
         @media (prefers-color-scheme: dark) {{
