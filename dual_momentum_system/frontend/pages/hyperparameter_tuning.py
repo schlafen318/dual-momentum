@@ -24,7 +24,7 @@ from src.backtesting import (
     create_default_param_space,
 )
 from src.strategies.dual_momentum import DualMomentumStrategy
-from src.data_sources.multi_source import MultiSourceDataProvider
+from src.data_sources import get_default_data_source
 from src.backtesting.utils import ensure_safe_asset_data
 
 
@@ -497,7 +497,8 @@ def run_optimization():
             end_date = st.session_state.tune_end_date
             universe = st.session_state.tune_universe
             
-            data_provider = MultiSourceDataProvider()
+            # Get data provider with proper initialization
+            data_provider = get_default_data_source()
             
             # Add some buffer for lookback period
             buffer_days = 400

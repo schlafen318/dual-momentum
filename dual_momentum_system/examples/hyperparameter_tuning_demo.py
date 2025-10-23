@@ -20,7 +20,7 @@ from src.backtesting import (
     create_default_param_space,
 )
 from src.strategies.dual_momentum import DualMomentumStrategy
-from src.data_sources.multi_source import MultiSourceDataProvider
+from src.data_sources import get_default_data_source
 from loguru import logger
 
 
@@ -46,7 +46,7 @@ def main():
     
     # Load data
     logger.info("Loading price data...")
-    data_provider = MultiSourceDataProvider()
+    data_provider = get_default_data_source()
     
     price_data = {}
     for symbol in universe:

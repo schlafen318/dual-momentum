@@ -1572,7 +1572,7 @@ def _rerun_with_new_params(base_params: dict, new_strategy_params: dict):
             # Import required modules
             from src.backtesting.engine import BacktestEngine
             from src.strategies.dual_momentum import DualMomentumStrategy
-            from src.data_sources.multi_source import MultiSourceDataProvider
+            from src.data_sources import get_default_data_source
             
             # Update strategy config
             updated_config = {**base_params.get('strategy_config', {}), **new_strategy_params}
@@ -1592,7 +1592,7 @@ def _rerun_with_new_params(base_params: dict, new_strategy_params: dict):
             
             if not price_data:
                 # Need to fetch fresh data
-                data_provider = MultiSourceDataProvider()
+                data_provider = get_default_data_source()
                 symbols = base_params.get('universe', base_params.get('symbols', []))
                 
                 for symbol in symbols:
