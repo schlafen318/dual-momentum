@@ -3,15 +3,15 @@ python-dateutil>=2.8.2
 pytz>=2023.3
 
 # Data Processing
-numpy>=1.24.0
-pandas>=2.0.0
-scipy>=1.10.0
+numpy>=1.24.0,<2.0.0  # Pin to 1.x - NumPy 2.0 has breaking changes
+pandas>=2.0.0,<2.3.0
+scipy>=1.10.0,<1.15.0
 
 # Backtesting & Financial Analysis
-vectorbt>=0.26.0
-quantstats>=0.0.62
-empyrical-reloaded>=0.5.5  # Python 3.13 compatible fork of empyrical
-optuna>=3.0.0  # Bayesian optimization for hyperparameter tuning
+vectorbt>=0.26.0,<0.27.0
+quantstats>=0.0.62,<0.1.0
+empyrical-reloaded>=0.5.5,<0.6.0  # Python 3.13 compatible fork of empyrical
+optuna>=3.0.0,<4.0.0  # Bayesian optimization for hyperparameter tuning
 
 # Data Sources
 # yfinance>=0.2.28  # OPTIONAL: Only needed for local development. Commented out for Streamlit Cloud compatibility.
