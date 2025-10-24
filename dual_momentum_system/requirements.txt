@@ -3,9 +3,10 @@ python-dateutil>=2.8.2
 pytz>=2023.3
 
 # Data Processing
-numpy>=1.24.0,<2.0.0  # Pin to 1.x - NumPy 2.0 has breaking changes
-pandas>=2.0.0,<2.3.0
-scipy>=1.10.0,<1.15.0
+# Pin to specific stable versions to avoid binary incompatibility
+numpy==1.26.4  # Latest stable 1.x, avoid NumPy 2.0 breaking changes
+pandas==2.2.2  # Compatible with NumPy 1.26
+scipy==1.13.1  # Compatible with NumPy 1.26
 
 # Backtesting & Financial Analysis
 vectorbt>=0.26.0,<0.27.0
