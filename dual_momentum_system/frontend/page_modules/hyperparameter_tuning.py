@@ -65,17 +65,28 @@ def render_configuration_tab():
         
         # Date range
         end_date = datetime.now().date()
-        start_date = end_date - timedelta(days=5*365)  # 5 years default
+        
+        # Intelligent default: use 10 years or earliest available data
+        default_start = end_date - timedelta(days=10*365)  # 10 years default (was 5)
+        
+        st.info(
+            "💡 **Tip:** For hyperparameter tuning, use the longest possible history. "
+            "Click 'Check Data Availability' in Strategy Builder to find the earliest available data for your universe."
+        )
         
         date_range = st.date_input(
             "Backtest Period",
-            value=(start_date, end_date),
-            help="Select the date range for backtesting"
+            value=(default_start, end_date),
+            help="Select the date range for backtesting. Longer periods generally produce more robust parameter estimates."
         )
         
         if len(date_range) == 2:
             st.session_state.tune_start_date = date_range[0]
             st.session_state.tune_end_date = date_range[1]
+            
+            # Show duration
+            duration_years = (date_range[1] - date_range[0]).days / 365.25
+            st.caption(f"📊 Tuning period: {duration_years:.1f} years")
         
         # Initial capital
         initial_capital = st.number_input(

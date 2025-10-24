@@ -378,6 +378,42 @@ class MultiSourceDataProvider(BaseDataSource):
                 continue
         return None
     
+    def get_data_range(self, symbol: str) -> Optional[tuple]:
+        """
+        Get available date range for a symbol with failover.
+        
+        Tries each source in order until one succeeds.
+        
+        Args:
+            symbol: Ticker symbol
+        
+        Returns:
+            Tuple of (earliest_date, latest_date) or None if unavailable
+        """
+        logger.debug(f"[MULTI-SOURCE] Getting data range for {symbol}")
+        
+        for i, source in enumerate(self.sources):
+            try:
+                logger.debug(f"[MULTI-SOURCE] Trying source {i+1}/{len(self.sources)}: {source.get_name()}")
+                date_range = source.get_data_range(symbol)
+                
+                if date_range is not None:
+                    start_date, end_date = date_range
+                    logger.debug(
+                        f"[MULTI-SOURCE] ✓ Got date range from {source.get_name()}: "
+                        f"{start_date.date()} to {end_date.date()}"
+                    )
+                    return date_range
+                else:
+                    logger.debug(f"[MULTI-SOURCE] Source {source.get_name()} returned None for {symbol}")
+                    
+            except Exception as e:
+                logger.debug(f"[MULTI-SOURCE] Error from {source.get_name()}: {e}")
+                continue
+        
+        logger.warning(f"[MULTI-SOURCE] All sources failed to get date range for {symbol}")
+        return None
+    
     def get_supported_asset_types(self) -> Set[AssetType]:
         """
         Get union of all supported asset types.
