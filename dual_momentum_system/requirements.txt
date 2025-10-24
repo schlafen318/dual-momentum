@@ -8,6 +8,10 @@ numpy==1.26.4  # Latest stable 1.x, avoid NumPy 2.0 breaking changes
 pandas==2.2.2  # Compatible with NumPy 1.26
 scipy==1.13.1  # Compatible with NumPy 1.26
 
+# Numba/LLVM (required by vectorbt, must be compatible with NumPy 1.x)
+numba==0.59.1  # Last version compatible with NumPy 1.x
+llvmlite==0.42.0  # Compatible with numba 0.59.1
+
 # Backtesting & Financial Analysis
 vectorbt>=0.26.0,<0.27.0
 quantstats>=0.0.62,<0.1.0

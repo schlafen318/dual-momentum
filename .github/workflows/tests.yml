@@ -32,7 +32,9 @@ jobs:
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
-        # Force reinstall to avoid NumPy 2.0 binary incompatibility
+        # Install NumPy first to ensure 1.x is used by all dependencies
+        pip install --no-cache-dir "numpy==1.26.4"
+        # Then install everything else
         pip install --no-cache-dir -r requirements.txt
         pip install --no-cache-dir pytest pytest-cov pytest-benchmark hypothesis pytest-mock
     
