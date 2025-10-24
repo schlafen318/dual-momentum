@@ -172,8 +172,8 @@ def render_create_universe():
         # Asset class
         asset_class = st.selectbox(
             "Asset Class *",
-            ["equity", "crypto", "commodity", "bond", "fx"],
-            help="Type of assets in this universe"
+            ["equity", "crypto", "commodity", "bond", "fx", "multi_asset"],
+            help="Type of assets in this universe. Use 'multi_asset' for portfolios with mixed asset classes."
         )
         
         # Symbols input
@@ -434,6 +434,18 @@ def render_import_export():
             "asset_class": "fx",
             "symbols": ["EUR/USD", "GBP/USD", "USD/JPY", "USD/CHF", "USD/CAD"],
             "benchmark": "EUR/USD"
+        },
+        "Multi-Asset Balanced": {
+            "description": "Balanced portfolio across stocks, bonds, commodities, and REITs",
+            "asset_class": "multi_asset",
+            "symbols": ["SPY", "QQQ", "AGG", "TLT", "GLD", "DBC", "VNQ", "IWM"],
+            "benchmark": "SPY"
+        },
+        "Multi-Asset Aggressive": {
+            "description": "Growth-oriented multi-asset portfolio with higher equity allocation",
+            "asset_class": "multi_asset",
+            "symbols": ["SPY", "QQQ", "VGK", "EEM", "GLD", "TLT", "DBC", "USO"],
+            "benchmark": "SPY"
         }
     }
     

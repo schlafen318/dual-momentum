@@ -80,8 +80,8 @@ def render_strategy_configuration():
     # Asset class selection
     asset_class = st.selectbox(
         "Asset Class",
-        ["Equity", "Crypto", "Commodity", "Bond", "FX"],
-        help="Choose the type of assets you want to trade"
+        ["Equity", "Crypto", "Commodity", "Bond", "FX", "Multi-Strategy"],
+        help="Choose the type of assets you want to trade. Multi-Strategy allows backtesting portfolios with mixed asset classes."
     )
     st.session_state.asset_class = asset_class
     
@@ -93,10 +93,17 @@ def render_strategy_configuration():
     with col1:
         universe_options = list(st.session_state.asset_universes.keys())
         # Filter by asset class
-        filtered_universes = [
-            u for u in universe_options
-            if st.session_state.asset_universes[u]['asset_class'].lower() == asset_class.lower()
-        ]
+        # For Multi-Strategy, show all universes or those explicitly marked as multi_asset
+        if asset_class.lower() == "multi-strategy":
+            filtered_universes = [
+                u for u in universe_options
+                if st.session_state.asset_universes[u]['asset_class'].lower() in ['multi_asset', 'multi-strategy']
+            ] or universe_options  # Show all if no multi_asset universes exist
+        else:
+            filtered_universes = [
+                u for u in universe_options
+                if st.session_state.asset_universes[u]['asset_class'].lower() == asset_class.lower()
+            ]
         
         if not filtered_universes:
             filtered_universes = ["Custom"]
@@ -465,7 +472,8 @@ def run_backtest():
             'crypto': CryptoAsset,
             'commodity': CommodityAsset,
             'bond': BondAsset,
-            'fx': FXAsset
+            'fx': FXAsset,
+            'multi-strategy': EquityAsset  # Use EquityAsset for multi-asset normalization
         }
         AssetClass = asset_class_map.get(asset_class_str, EquityAsset)
         asset_instance = AssetClass()
