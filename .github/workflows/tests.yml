@@ -32,9 +32,8 @@ jobs:
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
-        # Install NumPy first to ensure 1.x is used by all dependencies
-        pip install --no-cache-dir "numpy==1.26.4"
-        # Then install everything else
+        # Install everything at once to let pip resolve dependencies correctly
+        # requirements.txt already pins numpy==1.26.4 and numba==0.59.1
         pip install --no-cache-dir -r requirements.txt
         pip install --no-cache-dir pytest pytest-cov pytest-benchmark hypothesis pytest-mock
     
