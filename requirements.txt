@@ -8,7 +8,9 @@ pandas>=2.0.0
 scipy>=1.10.0
 
 # Backtesting & Financial Analysis
-vectorbt>=0.26.0
+# vectorbt is OPTIONAL - commented out due to incompatibility with NumPy 1.26 on Python 3.10
+# The system gracefully handles missing vectorbt (falls back to standard BacktestEngine)
+# vectorbt>=0.26.0  # DISABLED: requires numba<0.57 which needs numpy<1.24
 quantstats>=0.0.62
 empyrical-reloaded>=0.5.5  # Python 3.13 compatible fork of empyrical
 
