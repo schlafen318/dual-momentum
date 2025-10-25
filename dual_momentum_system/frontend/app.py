@@ -96,6 +96,7 @@ def main():
             "Select Page",
             pages,
             index=default_index,
+            key="page_navigation",  # Explicit key to preserve state on rerun
             label_visibility="collapsed"
         )
         

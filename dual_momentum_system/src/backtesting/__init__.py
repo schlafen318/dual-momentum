@@ -25,12 +25,12 @@ __all__ = [
     'create_default_param_space',
 ]
 
-# Optional advanced analytics (require scipy)
+# Optional advanced analytics (require scipy and vectorbt)
 try:
     from .advanced_analytics import AdvancedAnalytics
     __all__.append('AdvancedAnalytics')
-except ImportError:
-    pass  # scipy not installed, skip advanced analytics
+except (ImportError, SystemError):
+    pass  # scipy/vectorbt not installed or incompatible, skip advanced analytics
 
 # Optional vectorized components (require vectorbt)
 try:
@@ -41,5 +41,5 @@ try:
         'SignalGenerator',
         'VectorizedMetricsCalculator',
     ])
-except ImportError:
-    pass  # vectorbt not installed, skip vectorized components
+except (ImportError, SystemError):
+    pass  # vectorbt not installed or incompatible, skip vectorized components

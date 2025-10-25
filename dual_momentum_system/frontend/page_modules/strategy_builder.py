@@ -43,6 +43,10 @@ def render():
         "🛠️"
     )
     
+    # Check if we have tuned parameters to apply
+    if st.session_state.get('apply_tuned_params'):
+        render_tuned_params_banner()
+    
     # Main configuration area
     col1, col2 = st.columns([2, 1])
     
@@ -61,6 +65,68 @@ def render():
     # Run backtest section
     st.markdown("<br>", unsafe_allow_html=True)
     render_backtest_controls()
+
+
+def render_tuned_params_banner():
+    """Render a banner showing optimized parameters are available."""
+    tuned_params = st.session_state.get('apply_tuned_params', {})
+    tuned_source = st.session_state.get('tuned_params_source', {})
+    
+    st.success(f"""
+    🎯 **Optimized Parameters Available!**
+    
+    The hyperparameter tuning found optimal parameters with a **{tuned_source.get('metric', 'score')}** of 
+    **{tuned_source.get('score', 0):.4f}** using **{tuned_source.get('method', 'optimization').replace('_', ' ').title()}**.
+    """)
+    
+    col1, col2, col3 = st.columns([2, 1, 1])
+    
+    with col1:
+        with st.expander("📋 View Optimized Parameters", expanded=False):
+            import json
+            st.code(json.dumps(tuned_params, indent=2), language='json')
+    
+    with col2:
+        if st.button("✅ Apply Parameters", use_container_width=True, type="primary"):
+            _apply_tuned_parameters(tuned_params)
+            del st.session_state.apply_tuned_params
+            del st.session_state.tuned_params_source
+            st.success("Parameters applied! Review and run backtest below.")
+            st.rerun()
+    
+    with col3:
+        if st.button("❌ Dismiss", use_container_width=True):
+            del st.session_state.apply_tuned_params
+            if 'tuned_params_source' in st.session_state:
+                del st.session_state.tuned_params_source
+            st.rerun()
+    
+    st.markdown("---")
+
+
+def _apply_tuned_parameters(params: Dict[str, Any]):
+    """Apply tuned parameters to session state."""
+    if 'lookback_period' in params:
+        st.session_state.lookback_period = params['lookback_period']
+    
+    if 'position_count' in params:
+        st.session_state.position_count = params['position_count']
+    
+    if 'absolute_threshold' in params:
+        st.session_state.absolute_threshold = params['absolute_threshold']
+    
+    if 'use_volatility_adjustment' in params:
+        st.session_state.use_volatility = params['use_volatility_adjustment']
+    
+    if 'rebalance_frequency' in params:
+        # Convert to proper format
+        freq_map = {
+            'daily': 'Daily',
+            'weekly': 'Weekly', 
+            'monthly': 'Monthly',
+            'quarterly': 'Quarterly'
+        }
+        st.session_state.rebalance_freq = freq_map.get(params['rebalance_frequency'].lower(), 'Monthly').lower()
 
 
 def render_strategy_configuration():

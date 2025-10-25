@@ -24,7 +24,7 @@ from src.backtesting import (
     create_default_param_space,
 )
 from src.strategies.dual_momentum import DualMomentumStrategy
-from src.data_sources.multi_source import MultiSourceDataProvider
+from src.data_sources import get_default_data_source
 from src.backtesting.utils import ensure_safe_asset_data
 
 
@@ -32,9 +32,20 @@ def render():
     """Render the hyperparameter tuning page."""
     
     st.title("🎯 Hyperparameter Tuning")
-    st.markdown("""
-    Optimize strategy parameters to maximize performance metrics using various optimization methods.
-    """)
+    
+    # Check if we came from backtest results
+    if st.session_state.get('tuning_from_backtest', False):
+        # Show informational message
+        if 'tuning_message' in st.session_state:
+            st.info(st.session_state.tuning_message)
+            # Clear the message after showing it once
+            del st.session_state.tuning_message
+        # Clear the flag
+        st.session_state.tuning_from_backtest = False
+    else:
+        st.markdown("""
+        Optimize strategy parameters to maximize performance metrics using various optimization methods.
+        """)
     
     # Create tabs for different sections
     tab1, tab2, tab3 = st.tabs([
@@ -57,6 +68,16 @@ def render_configuration_tab():
     """Render the configuration tab."""
     
     st.header("Optimization Configuration")
+    
+    # Show banner if settings are pre-populated from backtest
+    if st.session_state.get('tune_universe') and not st.session_state.get('_tune_banner_shown'):
+        st.success("""
+        ✅ **Configuration pre-populated from your backtest!**
+        
+        Review the settings below - date range, capital, transaction costs, and asset universe 
+        have been automatically filled from your previous backtest.
+        """)
+        st.session_state._tune_banner_shown = True
     
     col1, col2 = st.columns(2)
     
@@ -109,11 +130,27 @@ def render_configuration_tab():
         st.session_state.tune_slippage = slippage
         
         # Benchmark
+        pre_populated_benchmark = st.session_state.get('tune_benchmark')
+        benchmark_options = ["SPY", "QQQ", "AGG", "None"]
+        
+        # Determine default index for benchmark
+        if pre_populated_benchmark and pre_populated_benchmark in benchmark_options:
+            default_benchmark_index = benchmark_options.index(pre_populated_benchmark)
+        elif pre_populated_benchmark is None:
+            default_benchmark_index = benchmark_options.index("None")
+        else:
+            # If benchmark is not in standard list, add it
+            if pre_populated_benchmark and pre_populated_benchmark not in benchmark_options:
+                benchmark_options.insert(0, pre_populated_benchmark)
+                default_benchmark_index = 0
+            else:
+                default_benchmark_index = 0
+        
         benchmark_symbol = st.selectbox(
             "Benchmark",
-            options=["SPY", "QQQ", "AGG", "None"],
-            index=0,
-            help="Benchmark for comparison"
+            options=benchmark_options,
+            index=default_benchmark_index,
+            help="Benchmark for comparison (pre-populated from backtest)" if pre_populated_benchmark else "Benchmark for comparison"
         )
         st.session_state.tune_benchmark = None if benchmark_symbol == "None" else benchmark_symbol
     
@@ -193,33 +230,60 @@ def render_configuration_tab():
     if 'tune_param_space' not in st.session_state:
         st.session_state.tune_param_space = []
     
+    # Initialize parameter ID counter
+    if 'tune_param_id_counter' not in st.session_state:
+        st.session_state.tune_param_id_counter = 0
+    
     # Add parameter button
     col1, col2, col3 = st.columns([3, 1, 1])
     with col1:
         if st.button("➕ Add Parameter", use_container_width=True):
+            st.session_state.tune_param_id_counter += 1
             st.session_state.tune_param_space.append({
+                'id': st.session_state.tune_param_id_counter,
                 'name': 'lookback_period',
                 'type': 'int',
                 'values': [126, 189, 252, 315],
             })
+            # Force stay on current page after rerun
+            if 'current_page' in st.session_state and st.session_state.current_page:
+                st.session_state.navigate_to = st.session_state.current_page
+            st.rerun()
     
     with col2:
         if st.button("🔄 Reset to Defaults", use_container_width=True):
+            st.session_state.tune_param_id_counter = 3
             st.session_state.tune_param_space = [
-                {'name': 'lookback_period', 'type': 'int', 'values': [63, 126, 189, 252, 315]},
-                {'name': 'position_count', 'type': 'int', 'values': [1, 2, 3]},
-                {'name': 'absolute_threshold', 'type': 'float', 'values': [0.0, 0.01, 0.02]},
+                {'id': 1, 'name': 'lookback_period', 'type': 'int', 'values': [63, 126, 189, 252, 315]},
+                {'id': 2, 'name': 'position_count', 'type': 'int', 'values': [1, 2, 3]},
+                {'id': 3, 'name': 'absolute_threshold', 'type': 'float', 'values': [0.0, 0.01, 0.02]},
             ]
+            # Force stay on current page after rerun
+            if 'current_page' in st.session_state and st.session_state.current_page:
+                st.session_state.navigate_to = st.session_state.current_page
+            st.rerun()
     
     with col3:
         if st.button("🗑️ Clear All", use_container_width=True):
             st.session_state.tune_param_space = []
+            # Force stay on current page after rerun
+            if 'current_page' in st.session_state and st.session_state.current_page:
+                st.session_state.navigate_to = st.session_state.current_page
+            st.rerun()
     
     # Display and edit parameters
     if st.session_state.tune_param_space:
         st.markdown("---")
         
+        # Ensure all parameters have IDs (for backward compatibility)
         for idx, param in enumerate(st.session_state.tune_param_space):
+            if 'id' not in param:
+                st.session_state.tune_param_id_counter += 1
+                param['id'] = st.session_state.tune_param_id_counter
+        
+        for idx, param in enumerate(st.session_state.tune_param_space):
+            param_id = param.get('id', idx)
+            
             with st.expander(f"Parameter {idx + 1}: {param.get('name', 'Unnamed')}", expanded=True):
                 col1, col2, col3 = st.columns([2, 2, 1])
                 
@@ -233,7 +297,7 @@ def render_configuration_tab():
                             "use_volatility_adjustment",
                             "rebalance_frequency",
                         ],
-                        key=f"param_name_{idx}",
+                        key=f"param_name_{param_id}",
                         index=0 if 'name' not in param else [
                             "lookback_period",
                             "position_count",
@@ -254,14 +318,20 @@ def render_configuration_tab():
                     param_type = st.selectbox(
                         "Type",
                         options=["int", "float", "categorical"],
-                        key=f"param_type_{idx}",
+                        key=f"param_type_{param_id}",
                         index=["int", "float", "categorical"].index(param.get('type', 'int'))
                     )
                     param['type'] = param_type
                 
                 with col3:
-                    if st.button("🗑️", key=f"delete_param_{idx}", help="Delete this parameter"):
-                        st.session_state.tune_param_space.pop(idx)
+                    if st.button("🗑️", key=f"delete_param_{param_id}", help="Delete this parameter"):
+                        # Remove parameter by ID
+                        st.session_state.tune_param_space = [
+                            p for p in st.session_state.tune_param_space if p.get('id') != param_id
+                        ]
+                        # Force stay on current page after rerun
+                        if 'current_page' in st.session_state and st.session_state.current_page:
+                            st.session_state.navigate_to = st.session_state.current_page
                         st.rerun()
                 
                 # Values input
@@ -269,7 +339,7 @@ def render_configuration_tab():
                     values_str = st.text_input(
                         "Values (comma-separated)",
                         value=", ".join(str(v) for v in param.get('values', [])),
-                        key=f"param_values_{idx}",
+                        key=f"param_values_{param_id}",
                         help="e.g., monthly, weekly, daily"
                     )
                     param['values'] = [v.strip() for v in values_str.split(',') if v.strip()]
@@ -278,7 +348,7 @@ def render_configuration_tab():
                     values_str = st.text_input(
                         "Values (comma-separated integers)",
                         value=", ".join(str(v) for v in param.get('values', [])),
-                        key=f"param_values_{idx}",
+                        key=f"param_values_{param_id}",
                         help="e.g., 126, 189, 252, 315"
                     )
                     try:
@@ -291,7 +361,7 @@ def render_configuration_tab():
                     values_str = st.text_input(
                         "Values (comma-separated floats)",
                         value=", ".join(str(v) for v in param.get('values', [])),
-                        key=f"param_values_{idx}",
+                        key=f"param_values_{param_id}",
                         help="e.g., 0.0, 0.01, 0.02, 0.05"
                     )
                     try:
@@ -353,30 +423,61 @@ def render_optimization_tab():
     # Asset universe selection
     st.subheader("Asset Universe")
     
+    # Show info if pre-populated from backtest
+    if st.session_state.get('tuning_from_backtest') or st.session_state.get('tune_universe'):
+        pre_populated_universe = st.session_state.get('tune_universe', [])
+        if pre_populated_universe:
+            st.info(f"📊 **Assets from your backtest**: {', '.join(pre_populated_universe)}")
+    
+    # Check if universe was pre-populated from backtest
+    pre_populated_universe = st.session_state.get('tune_universe', [])
+    default_universe = ["SPY", "EFA", "EEM", "AGG", "TLT", "GLD"]
+    
+    # Determine if we should default to Custom
+    if pre_populated_universe and pre_populated_universe != default_universe:
+        default_option_index = 1  # Custom
+        default_custom_value = ", ".join(pre_populated_universe)
+    else:
+        default_option_index = 0  # Default
+        default_custom_value = "SPY, EFA, EEM, AGG, TLT, GLD"
+    
     universe_option = st.radio(
         "Select Universe",
         options=["Default (SPY, EFA, EEM, AGG, TLT, GLD)", "Custom"],
-        horizontal=True
+        index=default_option_index,
+        horizontal=True,
+        help="Pre-populated with assets from your backtest" if pre_populated_universe else None
     )
     
     if universe_option == "Custom":
         universe_input = st.text_input(
             "Enter symbols (comma-separated)",
-            value="SPY, EFA, EEM, AGG, TLT, GLD",
+            value=default_custom_value,
             help="Enter ticker symbols separated by commas"
         )
         universe = [s.strip().upper() for s in universe_input.split(',') if s.strip()]
     else:
-        universe = ["SPY", "EFA", "EEM", "AGG", "TLT", "GLD"]
+        universe = default_universe
     
     st.session_state.tune_universe = universe
     
     # Safe asset
+    pre_populated_safe_asset = st.session_state.get('tune_safe_asset')
+    safe_asset_options = ["AGG", "TLT", "SHY", "BIL", "None"]
+    
+    # Determine default index for safe asset
+    if pre_populated_safe_asset and pre_populated_safe_asset in safe_asset_options:
+        default_safe_asset_index = safe_asset_options.index(pre_populated_safe_asset)
+    elif pre_populated_safe_asset is None:
+        default_safe_asset_index = safe_asset_options.index("None")
+    else:
+        default_safe_asset_index = 0
+    
     safe_asset = st.selectbox(
         "Safe Asset",
-        options=["AGG", "TLT", "SHY", "BIL", "None"],
-        index=0,
-        help="Asset to hold during defensive periods"
+        options=safe_asset_options,
+        index=default_safe_asset_index,
+        help="Asset to hold during defensive periods (pre-populated from backtest)" if pre_populated_safe_asset else "Asset to hold during defensive periods"
     )
     st.session_state.tune_safe_asset = None if safe_asset == "None" else safe_asset
     
@@ -408,7 +509,8 @@ def run_optimization():
             end_date = st.session_state.tune_end_date
             universe = st.session_state.tune_universe
             
-            data_provider = MultiSourceDataProvider()
+            # Get data provider with proper initialization
+            data_provider = get_default_data_source()
             
             # Add some buffer for lookback period
             buffer_days = 400
@@ -688,6 +790,44 @@ def render_results_tab():
             
             fig.update_layout(height=500)
             st.plotly_chart(fig, use_container_width=True)
+    
+    # Apply best parameters and re-run backtest
+    st.markdown("---")
+    st.subheader("🚀 Apply Tuned Parameters")
+    
+    col1, col2, col3 = st.columns([2, 1, 1])
+    
+    with col1:
+        st.markdown("""
+        Apply the best parameters found during optimization and run a new backtest to see the improved results.
+        """)
+    
+    with col2:
+        if st.button("📊 View in Results Page", use_container_width=True, type="primary"):
+            # Store the best backtest in session state
+            st.session_state.backtest_results = results.best_backtest
+            # Update last backtest params with best parameters
+            if 'last_backtest_params' not in st.session_state:
+                st.session_state.last_backtest_params = {}
+            st.session_state.last_backtest_params['strategy_config'] = results.best_params
+            st.session_state.last_backtest_params['optimization_source'] = True
+            # Navigate to results page
+            st.session_state.navigate_to = "📊 Backtest Results"
+            st.success("✅ Navigating to backtest results with optimized parameters!")
+            st.rerun()
+    
+    with col3:
+        if st.button("🔄 Re-run with Best Params", use_container_width=True):
+            # Pre-populate strategy builder with best parameters
+            st.session_state.apply_tuned_params = results.best_params
+            st.session_state.tuned_params_source = {
+                'score': results.best_score,
+                'metric': results.metric_name,
+                'method': results.method
+            }
+            st.session_state.navigate_to = "🛠️ Strategy Builder"
+            st.success("✅ Navigating to strategy builder with optimized parameters!")
+            st.rerun()
     
     # Download results
     st.markdown("---")

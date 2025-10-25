@@ -16,6 +16,7 @@ from frontend.utils.styling import (
     render_page_header, render_metric_card, render_info_box, render_section_divider
 )
 from frontend.utils.state import add_to_comparison
+from datetime import timedelta
 
 
 def render():
@@ -35,12 +36,13 @@ def render():
     results = st.session_state.backtest_results
     
     # Tabs for different analyses
-    tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
+    tab1, tab2, tab3, tab4, tab5, tab6, tab7 = st.tabs([
         "📈 Overview",
         "💹 Charts",
         "📋 Trades",
         "📊 Rolling Metrics",
         "🎯 Allocation",
+        "⚡ Quick Tune",
         "💾 Export"
     ])
     
@@ -60,6 +62,9 @@ def render():
         render_allocation(results)
     
     with tab6:
+        render_quick_tune(results)
+    
+    with tab7:
         render_export_options(results)
 
 
@@ -294,21 +299,28 @@ def render_overview(results):
     
     # Action buttons
     st.markdown("<br>", unsafe_allow_html=True)
-    col1, col2, col3 = st.columns(3)
+    col1, col2, col3, col4 = st.columns(4)
     
     with col1:
         strategy_name = f"{st.session_state.get('strategy_type', 'Strategy')} - {datetime.now().strftime('%H:%M:%S')}"
-        if st.button("➕ Add to Comparison", width='stretch'):
+        if st.button("➕ Add to Comparison", use_container_width=True):
             add_to_comparison(results, strategy_name)
             st.success(f"Added to comparison list!")
     
     with col2:
-        if st.button("🔄 Run New Backtest", width='stretch'):
-            st.session_state.navigate_to = "🛠️ Strategy Builder"
+        if st.button("🎯 Tune Parameters", use_container_width=True, type="primary"):
+            # Pre-populate tuning configuration from current backtest
+            _prepare_tuning_from_backtest()
+            st.session_state.navigate_to = "🎯 Hyperparameter Tuning"
             st.rerun()
     
     with col3:
-        if st.button("📥 Download Report", width='stretch'):
+        if st.button("🔄 Run New Backtest", use_container_width=True):
+            st.session_state.navigate_to = "🛠️ Strategy Builder"
+            st.rerun()
+    
+    with col4:
+        if st.button("📥 Download Report", use_container_width=True):
             st.info("See Export tab for download options")
 
 
@@ -1248,6 +1260,382 @@ def _get_rebalancing_allocation(results, allocation_df):
     except Exception as e:
         st.error(f"Error extracting rebalancing allocation: {str(e)}")
         return None
+
+
+def _prepare_tuning_from_backtest():
+    """
+    Prepare hyperparameter tuning configuration from current backtest settings.
+    
+    This function extracts the current backtest configuration and pre-populates
+    the tuning page with sensible defaults based on the current setup.
+    """
+    # Get current backtest parameters
+    backtest_params = st.session_state.get('last_backtest_params', {})
+    
+    # Mark that tuning was initiated from backtest results
+    st.session_state.tuning_from_backtest = True
+    
+    # Extract and set tuning configuration
+    if 'start_date' in backtest_params:
+        st.session_state.tune_start_date = backtest_params['start_date']
+    if 'end_date' in backtest_params:
+        st.session_state.tune_end_date = backtest_params['end_date']
+    
+    # Set capital and transaction costs
+    st.session_state.tune_initial_capital = backtest_params.get('initial_capital', 100000.0)
+    st.session_state.tune_commission = backtest_params.get('commission', 0.001)
+    st.session_state.tune_slippage = backtest_params.get('slippage', 0.0005)
+    
+    # Set benchmark
+    st.session_state.tune_benchmark = backtest_params.get('benchmark_symbol', 'SPY')
+    
+    # Set asset universe
+    if 'universe' in backtest_params:
+        st.session_state.tune_universe = backtest_params['universe']
+    elif 'symbols' in backtest_params:
+        st.session_state.tune_universe = backtest_params['symbols']
+    
+    # Set safe asset
+    st.session_state.tune_safe_asset = backtest_params.get('safe_asset', 'AGG')
+    
+    # Set default optimization settings
+    st.session_state.tune_method = "Random Search"
+    st.session_state.tune_metric = "sharpe_ratio"
+    st.session_state.tune_higher_is_better = True
+    st.session_state.tune_n_trials = 50
+    st.session_state.tune_random_seed = 42
+    
+    # Set default parameter space based on current strategy config
+    strategy_config = backtest_params.get('strategy_config', {})
+    current_lookback = strategy_config.get('lookback_period', 252)
+    current_position_count = strategy_config.get('position_count', 1)
+    current_threshold = strategy_config.get('absolute_threshold', 0.0)
+    
+    # Initialize parameter ID counter if not exists
+    if 'tune_param_id_counter' not in st.session_state:
+        st.session_state.tune_param_id_counter = 0
+    
+    # Create parameter space with ranges around current values
+    st.session_state.tune_param_id_counter = 3
+    st.session_state.tune_param_space = [
+        {
+            'id': 1,
+            'name': 'lookback_period',
+            'type': 'int',
+            'values': _generate_lookback_values(current_lookback)
+        },
+        {
+            'id': 2,
+            'name': 'position_count',
+            'type': 'int',
+            'values': [1, 2, 3, 4] if current_position_count <= 4 else [1, 2, 3, 4, 5]
+        },
+        {
+            'id': 3,
+            'name': 'absolute_threshold',
+            'type': 'float',
+            'values': [-0.02, -0.01, 0.0, 0.01, 0.02, 0.05]
+        },
+    ]
+    
+    # Store a message to display in tuning page
+    st.session_state.tuning_message = (
+        "📊 **Tuning configuration pre-populated from your backtest results!** "
+        "The parameter ranges are centered around your current strategy settings. "
+        "Review the configuration below and click 'Start Optimization' when ready."
+    )
+
+
+def _generate_lookback_values(current_value: int) -> list:
+    """
+    Generate lookback period values centered around current value.
+    
+    Args:
+        current_value: Current lookback period
+        
+    Returns:
+        List of lookback values to test
+    """
+    # Common lookback periods (in trading days)
+    common_periods = [21, 42, 63, 126, 189, 252, 315, 378, 441, 504]
+    
+    # Find closest common periods
+    values = []
+    for period in common_periods:
+        if abs(period - current_value) <= 126:  # Within ~6 months
+            values.append(period)
+    
+    # Ensure we have at least 4-5 values
+    if len(values) < 4:
+        # Add current value and neighbors
+        values = sorted(set([
+            max(21, current_value - 126),
+            max(21, current_value - 63),
+            current_value,
+            current_value + 63,
+            current_value + 126
+        ]))
+    
+    return sorted(set(values))
+
+
+def render_quick_tune(results):
+    """Render quick parameter tuning interface for easy adjustments and re-runs."""
+    
+    st.markdown("### ⚡ Quick Parameter Tuning")
+    
+    st.markdown("""
+    Quickly adjust strategy parameters and re-run the backtest to see how changes affect performance.
+    This is ideal for iterative testing and parameter sensitivity analysis.
+    """)
+    
+    # Get current parameters from last backtest
+    last_params = st.session_state.get('last_backtest_params', {})
+    strategy_config = last_params.get('strategy_config', {})
+    
+    if not last_params:
+        st.warning("⚠️ No backtest configuration found. Please run a backtest from the Strategy Builder first.")
+        return
+    
+    st.markdown("---")
+    
+    # Current vs New comparison
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        st.markdown("#### 📋 Current Parameters")
+        
+        current_lookback = strategy_config.get('lookback_period', 252)
+        current_position_count = strategy_config.get('position_count', 1)
+        current_threshold = strategy_config.get('absolute_threshold', 0.0)
+        current_rebalance = strategy_config.get('rebalance_frequency', 'monthly')
+        current_volatility = strategy_config.get('use_volatility_adjustment', False)
+        
+        st.info(f"""
+        - **Lookback Period:** {current_lookback} days
+        - **Position Count:** {current_position_count}
+        - **Absolute Threshold:** {current_threshold:.2%}
+        - **Rebalance Frequency:** {current_rebalance.title()}
+        - **Volatility Adjustment:** {'Yes' if current_volatility else 'No'}
+        """)
+        
+        # Show current performance
+        st.markdown("##### Current Performance")
+        metrics = results.metrics
+        perf_col1, perf_col2 = st.columns(2)
+        with perf_col1:
+            st.metric("Total Return", f"{metrics.get('total_return', 0)*100:.2f}%")
+            st.metric("Sharpe Ratio", f"{metrics.get('sharpe_ratio', 0):.2f}")
+        with perf_col2:
+            st.metric("Max Drawdown", f"{metrics.get('max_drawdown', 0)*100:.2f}%")
+            st.metric("Win Rate", f"{metrics.get('win_rate', 0)*100:.1f}%")
+    
+    with col2:
+        st.markdown("#### ⚙️ Adjust Parameters")
+        
+        # Parameter adjustment controls
+        new_lookback = st.slider(
+            "Lookback Period (days)",
+            min_value=21,
+            max_value=504,
+            value=current_lookback,
+            step=21,
+            help="Number of days to calculate momentum"
+        )
+        
+        new_position_count = st.number_input(
+            "Number of Positions",
+            min_value=1,
+            max_value=10,
+            value=current_position_count,
+            help="How many top-ranked assets to hold"
+        )
+        
+        new_threshold = st.slider(
+            "Absolute Momentum Threshold",
+            min_value=-0.20,
+            max_value=0.20,
+            value=float(current_threshold),
+            step=0.01,
+            format="%.2f",
+            help="Minimum momentum required to enter position"
+        )
+        
+        new_rebalance = st.selectbox(
+            "Rebalance Frequency",
+            ["daily", "weekly", "monthly", "quarterly"],
+            index=["daily", "weekly", "monthly", "quarterly"].index(current_rebalance.lower()),
+            help="How often to recalculate positions"
+        )
+        
+        new_volatility = st.checkbox(
+            "Use Volatility Adjustment",
+            value=current_volatility,
+            help="Adjust position sizes based on asset volatility"
+        )
+    
+    # Check if parameters have changed
+    params_changed = (
+        new_lookback != current_lookback or
+        new_position_count != current_position_count or
+        abs(new_threshold - current_threshold) > 0.001 or
+        new_rebalance != current_rebalance.lower() or
+        new_volatility != current_volatility
+    )
+    
+    st.markdown("---")
+    
+    # Action buttons
+    col1, col2, col3 = st.columns([2, 1, 1])
+    
+    with col1:
+        if params_changed:
+            st.success("✅ Parameters changed! Click 'Re-run Backtest' to see the impact.")
+        else:
+            st.info("ℹ️ Adjust parameters above to enable re-running.")
+    
+    with col2:
+        if st.button("🔄 Reset to Current", use_container_width=True, disabled=not params_changed):
+            st.rerun()
+    
+    with col3:
+        if st.button("🚀 Re-run Backtest", use_container_width=True, type="primary", disabled=not params_changed):
+            # Update configuration and trigger re-run
+            _rerun_with_new_params(
+                last_params,
+                {
+                    'lookback_period': new_lookback,
+                    'position_count': new_position_count,
+                    'absolute_threshold': new_threshold,
+                    'rebalance_frequency': new_rebalance,
+                    'use_volatility_adjustment': new_volatility
+                }
+            )
+    
+    # Parameter comparison table
+    if params_changed:
+        st.markdown("---")
+        st.markdown("#### 📊 Parameter Changes")
+        
+        changes = []
+        if new_lookback != current_lookback:
+            changes.append({
+                'Parameter': 'Lookback Period',
+                'Current': f"{current_lookback} days",
+                'New': f"{new_lookback} days",
+                'Change': f"{new_lookback - current_lookback:+d} days"
+            })
+        if new_position_count != current_position_count:
+            changes.append({
+                'Parameter': 'Position Count',
+                'Current': str(current_position_count),
+                'New': str(new_position_count),
+                'Change': f"{new_position_count - current_position_count:+d}"
+            })
+        if abs(new_threshold - current_threshold) > 0.001:
+            changes.append({
+                'Parameter': 'Absolute Threshold',
+                'Current': f"{current_threshold:.2%}",
+                'New': f"{new_threshold:.2%}",
+                'Change': f"{(new_threshold - current_threshold):.2%}"
+            })
+        if new_rebalance != current_rebalance.lower():
+            changes.append({
+                'Parameter': 'Rebalance Frequency',
+                'Current': current_rebalance.title(),
+                'New': new_rebalance.title(),
+                'Change': '→'
+            })
+        if new_volatility != current_volatility:
+            changes.append({
+                'Parameter': 'Volatility Adjustment',
+                'Current': 'Yes' if current_volatility else 'No',
+                'New': 'Yes' if new_volatility else 'No',
+                'Change': '→'
+            })
+        
+        if changes:
+            changes_df = pd.DataFrame(changes)
+            st.dataframe(changes_df, use_container_width=True, hide_index=True)
+
+
+def _rerun_with_new_params(base_params: dict, new_strategy_params: dict):
+    """
+    Re-run backtest with new parameters.
+    
+    Args:
+        base_params: Base backtest configuration
+        new_strategy_params: New strategy parameters to apply
+    """
+    with st.spinner("🔄 Re-running backtest with new parameters..."):
+        try:
+            # Import required modules
+            from src.backtesting.engine import BacktestEngine
+            from src.strategies.dual_momentum import DualMomentumStrategy
+            from src.data_sources import get_default_data_source
+            
+            # Update strategy config
+            updated_config = {**base_params.get('strategy_config', {}), **new_strategy_params}
+            
+            # Create strategy
+            strategy = DualMomentumStrategy(updated_config)
+            
+            # Create backtest engine
+            engine = BacktestEngine(
+                initial_capital=base_params.get('initial_capital', 100000),
+                commission=base_params.get('commission', 0.001),
+                slippage=base_params.get('slippage', 0.0005)
+            )
+            
+            # Get price data (try to use cached data if available)
+            price_data = st.session_state.get('cached_price_data', {})
+            
+            if not price_data:
+                # Need to fetch fresh data
+                data_provider = get_default_data_source()
+                symbols = base_params.get('universe', base_params.get('symbols', []))
+                
+                for symbol in symbols:
+                    try:
+                        data = data_provider.fetch_data(
+                            symbol,
+                            start_date=base_params.get('start_date'),
+                            end_date=base_params.get('end_date')
+                        )
+                        price_data[symbol] = data
+                    except Exception as e:
+                        st.warning(f"Could not load data for {symbol}: {e}")
+                
+                # Cache the data
+                st.session_state.cached_price_data = price_data
+            
+            # Get benchmark data if available
+            benchmark_data = st.session_state.get('benchmark_data')
+            
+            # Run backtest
+            results = engine.run(
+                strategy=strategy,
+                price_data=price_data,
+                start_date=pd.to_datetime(base_params.get('start_date')),
+                end_date=pd.to_datetime(base_params.get('end_date')),
+                benchmark_data=benchmark_data
+            )
+            
+            # Update session state
+            st.session_state.backtest_results = results
+            updated_params = base_params.copy()
+            updated_params['strategy_config'] = updated_config
+            updated_params['timestamp'] = datetime.now()
+            st.session_state.last_backtest_params = updated_params
+            
+            st.success("✅ Backtest completed! Results updated above.")
+            st.rerun()
+            
+        except Exception as e:
+            st.error(f"❌ Error running backtest: {str(e)}")
+            import traceback
+            with st.expander("Show error details"):
+                st.code(traceback.format_exc())
 
 
 def render_export_options(results):
