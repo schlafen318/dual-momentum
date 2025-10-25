@@ -32,9 +32,9 @@ jobs:
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
-        # Install everything at once to let pip resolve dependencies correctly
-        # requirements.txt already pins numpy==1.26.4 and numba==0.59.1
-        pip install --no-cache-dir -r requirements.txt
+        # Use constraints file to force specific versions and prevent conflicts
+        # This overrides loose dependencies from packages like vectorbt
+        pip install --no-cache-dir -c dual_momentum_system/constraints.txt -r requirements.txt
         pip install --no-cache-dir pytest pytest-cov pytest-benchmark hypothesis pytest-mock
     
     - name: Run unit tests
