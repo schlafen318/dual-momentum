@@ -140,7 +140,8 @@ jobs:
     - name: Run performance benchmarks
       run: |
         cd dual_momentum_system
-        pytest tests/ -v --benchmark-only --benchmark-autosave
+        # Disable coverage for benchmark-only runs (would fail threshold)
+        pytest tests/ -v --benchmark-only --benchmark-autosave --no-cov
     
     - name: Compare benchmarks
       run: |
