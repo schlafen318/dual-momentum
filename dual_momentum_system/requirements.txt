@@ -13,10 +13,9 @@ scipy==1.13.1  # Compatible with NumPy 1.26
 # The system gracefully handles missing vectorbt (falls back to standard BacktestEngine)
 # vectorbt==0.26.0  # DISABLED: requires numba<0.57 which needs numpy<1.24
 
-# Numba/LLVM (required by vectorbt, must be compatible with NumPy 1.x)
-# Pin after vectorbt to override its loose numba dependency
-numba==0.59.1  # Last version compatible with NumPy 1.x
-llvmlite==0.42.0  # Compatible with numba 0.59.1
+# Numba/LLVM - OPTIONAL (only needed for vectorbt which is disabled)
+# numba==0.59.1  # Last version compatible with NumPy 1.x
+# llvmlite==0.42.0  # Compatible with numba 0.59.1
 quantstats>=0.0.62,<0.1.0
 empyrical-reloaded>=0.5.5,<0.6.0  # Python 3.13 compatible fork of empyrical
 optuna>=3.0.0,<4.0.0  # Bayesian optimization for hyperparameter tuning
