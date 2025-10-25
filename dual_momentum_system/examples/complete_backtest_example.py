@@ -59,10 +59,29 @@ def main():
     print(f"Asset Universe: {universe}")
     print()
     
-    # Date range
-    end_date = datetime.now()
-    start_date = end_date - timedelta(days=365 * 3)  # 3 years of data
-    print(f"Date Range: {start_date.date()} to {end_date.date()}")
+    # Date range - Query actual data availability for maximum history
+    print("Querying data availability for selected universe...")
+    from src.backtesting.utils import get_universe_data_availability
+    
+    # Get multi-source data provider
+    from src.data_sources import get_default_data_source
+    data_source = get_default_data_source()
+    
+    earliest_available, latest_available, per_symbol_ranges = get_universe_data_availability(
+        universe, data_source
+    )
+    
+    if earliest_available and latest_available:
+        # Use maximum available history
+        end_date = latest_available
+        start_date = earliest_available
+        print(f"✓ Using maximum available history: {start_date.date()} to {end_date.date()}")
+        print(f"  ({(end_date - start_date).days / 365.25:.1f} years)")
+    else:
+        # Fallback to default if query fails
+        end_date = datetime.now()
+        start_date = end_date - timedelta(days=365 * 10)  # 10 years fallback
+        print(f"⚠️  Could not query data availability, using default: {start_date.date()} to {end_date.date()}")
     print()
     
     # =========================================================================
@@ -71,9 +90,7 @@ def main():
     print("[STEP 3] Loading Data...")
     print("-" * 80)
     
-    # Get multi-source data provider with automatic failover
-    from src.data_sources import get_default_data_source
-    data_source = get_default_data_source()
+    # Data source already initialized in STEP 2 (data availability query)
     print(f"✓ Using multi-source data provider with {len(data_source.sources)} source(s)")
     
     # Show source status
@@ -92,8 +109,23 @@ def main():
     print(f"✓ Using asset class: {asset_class.get_name()}")
     print()
     
-    # Fetch data for all assets
-    print("Fetching historical data...")
+    # Calculate data fetch dates including warm-up period for momentum
+    print("Calculating required data fetch period (including warm-up)...")
+    from src.backtesting.utils import calculate_data_fetch_dates
+    
+    # We need extra data before start_date for momentum calculations
+    # Assuming 252-day lookback (will be confirmed from strategy later)
+    estimated_lookback = 252
+    data_fetch_start, data_fetch_end = calculate_data_fetch_dates(
+        backtest_start_date=start_date,
+        backtest_end_date=end_date,
+        lookback_period=estimated_lookback,
+        safety_factor=1.5
+    )
+    print()
+    
+    # Fetch data for all assets (with warm-up period)
+    print("Fetching historical data (including warm-up period)...")
     price_data = {}
     
     for symbol in universe:
@@ -101,8 +133,8 @@ def main():
             print(f"  - Fetching {symbol}...", end=" ")
             raw_data = data_source.fetch_data(
                 symbol=symbol,
-                start_date=start_date,
-                end_date=end_date,
+                start_date=data_fetch_start,  # Includes warm-up period
+                end_date=data_fetch_end,
                 timeframe='1d'
             )
             
@@ -155,8 +187,8 @@ def main():
         strategy=strategy,
         price_data=price_data,
         data_source=data_source,
-        start_date=start_date,
-        end_date=end_date,
+        start_date=data_fetch_start,  # Use same dates as main data fetch
+        end_date=data_fetch_end,
         asset_class=asset_class
     )
     

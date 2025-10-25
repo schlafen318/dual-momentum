@@ -5,12 +5,125 @@ Provides helper functions to make backtesting easier and avoid common pitfalls.
 """
 
 from datetime import datetime, timedelta
-from typing import Any, Dict, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 from loguru import logger
 
 from ..core.base_strategy import BaseStrategy
 from ..core.base_data_source import BaseDataSource
+
+
+def get_universe_data_availability(
+    symbols: List[str],
+    data_source: BaseDataSource,
+    max_retries: int = 2
+) -> Tuple[Optional[datetime], Optional[datetime], Dict[str, Tuple[Optional[datetime], Optional[datetime]]]]:
+    """
+    Query the earliest and latest available dates across all symbols in a universe.
+    
+    This function checks data availability for each symbol and returns:
+    1. The latest inception date (most conservative for backtesting all symbols)
+    2. The earliest inception date (most optimistic)
+    3. Per-symbol date ranges
+    
+    Args:
+        symbols: List of symbols to check
+        data_source: Data source instance to query
+        max_retries: Maximum retries per symbol (default: 2)
+    
+    Returns:
+        Tuple of (
+            earliest_common_date: datetime or None,
+            latest_common_date: datetime or None, 
+            per_symbol_ranges: Dict[symbol, (start, end)]
+        )
+        
+        earliest_common_date is the LATEST inception date across all symbols
+        (i.e., the date from which ALL symbols have data)
+    
+    Example:
+        >>> earliest, latest, ranges = get_universe_data_availability(
+        ...     ['SPY', 'EFA', 'EEM'],
+        ...     data_source
+        ... )
+        >>> print(f"All symbols available from: {earliest}")
+        All symbols available from: 2003-04-11  # EEM inception date
+        >>> 
+        >>> print(f"Per-symbol ranges:")
+        >>> for symbol, (start, end) in ranges.items():
+        ...     print(f"  {symbol}: {start.date()} to {end.date()}")
+        SPY: 1993-01-29 to 2025-10-24
+        EFA: 2001-08-17 to 2025-10-24
+        EEM: 2003-04-11 to 2025-10-24
+    """
+    logger.info(f"🔍 Checking data availability for {len(symbols)} symbols...")
+    
+    per_symbol_ranges = {}
+    earliest_starts = []
+    latest_starts = []
+    earliest_ends = []
+    
+    for symbol in symbols:
+        retries = 0
+        date_range = None
+        
+        while retries <= max_retries and date_range is None:
+            try:
+                # Try to get date range from data source
+                date_range = data_source.get_data_range(symbol)
+                
+                if date_range:
+                    start_date, end_date = date_range
+                    per_symbol_ranges[symbol] = (start_date, end_date)
+                    earliest_starts.append(start_date)
+                    latest_starts.append(start_date)
+                    earliest_ends.append(end_date)
+                    
+                    logger.info(
+                        f"  ✓ {symbol}: {start_date.date()} to {end_date.date()} "
+                        f"({(end_date - start_date).days} days)"
+                    )
+                else:
+                    logger.warning(f"  ⚠️  {symbol}: No date range available")
+                    
+            except Exception as e:
+                retries += 1
+                if retries > max_retries:
+                    logger.error(f"  ✗ {symbol}: Failed to get date range after {max_retries} retries: {e}")
+                else:
+                    logger.debug(f"  Retry {retries}/{max_retries} for {symbol}")
+    
+    # Calculate common date range
+    if earliest_starts and latest_starts and earliest_ends:
+        # The earliest common date is the LATEST of all start dates
+        # (i.e., the date from which ALL symbols have data)
+        earliest_common_date = max(latest_starts)
+        
+        # The latest common date is the EARLIEST of all end dates
+        latest_common_date = min(earliest_ends)
+        
+        logger.info(
+            f"\n📊 Data Availability Summary:"
+            f"\n  ✓ {len(per_symbol_ranges)}/{len(symbols)} symbols checked"
+            f"\n  📅 Common date range: {earliest_common_date.date()} to {latest_common_date.date()}"
+            f"\n  📏 Common period: {(latest_common_date - earliest_common_date).days} days "
+            f"({(latest_common_date - earliest_common_date).days / 365.25:.1f} years)"
+        )
+        
+        # Show which symbol limits the backtest start date
+        limiting_symbol = None
+        for symbol, (start_date, _) in per_symbol_ranges.items():
+            if start_date == earliest_common_date:
+                limiting_symbol = symbol
+                break
+        
+        if limiting_symbol:
+            logger.info(f"  ℹ️  Earliest common date limited by: {limiting_symbol}")
+        
+        return earliest_common_date, latest_common_date, per_symbol_ranges
+    else:
+        logger.warning("⚠️  Could not determine data availability for any symbols")
+        return None, None, per_symbol_ranges
 
 
 def calculate_data_fetch_dates(
