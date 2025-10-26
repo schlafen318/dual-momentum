@@ -1,0 +1,198 @@
+2025-10-26 06:22:43.852 | INFO     | src.backtesting.engine:_setup_logging:122 - Backtest logging enabled: logs/backtest_AbsoluteMomentumStrategy_20251026_062243.log
+2025-10-26 06:22:43.852 | INFO     | src.backtesting.engine:_setup_logging:123 - Strategy: AbsoluteMomentumStrategy
+2025-10-26 06:22:43.852 | INFO     | src.backtesting.engine:_setup_logging:124 - Period: 2025-07-28 to 2025-10-26
+2025-10-26 06:22:43.854 | INFO     | src.backtesting.engine:run:180 - Backtesting from 2025-07-29 00:00:00-04:00 to 2025-10-24 00:00:00-04:00 (63 periods)
+2025-10-26 06:22:43.854 | INFO     | src.backtesting.engine:run:197 - First rebalancing expected on or after 2025-08-26 00:00:00-04:00 (after 20 periods of warm-up data)
+2025-10-26 06:22:43.854 | DEBUG    | src.backtesting.engine:_record_position_snapshot:553 - Position snapshot #1: 0 positions, cash=$100,000.00
+2025-10-26 06:22:43.854 | DEBUG    | src.backtesting.engine:_record_position_snapshot:553 - Position snapshot #2: 0 positions, cash=$100,000.00
+2025-10-26 06:22:43.855 | DEBUG    | src.backtesting.engine:_record_position_snapshot:553 - Position snapshot #3: 0 positions, cash=$100,000.00
+2025-10-26 06:22:43.855 | INFO     | src.backtesting.engine:run:260 - 📊 Performance tracking starts from first rebalancing: 2025-08-26
+2025-10-26 06:22:43.855 | INFO     | src.backtesting.engine:run:263 - 🔄 REBALANCING on 2025-08-26
+2025-10-26 06:22:43.855 | INFO     | src.backtesting.engine:run:264 -    Portfolio Value: $100,000.00
+2025-10-26 06:22:43.855 | INFO     | src.backtesting.engine:run:265 -    Available Cash: $100,000.00
+2025-10-26 06:22:43.855 | INFO     | src.backtesting.engine:run:276 -    Current Positions: None
+2025-10-26 06:22:43.857 | INFO     | src.strategies.absolute_momentum:generate_signals:319 - Generated signals for: ['SPY', 'GLD']
+2025-10-26 06:22:43.857 | INFO     | src.backtesting.engine:run:289 -    Generated 2 signals:
+2025-10-26 06:22:43.857 | INFO     | src.backtesting.engine:run:292 -      SPY: LONG (strength: 0.16)
+2025-10-26 06:22:43.857 | INFO     | src.backtesting.engine:run:292 -      GLD: LONG (strength: 0.19)
+2025-10-26 06:22:43.857 | INFO     | src.backtesting.engine:_execute_signals:766 - [ORDER SIZING] 2025-08-26: PV=$100,000.00, Cash=$100,000.00, Comm=0.1000%, Slip=0.0500%, Scale=0.999001
+2025-10-26 06:22:43.857 | INFO     | src.backtesting.engine:_execute_signals:769 - [ORDER SIZING] Weights: GLD=54.99%, SPY=45.01%
+2025-10-26 06:22:43.857 | INFO     | src.backtesting.engine:_execute_signals:802 - [EXECUTION ORDER] Sells first: [], then buys: ['GLD', 'SPY']
+2025-10-26 06:22:43.857 | INFO     | src.backtesting.engine:_execute_signals:901 -      📈 BUY GLD [momentum_positive]
+2025-10-26 06:22:43.857 | INFO     | src.backtesting.engine:_execute_signals:902 -         Price: $312.08 → $312.24 (slippage: 0.050%)
+2025-10-26 06:22:43.857 | INFO     | src.backtesting.engine:_execute_signals:903 -         Signal: strength=0.19 confidence=0.19
+2025-10-26 06:22:43.857 | INFO     | src.backtesting.engine:_execute_signals:904 -         Target Shares: 176.10
+2025-10-26 06:22:43.857 | INFO     | src.backtesting.engine:_execute_signals:910 -         Commission: $54.99
+2025-10-26 06:22:43.858 | INFO     | src.backtesting.engine:_execute_signals:911 -         Total Cost: $55,041.19
+2025-10-26 06:22:43.858 | DEBUG    | src.backtesting.engine:_open_position:1003 - Opened position: GLD x 176.10 @ $312.24
+2025-10-26 06:22:43.858 | INFO     | src.backtesting.engine:_execute_signals:972 -         ✅ Position opened successfully
+2025-10-26 06:22:43.858 | INFO     | src.backtesting.engine:_execute_signals:976 -         💰 Cash remaining: $44,958.81
+2025-10-26 06:22:43.858 | INFO     | src.backtesting.engine:_execute_signals:901 -      📈 BUY SPY [momentum_positive]
+2025-10-26 06:22:43.858 | INFO     | src.backtesting.engine:_execute_signals:902 -         Price: $643.38 → $643.70 (slippage: 0.050%)
+2025-10-26 06:22:43.858 | INFO     | src.backtesting.engine:_execute_signals:903 -         Signal: strength=0.16 confidence=0.16
+2025-10-26 06:22:43.858 | INFO     | src.backtesting.engine:_execute_signals:904 -         Target Shares: 69.93
+2025-10-26 06:22:43.858 | INFO     | src.backtesting.engine:_execute_signals:910 -         Commission: $45.01
+2025-10-26 06:22:43.858 | INFO     | src.backtesting.engine:_execute_signals:911 -         Total Cost: $45,058.81
+2025-10-26 06:22:43.858 | DEBUG    | src.backtesting.engine:_open_position:1003 - Opened position: SPY x 69.77 @ $643.70
+2025-10-26 06:22:43.858 | INFO     | src.backtesting.engine:_execute_signals:972 -         ✅ Position opened successfully
+2025-10-26 06:22:43.858 | INFO     | src.backtesting.engine:_execute_signals:976 -         💰 Cash remaining: $0.00
+2025-10-26 06:22:43.858 | INFO     | src.backtesting.engine:_execute_signals:982 - [ORDER SIZING] Batch total cost=$100,000.00, Cash end=$0.00
+2025-10-26 06:22:43.858 | INFO     | src.backtesting.engine:_log_position_changes:1159 -    Positions Opened:
+2025-10-26 06:22:43.858 | INFO     | src.backtesting.engine:_log_position_changes:1163 -      GLD: 176.10 shares @ $312.24 (Value: $54,986.21)
+2025-10-26 06:22:43.858 | INFO     | src.backtesting.engine:_log_position_changes:1163 -      SPY: 69.77 shares @ $643.70 (Value: $44,913.89)
+2025-10-26 06:22:43.858 | INFO     | src.backtesting.engine:run:313 -    After Rebalancing:
+2025-10-26 06:22:43.858 | INFO     | src.backtesting.engine:run:314 -      Portfolio Value: $99,900.10
+2025-10-26 06:22:43.858 | INFO     | src.backtesting.engine:run:315 -      Available Cash: $0.00
+2025-10-26 06:22:43.858 | INFO     | src.backtesting.engine:run:316 -      Change: $-99.90
+2025-10-26 06:22:43.858 | INFO     | src.backtesting.engine:run:322 -    ✅ Rebalancing complete
+2025-10-26 06:22:43.859 | INFO     | src.backtesting.engine:run:263 - 🔄 REBALANCING on 2025-09-02
+2025-10-26 06:22:43.859 | INFO     | src.backtesting.engine:run:264 -    Portfolio Value: $101,889.10
+2025-10-26 06:22:43.859 | INFO     | src.backtesting.engine:run:265 -    Available Cash: $0.00
+2025-10-26 06:22:43.859 | INFO     | src.backtesting.engine:run:269 -    Current Positions:
+2025-10-26 06:22:43.859 | INFO     | src.backtesting.engine:run:273 -      GLD: 176.10 shares @ $325.59 (Value: $57,337.90, P&L: $2,351.70)
+2025-10-26 06:22:43.859 | INFO     | src.backtesting.engine:run:273 -      SPY: 69.77 shares @ $638.50 (Value: $44,551.19, P&L: $-362.70)
+2025-10-26 06:22:43.860 | INFO     | src.strategies.absolute_momentum:generate_signals:319 - Generated signals for: ['SPY', 'GLD']
+2025-10-26 06:22:43.860 | INFO     | src.backtesting.engine:run:289 -    Generated 2 signals:
+2025-10-26 06:22:43.860 | INFO     | src.backtesting.engine:run:292 -      SPY: LONG (strength: 0.14)
+2025-10-26 06:22:43.860 | INFO     | src.backtesting.engine:run:292 -      GLD: LONG (strength: 0.47)
+2025-10-26 06:22:43.861 | INFO     | src.backtesting.engine:_execute_signals:673 -    Keeping existing positions:
+2025-10-26 06:22:43.861 | INFO     | src.backtesting.engine:_execute_signals:677 -      GLD: 176.10 shares @ $325.59 (Value: $57,337.90)
+2025-10-26 06:22:43.861 | INFO     | src.backtesting.engine:_execute_signals:677 -      SPY: 69.77 shares @ $638.50 (Value: $44,551.19)
+2025-10-26 06:22:43.861 | INFO     | src.backtesting.engine:_execute_signals:766 - [ORDER SIZING] 2025-09-02: PV=$101,889.10, Cash=$0.00, Comm=0.1000%, Slip=0.0500%, Scale=0.000000
+2025-10-26 06:22:43.861 | INFO     | src.backtesting.engine:_execute_signals:769 - [ORDER SIZING] Weights: GLD=76.61%, SPY=23.39%
+2025-10-26 06:22:43.861 | INFO     | src.backtesting.engine:_execute_signals:773 - [ORDER SIZING] Keeping 2 existing positions (may adjust sizes)
+2025-10-26 06:22:43.861 | INFO     | src.backtesting.engine:_execute_signals:802 - [EXECUTION ORDER] Sells first: ['SPY'], then buys: ['GLD']
+2025-10-26 06:22:43.861 | DEBUG    | src.backtesting.engine:_execute_signals:841 -       Existing position: 69.77 shares worth $44,551.19
+2025-10-26 06:22:43.861 | INFO     | src.backtesting.engine:_execute_signals:901 -      📈 REDUCE SPY [momentum_positive]
+2025-10-26 06:22:43.861 | INFO     | src.backtesting.engine:_execute_signals:902 -         Price: $638.50 → $638.82 (slippage: 0.050%)
+2025-10-26 06:22:43.861 | INFO     | src.backtesting.engine:_execute_signals:903 -         Signal: strength=0.14 confidence=0.14
+2025-10-26 06:22:43.861 | INFO     | src.backtesting.engine:_execute_signals:904 -         Target Shares: 37.31
+2025-10-26 06:22:43.861 | INFO     | src.backtesting.engine:_execute_signals:907 -         Current Shares: 69.77
+2025-10-26 06:22:43.861 | INFO     | src.backtesting.engine:_execute_signals:908 -         Share Change: -32.46
+2025-10-26 06:22:43.861 | INFO     | src.backtesting.engine:_execute_signals:910 -         Commission: $20.74
+2025-10-26 06:22:43.861 | INFO     | src.backtesting.engine:_execute_signals:911 -         Total Cost: $-20,718.28
+2025-10-26 06:22:43.861 | DEBUG    | src.backtesting.engine:_adjust_position:1055 - Adjusting SPY: selling 32.46 shares at $638.18 (proceeds: $20,697.57)
+2025-10-26 06:22:43.861 | INFO     | src.backtesting.engine:_execute_signals:963 -         ✅ Position adjusted successfully
+2025-10-26 06:22:43.861 | INFO     | src.backtesting.engine:_execute_signals:976 -         💰 Cash remaining: $20,697.57
+2025-10-26 06:22:43.861 | DEBUG    | src.backtesting.engine:_execute_signals:841 -       Existing position: 176.10 shares worth $57,337.90
+2025-10-26 06:22:43.861 | INFO     | src.backtesting.engine:_execute_signals:901 -      📈 ADD GLD [momentum_positive]
+2025-10-26 06:22:43.861 | INFO     | src.backtesting.engine:_execute_signals:902 -         Price: $325.59 → $325.75 (slippage: 0.050%)
+2025-10-26 06:22:43.861 | INFO     | src.backtesting.engine:_execute_signals:903 -         Signal: strength=0.47 confidence=0.47
+2025-10-26 06:22:43.861 | INFO     | src.backtesting.engine:_execute_signals:904 -         Target Shares: 239.61
+2025-10-26 06:22:43.861 | INFO     | src.backtesting.engine:_execute_signals:907 -         Current Shares: 176.10
+2025-10-26 06:22:43.862 | INFO     | src.backtesting.engine:_execute_signals:908 -         Share Change: +63.51
+2025-10-26 06:22:43.862 | INFO     | src.backtesting.engine:_execute_signals:910 -         Commission: $20.69
+2025-10-26 06:22:43.862 | INFO     | src.backtesting.engine:_execute_signals:911 -         Total Cost: $20,708.76
+2025-10-26 06:22:43.862 | WARNING  | src.backtesting.engine:_execute_signals:922 -      ⚠️  Cannot fully adjust GLD - insufficient cash
+2025-10-26 06:22:43.862 | WARNING  | src.backtesting.engine:_execute_signals:923 -         Required: $20,708.76, Available: $20,697.57
+2025-10-26 06:22:43.862 | INFO     | src.backtesting.engine:_execute_signals:931 -         Adjusted to partial increase: 239.58 shares
+2025-10-26 06:22:43.862 | DEBUG    | src.backtesting.engine:_adjust_position:1050 - Adjusting GLD: buying 63.47 more shares at $325.75 (cost: $20,697.57)
+2025-10-26 06:22:43.862 | INFO     | src.backtesting.engine:_execute_signals:963 -         ✅ Position adjusted successfully
+2025-10-26 06:22:43.862 | INFO     | src.backtesting.engine:_execute_signals:976 -         💰 Cash remaining: $0.00
+2025-10-26 06:22:43.862 | INFO     | src.backtesting.engine:_execute_signals:982 - [ORDER SIZING] Batch total cost=$41,415.85, Cash end=$0.00
+2025-10-26 06:22:43.862 | INFO     | src.backtesting.engine:_log_position_changes:1184 -    No position changes made
+2025-10-26 06:22:43.862 | INFO     | src.backtesting.engine:run:313 -    After Rebalancing:
+2025-10-26 06:22:43.862 | INFO     | src.backtesting.engine:run:314 -      Portfolio Value: $101,827.00
+2025-10-26 06:22:43.862 | INFO     | src.backtesting.engine:run:315 -      Available Cash: $0.00
+2025-10-26 06:22:43.862 | INFO     | src.backtesting.engine:run:316 -      Change: $-62.09
+2025-10-26 06:22:43.862 | INFO     | src.backtesting.engine:run:322 -    ✅ Rebalancing complete
+2025-10-26 06:22:43.863 | INFO     | src.backtesting.engine:run:263 - 🔄 REBALANCING on 2025-10-01
+2025-10-26 06:22:43.863 | INFO     | src.backtesting.engine:run:264 -    Portfolio Value: $110,237.23
+2025-10-26 06:22:43.863 | INFO     | src.backtesting.engine:run:265 -    Available Cash: $0.00
+2025-10-26 06:22:43.863 | INFO     | src.backtesting.engine:run:269 -    Current Positions:
+2025-10-26 06:22:43.863 | INFO     | src.backtesting.engine:run:273 -      GLD: 239.58 shares @ $356.03 (Value: $85,297.25, P&L: $10,492.11)
+2025-10-26 06:22:43.863 | INFO     | src.backtesting.engine:run:273 -      SPY: 37.31 shares @ $668.45 (Value: $24,939.98, P&L: $923.50)
+2025-10-26 06:22:43.865 | INFO     | src.strategies.absolute_momentum:generate_signals:319 - Generated signals for: ['SPY', 'TLT', 'GLD']
+2025-10-26 06:22:43.865 | INFO     | src.backtesting.engine:run:289 -    Generated 3 signals:
+2025-10-26 06:22:43.865 | INFO     | src.backtesting.engine:run:292 -      SPY: LONG (strength: 0.41)
+2025-10-26 06:22:43.865 | INFO     | src.backtesting.engine:run:292 -      TLT: LONG (strength: 0.35)
+2025-10-26 06:22:43.865 | INFO     | src.backtesting.engine:run:292 -      GLD: LONG (strength: 0.85)
+2025-10-26 06:22:43.865 | INFO     | src.backtesting.engine:_execute_signals:673 -    Keeping existing positions:
+2025-10-26 06:22:43.865 | INFO     | src.backtesting.engine:_execute_signals:677 -      GLD: 239.58 shares @ $356.03 (Value: $85,297.25)
+2025-10-26 06:22:43.865 | INFO     | src.backtesting.engine:_execute_signals:677 -      SPY: 37.31 shares @ $668.45 (Value: $24,939.98)
+2025-10-26 06:22:43.865 | INFO     | src.backtesting.engine:_execute_signals:766 - [ORDER SIZING] 2025-10-01: PV=$110,237.23, Cash=$0.00, Comm=0.1000%, Slip=0.0500%, Scale=0.000000
+2025-10-26 06:22:43.865 | INFO     | src.backtesting.engine:_execute_signals:769 - [ORDER SIZING] Weights: GLD=67.32%, SPY=32.68%
+2025-10-26 06:22:43.865 | INFO     | src.backtesting.engine:_execute_signals:773 - [ORDER SIZING] Keeping 2 existing positions (may adjust sizes)
+2025-10-26 06:22:43.865 | INFO     | src.backtesting.engine:_execute_signals:802 - [EXECUTION ORDER] Sells first: ['GLD'], then buys: ['SPY']
+2025-10-26 06:22:43.865 | DEBUG    | src.backtesting.engine:_execute_signals:841 -       Existing position: 239.58 shares worth $85,297.25
+2025-10-26 06:22:43.865 | INFO     | src.backtesting.engine:_execute_signals:901 -      📈 REDUCE GLD [momentum_positive]
+2025-10-26 06:22:43.865 | INFO     | src.backtesting.engine:_execute_signals:902 -         Price: $356.03 → $356.21 (slippage: 0.050%)
+2025-10-26 06:22:43.865 | INFO     | src.backtesting.engine:_execute_signals:903 -         Signal: strength=0.85 confidence=0.85
+2025-10-26 06:22:43.865 | INFO     | src.backtesting.engine:_execute_signals:904 -         Target Shares: 208.33
+2025-10-26 06:22:43.865 | INFO     | src.backtesting.engine:_execute_signals:907 -         Current Shares: 239.58
+2025-10-26 06:22:43.865 | INFO     | src.backtesting.engine:_execute_signals:908 -         Share Change: -31.25
+2025-10-26 06:22:43.865 | INFO     | src.backtesting.engine:_execute_signals:910 -         Commission: $11.13
+2025-10-26 06:22:43.865 | INFO     | src.backtesting.engine:_execute_signals:911 -         Total Cost: $-11,119.50
+2025-10-26 06:22:43.866 | DEBUG    | src.backtesting.engine:_adjust_position:1055 - Adjusting GLD: selling 31.25 shares at $355.85 (proceeds: $11,108.39)
+2025-10-26 06:22:43.866 | INFO     | src.backtesting.engine:_execute_signals:963 -         ✅ Position adjusted successfully
+2025-10-26 06:22:43.866 | INFO     | src.backtesting.engine:_execute_signals:976 -         💰 Cash remaining: $11,108.39
+2025-10-26 06:22:43.866 | DEBUG    | src.backtesting.engine:_execute_signals:841 -       Existing position: 37.31 shares worth $24,939.98
+2025-10-26 06:22:43.866 | INFO     | src.backtesting.engine:_execute_signals:901 -      📈 ADD SPY [momentum_positive]
+2025-10-26 06:22:43.866 | INFO     | src.backtesting.engine:_execute_signals:902 -         Price: $668.45 → $668.78 (slippage: 0.050%)
+2025-10-26 06:22:43.866 | INFO     | src.backtesting.engine:_execute_signals:903 -         Signal: strength=0.41 confidence=0.41
+2025-10-26 06:22:43.866 | INFO     | src.backtesting.engine:_execute_signals:904 -         Target Shares: 53.87
+2025-10-26 06:22:43.866 | INFO     | src.backtesting.engine:_execute_signals:907 -         Current Shares: 37.31
+2025-10-26 06:22:43.866 | INFO     | src.backtesting.engine:_execute_signals:908 -         Share Change: +16.56
+2025-10-26 06:22:43.866 | INFO     | src.backtesting.engine:_execute_signals:910 -         Commission: $11.08
+2025-10-26 06:22:43.866 | INFO     | src.backtesting.engine:_execute_signals:911 -         Total Cost: $11,086.59
+2025-10-26 06:22:43.866 | DEBUG    | src.backtesting.engine:_adjust_position:1050 - Adjusting SPY: buying 16.56 more shares at $668.78 (cost: $11,086.59)
+2025-10-26 06:22:43.866 | INFO     | src.backtesting.engine:_execute_signals:963 -         ✅ Position adjusted successfully
+2025-10-26 06:22:43.866 | INFO     | src.backtesting.engine:_execute_signals:976 -         💰 Cash remaining: $21.80
+2025-10-26 06:22:43.866 | INFO     | src.backtesting.engine:_execute_signals:982 - [ORDER SIZING] Batch total cost=$22,206.09, Cash end=$21.80
+2025-10-26 06:22:43.866 | INFO     | src.backtesting.engine:_log_position_changes:1184 -    No position changes made
+2025-10-26 06:22:43.866 | INFO     | src.backtesting.engine:run:313 -    After Rebalancing:
+2025-10-26 06:22:43.866 | INFO     | src.backtesting.engine:run:314 -      Portfolio Value: $110,203.94
+2025-10-26 06:22:43.866 | INFO     | src.backtesting.engine:run:315 -      Available Cash: $21.80
+2025-10-26 06:22:43.866 | INFO     | src.backtesting.engine:run:316 -      Change: $-33.29
+2025-10-26 06:22:43.866 | INFO     | src.backtesting.engine:run:322 -    ✅ Rebalancing complete
+2025-10-26 06:22:43.867 | DEBUG    | src.backtesting.engine:_close_position:1123 - Closed position: GLD x 208.33 @ $377.33 (P&L: $13,561.37)
+2025-10-26 06:22:43.867 | DEBUG    | src.backtesting.engine:_close_position:1123 - Closed position: SPY x 53.87 @ $676.91 (P&L: $1,789.23)
+2025-10-26 06:22:43.868 | INFO     | src.backtesting.engine:_generate_results:1200 - 📊 Performance metrics calculated from 2025-08-26 to 2025-10-24
+2025-10-26 06:22:43.869 | INFO     | src.backtesting.engine:_generate_results:1278 - 📊 No benchmark data provided for comparison
+2025-10-26 06:22:43.877 | DEBUG    | src.backtesting.engine:_create_positions_dataframe:569 - Creating positions DataFrame from 63 snapshots
+2025-10-26 06:22:43.878 | DEBUG    | src.backtesting.engine:_create_positions_dataframe:574 - Initial DataFrame shape after conversion: (63, 9)
+2025-10-26 06:22:43.878 | DEBUG    | src.backtesting.engine:_create_positions_dataframe:575 - Initial DataFrame columns: ['timestamp', 'portfolio_value', 'cash', 'GLD_quantity', 'GLD_price', 'GLD_value', 'SPY_quantity', 'SPY_price', 'SPY_value']
+2025-10-26 06:22:43.878 | DEBUG    | src.backtesting.engine:_create_positions_dataframe:586 - Filtered position history from 63 to 43 records (performance period)
+2025-10-26 06:22:43.884 | INFO     | src.backtesting.engine:_generate_results:1294 - ============================================================
+2025-10-26 06:22:43.884 | INFO     | src.backtesting.engine:_generate_results:1295 - POSITION DATA SUMMARY
+2025-10-26 06:22:43.884 | INFO     | src.backtesting.engine:_generate_results:1296 - ============================================================
+2025-10-26 06:22:43.884 | INFO     | src.backtesting.engine:_generate_results:1297 - Total timesteps in backtest: 43
+2025-10-26 06:22:43.884 | INFO     | src.backtesting.engine:_generate_results:1298 - Position history snapshots recorded: 63
+2025-10-26 06:22:43.884 | INFO     | src.backtesting.engine:_generate_results:1299 - Positions DataFrame shape: (43, 14)
+2025-10-26 06:22:43.884 | INFO     | src.backtesting.engine:_generate_results:1302 - Positions DataFrame columns: ['portfolio_value', 'cash', 'cash_pct', 'portfolio_quantity', 'portfolio_price', 'portfolio_pct', 'GLD_value', 'GLD_quantity', 'GLD_price', 'GLD_pct', 'SPY_value', 'SPY_quantity', 'SPY_price', 'SPY_pct']
+2025-10-26 06:22:43.884 | INFO     | src.backtesting.engine:_generate_results:1303 - First 3 rows of positions data:
+2025-10-26 06:22:43.896 | INFO     | src.backtesting.engine:_generate_results:1304 - 
+                           portfolio_value      cash  ...   SPY_price    SPY_pct
+timestamp                                             ...                       
+2025-08-26 00:00:00-04:00    100000.000000  100000.0  ...         NaN        NaN
+2025-08-27 00:00:00-04:00    100063.407410       0.0  ...  644.842224  44.965220
+2025-08-28 00:00:00-04:00    100631.311264       0.0  ...  647.125854  44.869803
+
+[3 rows x 14 columns]
+2025-10-26 06:22:43.896 | INFO     | src.backtesting.engine:_generate_results:1305 - Last 3 rows of positions data:
+2025-10-26 06:22:43.905 | INFO     | src.backtesting.engine:_generate_results:1306 - 
+                           portfolio_value       cash  ...   SPY_price    SPY_pct
+timestamp                                              ...                       
+2025-10-22 00:00:00-04:00    114595.958995  21.798525  ...  667.799988  31.392855
+2025-10-23 00:00:00-04:00    115123.870923  21.798525  ...  671.760010  31.434204
+2025-10-24 00:00:00-04:00    115155.036516  21.798525  ...  677.250000  31.682525
+
+[3 rows x 14 columns]
+2025-10-26 06:22:43.905 | INFO     | src.backtesting.engine:_generate_results:1314 - ============================================================
+2025-10-26 06:22:43.905 | INFO     | src.backtesting.engine:run:336 - Backtest complete. Final value: $115,155.04 (15.16% return)
+2025-10-26 06:22:43.905 | INFO     | src.backtesting.engine:run:340 - Detailed backtest log saved to: logs/backtest_AbsoluteMomentumStrategy_20251026_062243.log
+2025-10-26 06:22:44.300 | INFO     | config.universe_loader:__init__:98 - Loaded 30 asset universes
+2025-10-26 06:22:44.309 | INFO     | src.core.cash_manager:__init__:93 - Initialized CashManager: strategic=5.0%, operational=2.0%, min_buffer=$100.00
+2025-10-26 06:22:44.309 | DEBUG    | src.core.cash_manager:calculate_allocation:133 - Cash allocation: strategic=$5,000.00, buffer=$2,000.00, available=$3,000.00 of $10,000.00 total
+2025-10-26 06:22:44.309 | DEBUG    | src.core.cash_manager:calculate_allocation:133 - Cash allocation: strategic=$5,000.00, buffer=$2,000.00, available=$3,000.00 of $10,000.00 total
+2025-10-26 06:22:44.310 | INFO     | src.strategies.dual_momentum:_validate_safe_asset_config:97 - Safe asset configured: SHY
+2025-10-26 06:22:44.310 | INFO     | src.strategies.dual_momentum:_validate_safe_asset_config:99 - No safe asset configured. Portfolio will hold cash during defensive periods.
+2025-10-26 06:22:44.311 | INFO     | src.strategies.dual_momentum:_validate_safe_asset_config:99 - No safe asset configured. Portfolio will hold cash during defensive periods.
+2025-10-26 06:22:44.313 | INFO     | src.core.cash_manager:__init__:93 - Initialized CashManager: strategic=5.0%, operational=2.0%, min_buffer=$100.00
+2025-10-26 06:22:44.313 | DEBUG    | src.core.cash_manager:calculate_allocation:133 - Cash allocation: strategic=$5,000.00, buffer=$2,000.00, available=$3,000.00 of $10,000.00 total
+2025-10-26 06:22:44.315 | INFO     | src.data_sources:get_default_data_source:96 - [DATA SOURCE] Streamlit Cloud/restricted environment detected - prioritizing YahooFinanceDirectSource
+2025-10-26 06:22:44.315 | DEBUG    | src.data_sources:get_default_data_source:103 - [DATA SOURCE] Adding YahooFinanceSource as backup (may be unreliable on cloud)
+2025-10-26 06:22:44.315 | INFO     | src.data_sources:get_default_data_source:133 - [DATA SOURCE] Initialized with 2 source(s): ['YahooFinanceDirectSource', 'YahooFinanceSource']
+2025-10-26 06:22:44.315 | INFO     | src.data_sources.multi_source:__init__:62 - Initialized MultiSourceDataProvider with 2 sources
+2025-10-26 06:22:44.315 | INFO     | src.data_sources.multi_source:__init__:64 -   Source 1: YahooFinanceDirectSource
+2025-10-26 06:22:44.315 | INFO     | src.data_sources.multi_source:__init__:64 -   Source 2: YahooFinanceSource
