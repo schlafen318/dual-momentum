@@ -301,11 +301,39 @@ def render_strategy_configuration():
     render_section_divider()
     st.markdown("#### 📅 Backtest Period")
     
-    # Check data availability if symbols are selected
-    data_availability_info = None
-    if symbols and len(symbols) > 0:
-        if st.button("🔍 Check Data Availability", help="Query the earliest available data for selected assets"):
-            with st.spinner("Querying data availability..."):
+    # Date range mode selection
+    col_mode, col_refresh = st.columns([3, 1])
+    
+    with col_mode:
+        date_range_mode = st.selectbox(
+            "Date Range Mode",
+            ["Longest Available", "Custom Range", "Last 1 Year", "Last 3 Years", "Last 5 Years", "Last 10 Years"],
+            index=0,
+            help="Longest Available automatically uses maximum history. Custom Range lets you pick specific dates."
+        )
+        st.session_state.date_range_mode = date_range_mode
+    
+    with col_refresh:
+        # Only show refresh button if we have symbols
+        if symbols and len(symbols) > 0 and date_range_mode == "Longest Available":
+            st.markdown("<br>", unsafe_allow_html=True)  # Align with selectbox
+            if st.button("🔄 Refresh", help="Re-query data availability"):
+                # Clear cached availability to force refresh
+                if 'data_availability' in st.session_state:
+                    del st.session_state.data_availability
+                st.rerun()
+    
+    # Auto-query data availability for "Longest Available" mode
+    if date_range_mode == "Longest Available" and symbols and len(symbols) > 0:
+        # Check if we need to query (first time or symbols changed)
+        current_symbols_hash = hash(tuple(sorted(symbols)))
+        stored_hash = st.session_state.get('data_availability_symbols_hash')
+        
+        if (not hasattr(st.session_state, 'data_availability') or 
+            not st.session_state.get('data_availability', {}).get('checked') or
+            current_symbols_hash != stored_hash):
+            
+            with st.spinner("🔍 Querying longest available data for selected assets..."):
                 try:
                     from src.data_sources import get_default_data_source
                     import os
@@ -328,19 +356,21 @@ def render_strategy_configuration():
                             'ranges': ranges,
                             'checked': True
                         }
-                        st.success(f"✅ Data available from {earliest.date()} to {latest.date()}")
+                        st.session_state.data_availability_symbols_hash = current_symbols_hash
+                        duration_years = (latest - earliest).days / 365.25
+                        st.success(f"✅ Using longest available period: {earliest.date()} to {latest.date()} ({duration_years:.1f} years)")
                     else:
-                        st.warning("⚠️ Could not determine data availability. Using default date range.")
+                        st.warning("⚠️ Could not determine data availability. Falling back to 10 years.")
                         st.session_state.data_availability = {'checked': False}
                 except Exception as e:
                     st.error(f"❌ Error checking data availability: {str(e)}")
                     st.session_state.data_availability = {'checked': False}
     
-    # Show data availability info if checked
+    # Show data availability info if checked (for all modes)
     if hasattr(st.session_state, 'data_availability') and st.session_state.data_availability.get('checked'):
         data_avail = st.session_state.data_availability
         
-        with st.expander("📊 Data Availability Details", expanded=True):
+        with st.expander("📊 Data Availability Details", expanded=False):
             st.markdown(f"""
             **Common Date Range:** {data_avail['earliest'].date()} to {data_avail['latest'].date()}  
             **Duration:** {(data_avail['latest'] - data_avail['earliest']).days} days 
@@ -358,52 +388,125 @@ def render_strategy_configuration():
             if limiting_symbols:
                 st.info(f"💡 Earliest date limited by: **{', '.join(limiting_symbols)}**")
     
-    col1, col2 = st.columns(2)
-    
+    # Determine dates based on selected mode
     default_end = datetime.now()
     
-    # Intelligent default start date
-    if hasattr(st.session_state, 'data_availability') and st.session_state.data_availability.get('checked'):
-        # Use the earliest available date from all symbols
-        default_start = st.session_state.data_availability['earliest']
-        help_start = f"Earliest available data for all selected assets: {default_start.date()}"
+    if date_range_mode == "Longest Available":
+        # Use data availability if queried
+        if hasattr(st.session_state, 'data_availability') and st.session_state.data_availability.get('checked'):
+            default_start = st.session_state.data_availability['earliest']
+            default_end_dt = st.session_state.data_availability['latest']
+            help_text = f"Using longest available data: {default_start.date()} to {default_end_dt.date()}"
+            
+            # For longest available, make dates read-only (disabled)
+            col1, col2 = st.columns(2)
+            with col1:
+                start_date = st.date_input(
+                    "Start Date",
+                    value=default_start.date() if hasattr(default_start, 'date') else default_start,
+                    disabled=True,
+                    help=help_text
+                )
+            with col2:
+                end_date = st.date_input(
+                    "End Date",
+                    value=default_end_dt.date() if hasattr(default_end_dt, 'date') else default_end_dt,
+                    disabled=True,
+                    help=help_text
+                )
+            
+            st.session_state.start_date = start_date
+            st.session_state.end_date = end_date
+            
+            # Show duration
+            duration_days = (end_date - start_date).days
+            duration_years = duration_days / 365.25
+            st.caption(f"📊 Backtest duration: {duration_days} days ({duration_years:.1f} years)")
+        else:
+            # Fallback while querying
+            st.info("🔍 Querying data availability for selected assets...")
+            default_start = default_end - timedelta(days=365*10)
+            st.session_state.start_date = default_start.date()
+            st.session_state.end_date = default_end.date()
+    
+    elif date_range_mode == "Custom Range":
+        # Allow full customization
+        col1, col2 = st.columns(2)
+        
+        # Get intelligent default
+        if hasattr(st.session_state, 'data_availability') and st.session_state.data_availability.get('checked'):
+            default_start = st.session_state.data_availability['earliest']
+            help_start = f"Earliest available: {default_start.date()}"
+        else:
+            default_start = default_end - timedelta(days=365*10)
+            help_start = "Select custom start date"
+        
+        with col1:
+            start_date = st.date_input(
+                "Start Date",
+                value=default_start.date() if hasattr(default_start, 'date') else default_start,
+                max_value=default_end,
+                help=help_start
+            )
+            st.session_state.start_date = start_date
+        
+        with col2:
+            end_date = st.date_input(
+                "End Date",
+                value=default_end.date(),
+                min_value=start_date,
+                help="End of backtest period"
+            )
+            st.session_state.end_date = end_date
+        
+        # Calculate duration
+        duration_days = (end_date - start_date).days
+        duration_years = duration_days / 365.25
+        st.caption(f"📊 Backtest duration: {duration_days} days ({duration_years:.1f} years)")
+        
+        # Warning if start date is before available data
+        if (hasattr(st.session_state, 'data_availability') and 
+            st.session_state.data_availability.get('checked') and
+            datetime.combine(start_date, datetime.min.time()) < st.session_state.data_availability['earliest']):
+            st.warning(
+                f"⚠️ Start date ({start_date}) is before the earliest available data "
+                f"({st.session_state.data_availability['earliest'].date()}). "
+                f"Some assets may have missing data at the beginning of the backtest."
+            )
+    
     else:
-        # Fallback to 10 years back (longer than the old 3 years)
-        default_start = default_end - timedelta(days=365*10)
-        help_start = "Default: 10 years back. Click 'Check Data Availability' above for actual data ranges."
-    
-    with col1:
-        start_date = st.date_input(
-            "Start Date",
-            value=default_start,
-            max_value=default_end,
-            help=help_start
-        )
+        # Quick presets (Last X Years)
+        years_map = {
+            "Last 1 Year": 1,
+            "Last 3 Years": 3,
+            "Last 5 Years": 5,
+            "Last 10 Years": 10
+        }
+        years = years_map.get(date_range_mode, 10)
+        default_start = default_end - timedelta(days=365*years)
+        
+        col1, col2 = st.columns(2)
+        with col1:
+            start_date = st.date_input(
+                "Start Date",
+                value=default_start.date(),
+                disabled=True,
+                help=f"Automatically set to {years} year(s) ago"
+            )
+        with col2:
+            end_date = st.date_input(
+                "End Date",
+                value=default_end.date(),
+                disabled=True,
+                help="Automatically set to today"
+            )
+        
         st.session_state.start_date = start_date
-    
-    with col2:
-        end_date = st.date_input(
-            "End Date",
-            value=default_end,
-            min_value=start_date,
-            help="End of backtest period (typically today)"
-        )
         st.session_state.end_date = end_date
-    
-    # Calculate duration
-    duration_days = (end_date - start_date).days
-    duration_years = duration_days / 365.25
-    st.caption(f"📊 Backtest duration: {duration_days} days ({duration_years:.1f} years)")
-    
-    # Warning if start date is before available data
-    if (hasattr(st.session_state, 'data_availability') and 
-        st.session_state.data_availability.get('checked') and
-        datetime.combine(start_date, datetime.min.time()) < st.session_state.data_availability['earliest']):
-        st.warning(
-            f"⚠️ Start date ({start_date}) is before the earliest available data "
-            f"({st.session_state.data_availability['earliest'].date()}). "
-            f"Some assets may have missing data at the beginning of the backtest."
-        )
+        
+        duration_days = (end_date - start_date).days
+        duration_years = duration_days / 365.25
+        st.caption(f"📊 Backtest duration: {duration_days} days ({duration_years:.1f} years)")
     
     # Capital and costs
     render_section_divider()
