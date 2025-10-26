@@ -78,7 +78,7 @@ def test_data_source_selection(simulate_cloud=False):
     return data_source
 
 
-def test_data_fetching(data_source):
+def check_data_fetching(data_source):
     """Test actual data fetching."""
     print("=" * 80)
     print("TEST 3: Data Fetching")
@@ -117,7 +117,7 @@ def test_data_fetching(data_source):
         return False
 
 
-def test_batch_fetching(data_source):
+def check_batch_fetching(data_source):
     """Test batch fetching of multiple symbols."""
     print("=" * 80)
     print("TEST 4: Batch Fetching")
@@ -157,7 +157,7 @@ def test_batch_fetching(data_source):
         return False
 
 
-def test_caching(data_source):
+def check_caching(data_source):
     """Test caching functionality."""
     print("=" * 80)
     print("TEST 5: Caching")
@@ -221,15 +221,15 @@ def main():
         results.append(("Data Source Selection (Simulated Cloud)", True))
         
         # Test 3: Data fetching
-        fetch_success = test_data_fetching(data_source)
+        fetch_success = check_data_fetching(data_source)
         results.append(("Data Fetching", fetch_success))
         
         # Test 4: Batch fetching
-        batch_success = test_batch_fetching(data_source)
+        batch_success = check_batch_fetching(data_source)
         results.append(("Batch Fetching", batch_success))
         
         # Test 5: Caching
-        cache_success = test_caching(data_source)
+        cache_success = check_caching(data_source)
         results.append(("Caching", cache_success))
         
     except Exception as e:

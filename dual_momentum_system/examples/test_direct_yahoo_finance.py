@@ -5,6 +5,7 @@ This script verifies that the new direct HTTP-based Yahoo Finance
 data source works correctly without the yfinance library.
 """
 
+import pytest
 from datetime import datetime, timedelta
 import sys
 from pathlib import Path
@@ -15,6 +16,9 @@ sys.path.insert(0, str(project_root))
 
 from src.data_sources.yahoo_finance_direct import YahooFinanceDirectSource
 from loguru import logger
+
+# Mark all tests in this file as requiring network
+pytestmark = pytest.mark.requires_network
 
 
 def test_availability():
