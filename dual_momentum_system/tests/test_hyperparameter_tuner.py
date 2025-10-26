@@ -18,6 +18,16 @@ from src.strategies.dual_momentum import DualMomentumStrategy
 from src.core.types import PriceData, AssetMetadata, AssetType
 
 
+# Helper function to check if optuna is available
+def _has_optuna():
+    """Check if optuna is installed."""
+    try:
+        import optuna
+        return True
+    except ImportError:
+        return False
+
+
 @pytest.fixture
 def sample_price_data():
     """Create sample price data for testing."""
@@ -225,7 +235,7 @@ class TestHyperparameterTuner:
         assert len(results.all_results) == 5
     
     @pytest.mark.skipif(
-        not pytest.importorskip("optuna", minversion=None),
+        not _has_optuna(),
         reason="Optuna not installed"
     )
     def test_bayesian_optimization_basic(self, hyperparameter_tuner):

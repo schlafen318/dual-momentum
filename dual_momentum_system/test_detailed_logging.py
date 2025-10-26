@@ -42,7 +42,7 @@ logger.info("=" * 80)
 # Import data sources
 from src.data_sources import get_default_data_source
 
-def test_single_symbol(data_source, symbol, start_date, end_date):
+def check_single_symbol(data_source, symbol, start_date, end_date):
     """Test fetching a single symbol with detailed logging."""
     logger.info(f"\n{'='*80}")
     logger.info(f"TEST: Fetching single symbol: {symbol}")
@@ -71,7 +71,7 @@ def test_single_symbol(data_source, symbol, start_date, end_date):
         return False
 
 
-def test_multiple_symbols(data_source, symbols, start_date, end_date):
+def check_multiple_symbols(data_source, symbols, start_date, end_date):
     """Test fetching multiple symbols with detailed logging."""
     logger.info(f"\n{'='*80}")
     logger.info(f"TEST: Fetching multiple symbols: {', '.join(symbols)}")
@@ -103,7 +103,7 @@ def test_multiple_symbols(data_source, symbols, start_date, end_date):
         return {}
 
 
-def test_invalid_symbol(data_source, symbol, start_date, end_date):
+def check_invalid_symbol(data_source, symbol, start_date, end_date):
     """Test fetching an invalid symbol to see error handling."""
     logger.info(f"\n{'='*80}")
     logger.info(f"TEST: Fetching invalid symbol: {symbol} (expect failure)")
@@ -129,7 +129,7 @@ def test_invalid_symbol(data_source, symbol, start_date, end_date):
         return False
 
 
-def test_cache_functionality(data_source, symbol, start_date, end_date):
+def check_cache_functionality(data_source, symbol, start_date, end_date):
     """Test caching with detailed logging."""
     logger.info(f"\n{'='*80}")
     logger.info(f"TEST: Cache functionality for {symbol}")
@@ -174,7 +174,7 @@ def main():
     
     test_symbols = ['SPY', 'AAPL', 'MSFT']
     for symbol in test_symbols:
-        test_single_symbol(data_source, symbol, start_date, end_date)
+        check_single_symbol(data_source, symbol, start_date, end_date)
     
     # Test 2: Multiple symbols batch fetch
     logger.info("\n" + "="*80)
@@ -182,21 +182,21 @@ def main():
     logger.info("="*80)
     
     batch_symbols = ['SPY', 'QQQ', 'IWM', 'DIA']
-    test_multiple_symbols(data_source, batch_symbols, start_date, end_date)
+    check_multiple_symbols(data_source, batch_symbols, start_date, end_date)
     
     # Test 3: Invalid symbol
     logger.info("\n" + "="*80)
     logger.info("TEST SUITE 3: Invalid Symbol (Error Handling)")
     logger.info("="*80)
     
-    test_invalid_symbol(data_source, 'INVALID_SYMBOL_12345', start_date, end_date)
+    check_invalid_symbol(data_source, 'INVALID_SYMBOL_12345', start_date, end_date)
     
     # Test 4: Cache functionality
     logger.info("\n" + "="*80)
     logger.info("TEST SUITE 4: Cache Functionality")
     logger.info("="*80)
     
-    test_cache_functionality(data_source, 'SPY', start_date, end_date)
+    check_cache_functionality(data_source, 'SPY', start_date, end_date)
     
     # Final summary
     logger.info("\n" + "="*80)
