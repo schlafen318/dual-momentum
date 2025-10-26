@@ -84,23 +84,134 @@ def render_configuration_tab():
     with col1:
         st.subheader("Backtest Settings")
         
-        # Date range
+        # Date range mode selection
+        col_mode, col_refresh = st.columns([3, 1])
+        
+        with col_mode:
+            date_range_mode = st.selectbox(
+                "Date Range Mode",
+                ["Longest Available", "Custom Range", "Last 1 Year", "Last 3 Years", "Last 5 Years", "Last 10 Years"],
+                index=0,
+                help="Longest Available automatically uses maximum history for more robust parameter estimates."
+            )
+            st.session_state.tune_date_range_mode = date_range_mode
+        
+        with col_refresh:
+            # Get universe for querying
+            tune_universe = st.session_state.get('tune_universe', [])
+            if tune_universe and len(tune_universe) > 0 and date_range_mode == "Longest Available":
+                st.markdown("<br>", unsafe_allow_html=True)
+                if st.button("🔄", key="tune_refresh", help="Re-query data availability"):
+                    if 'tune_data_availability' in st.session_state:
+                        del st.session_state.tune_data_availability
+                    st.rerun()
+        
+        # Auto-query for "Longest Available" mode
+        tune_universe = st.session_state.get('tune_universe', [])
+        if date_range_mode == "Longest Available" and tune_universe and len(tune_universe) > 0:
+            current_symbols_hash = hash(tuple(sorted(tune_universe)))
+            stored_hash = st.session_state.get('tune_data_availability_symbols_hash')
+            
+            if (not hasattr(st.session_state, 'tune_data_availability') or 
+                not st.session_state.get('tune_data_availability', {}).get('checked') or
+                current_symbols_hash != stored_hash):
+                
+                with st.spinner("🔍 Querying longest available data..."):
+                    try:
+                        from src.backtesting.utils import get_universe_data_availability
+                        import os
+                        
+                        api_config = {}
+                        if 'ALPHAVANTAGE_API_KEY' in os.environ:
+                            api_config['alphavantage_api_key'] = os.environ['ALPHAVANTAGE_API_KEY']
+                        if 'TWELVEDATA_API_KEY' in os.environ:
+                            api_config['twelvedata_api_key'] = os.environ['TWELVEDATA_API_KEY']
+                        
+                        data_source = get_default_data_source(api_config)
+                        earliest, latest, ranges = get_universe_data_availability(tune_universe, data_source)
+                        
+                        if earliest and latest:
+                            st.session_state.tune_data_availability = {
+                                'earliest': earliest,
+                                'latest': latest,
+                                'ranges': ranges,
+                                'checked': True
+                            }
+                            st.session_state.tune_data_availability_symbols_hash = current_symbols_hash
+                            duration_years = (latest - earliest).days / 365.25
+                            st.success(f"✅ Using longest available: {earliest.date()} to {latest.date()} ({duration_years:.1f} years)")
+                        else:
+                            st.warning("⚠️ Could not determine data availability. Falling back to 10 years.")
+                            st.session_state.tune_data_availability = {'checked': False}
+                    except Exception as e:
+                        st.error(f"❌ Error checking data availability: {str(e)}")
+                        st.session_state.tune_data_availability = {'checked': False}
+        
+        # Show data availability details if available
+        if hasattr(st.session_state, 'tune_data_availability') and st.session_state.tune_data_availability.get('checked'):
+            data_avail = st.session_state.tune_data_availability
+            with st.expander("📊 Data Availability Details", expanded=False):
+                st.markdown(f"""
+                **Common Date Range:** {data_avail['earliest'].date()} to {data_avail['latest'].date()}  
+                **Duration:** {(data_avail['latest'] - data_avail['earliest']).days} days 
+                ({(data_avail['latest'] - data_avail['earliest']).days / 365.25:.1f} years)
+                """)
+                
+                st.markdown("**Per-Symbol Availability:**")
+                for symbol, (start, end) in data_avail['ranges'].items():
+                    years = (end - start).days / 365.25
+                    st.text(f"  • {symbol:6s}: {start.date()} to {end.date()} ({years:.1f} years)")
+        
+        # Date inputs based on mode
         end_date = datetime.now().date()
         
-        # Intelligent default: use 10 years or earliest available data
-        default_start = end_date - timedelta(days=10*365)  # 10 years default (was 5)
+        if date_range_mode == "Longest Available":
+            if hasattr(st.session_state, 'tune_data_availability') and st.session_state.tune_data_availability.get('checked'):
+                data_avail = st.session_state.tune_data_availability
+                start_date = data_avail['earliest'].date() if hasattr(data_avail['earliest'], 'date') else data_avail['earliest']
+                end_date = data_avail['latest'].date() if hasattr(data_avail['latest'], 'date') else data_avail['latest']
+                
+                date_range = st.date_input(
+                    "Backtest Period",
+                    value=(start_date, end_date),
+                    disabled=True,
+                    help=f"Using longest available data: {start_date} to {end_date}"
+                )
+            else:
+                # Fallback
+                default_start = end_date - timedelta(days=10*365)
+                date_range = st.date_input(
+                    "Backtest Period",
+                    value=(default_start, end_date),
+                    help="Querying data availability..."
+                )
         
-        st.info(
-            "💡 **Tip:** For hyperparameter tuning, use the longest possible history. "
-            "Click 'Check Data Availability' in Strategy Builder to find the earliest available data for your universe."
-        )
+        elif date_range_mode == "Custom Range":
+            default_start = end_date - timedelta(days=10*365)
+            date_range = st.date_input(
+                "Backtest Period",
+                value=(default_start, end_date),
+                help="Select custom date range. Longer periods produce more robust parameter estimates."
+            )
         
-        date_range = st.date_input(
-            "Backtest Period",
-            value=(default_start, end_date),
-            help="Select the date range for backtesting. Longer periods generally produce more robust parameter estimates."
-        )
+        else:
+            # Quick presets
+            years_map = {
+                "Last 1 Year": 1,
+                "Last 3 Years": 3,
+                "Last 5 Years": 5,
+                "Last 10 Years": 10
+            }
+            years = years_map.get(date_range_mode, 10)
+            default_start = end_date - timedelta(days=365*years)
+            date_range = st.date_input(
+                "Backtest Period",
+                value=(default_start, end_date),
+                disabled=True,
+                help=f"Automatically set to {years} year(s) ago"
+            )
         
+        # Store dates
         if len(date_range) == 2:
             st.session_state.tune_start_date = date_range[0]
             st.session_state.tune_end_date = date_range[1]
