@@ -14,7 +14,12 @@ from .methods import (
     MaximumDiversificationOptimizer,
     HierarchicalRiskParityOptimizer,
 )
-from .comparison import PortfolioMethodComparison
+from .comparison import (
+    PortfolioMethodComparison,
+    compare_portfolio_methods,
+    get_available_methods,
+    get_method_description,
+)
 
 __all__ = [
     'PortfolioOptimizer',
@@ -27,4 +32,7 @@ __all__ = [
     'MaximumDiversificationOptimizer',
     'HierarchicalRiskParityOptimizer',
     'PortfolioMethodComparison',
+    'compare_portfolio_methods',
+    'get_available_methods',
+    'get_method_description',
 ]
