@@ -17,7 +17,7 @@ def render():
         "🏠"
     )
     
-    # Introduction
+    # Introduction - Top Row
     col1, col2, col3 = st.columns(3)
     
     with col1:
@@ -59,6 +59,50 @@ def render():
         </div>
         """, unsafe_allow_html=True)
     
+    # Second Row - New Features
+    st.markdown("<br>", unsafe_allow_html=True)
+    
+    col4, col5, col6 = st.columns(3)
+    
+    with col4:
+        st.markdown("""
+        <div class="card" style="border: 2px solid #28a745;">
+            <h3>💼 Portfolio Optimization <span style="color: #28a745; font-size: 0.8em;">NEW!</span></h3>
+            <p>Compare 7 portfolio construction methods beyond mean-variance to find optimal asset allocation.</p>
+            <ul>
+                <li>7 Optimization methods</li>
+                <li>Interactive visualizations</li>
+                <li>Risk-return analysis</li>
+            </ul>
+        </div>
+        """, unsafe_allow_html=True)
+    
+    with col5:
+        st.markdown("""
+        <div class="card">
+            <h3>🎯 Hyperparameter Tuning</h3>
+            <p>Optimize strategy parameters using Grid Search, Random Search, or Bayesian Optimization.</p>
+            <ul>
+                <li>3 Optimization algorithms</li>
+                <li>Parameter exploration</li>
+                <li>Performance comparison</li>
+            </ul>
+        </div>
+        """, unsafe_allow_html=True)
+    
+    with col6:
+        st.markdown("""
+        <div class="card">
+            <h3>🗂️ Asset Universe</h3>
+            <p>Manage and create custom asset universes for different investment strategies.</p>
+            <ul>
+                <li>Predefined universes</li>
+                <li>Custom creation</li>
+                <li>Universe comparison</li>
+            </ul>
+        </div>
+        """, unsafe_allow_html=True)
+    
     st.markdown("<br>", unsafe_allow_html=True)
     
     # Quick start guide
@@ -94,7 +138,21 @@ def render():
         - **Export Options**: Download results as CSV or JSON
         """)
     
-    with st.expander("🔄 Step 4: Compare Strategies (Optional)"):
+    with st.expander("💼 Step 4: Portfolio Optimization (NEW)"):
+        st.markdown("""
+        Optimize your portfolio allocation:
+        1. Navigate to **Portfolio Optimization** page
+        2. Select your assets (or use defaults)
+        3. Choose optimization methods to compare (up to 7)
+        4. Set portfolio constraints (min/max weights)
+        5. Run optimization and view results:
+           - Best Sharpe ratio method
+           - Best diversification method
+           - Lowest volatility method
+        6. Download weights and implement optimal allocation
+        """)
+    
+    with st.expander("🔄 Step 5: Compare Strategies (Optional)"):
         st.markdown("""
         To compare multiple strategies:
         1. Run multiple backtests with different configurations
