@@ -21,6 +21,7 @@ from src.backtesting import (
     BacktestEngine,
     HyperparameterTuner,
     ParameterSpace,
+    MethodComparisonResult,
     create_default_param_space,
 )
 from src.strategies.dual_momentum import DualMomentumStrategy
@@ -48,10 +49,11 @@ def render():
         """)
     
     # Create tabs for different sections
-    tab1, tab2, tab3 = st.tabs([
+    tab1, tab2, tab3, tab4 = st.tabs([
         "⚙️ Configuration",
         "🚀 Run Optimization", 
-        "📊 Results"
+        "📊 Results",
+        "🔬 Compare Methods"
     ])
     
     with tab1:
@@ -62,6 +64,9 @@ def render():
     
     with tab3:
         render_results_tab()
+    
+    with tab4:
+        render_comparison_tab()
 
 
 def render_configuration_tab():
@@ -869,6 +874,410 @@ def render_results_tab():
             label="Download Best Parameters JSON",
             data=params_json,
             file_name=f"best_params_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json",
+            mime="application/json",
+            use_container_width=True
+        )
+
+
+def render_comparison_tab():
+    """Render the method comparison tab."""
+    
+    st.header("Compare Optimization Methods")
+    
+    st.markdown("""
+    Compare multiple optimization methods (Grid Search, Random Search, Bayesian Optimization) 
+    to find which works best for your problem.
+    
+    **Why compare methods?**
+    - Different methods have different strengths and weaknesses
+    - Some methods are faster but may miss optimal solutions
+    - Bayesian optimization is often most efficient for expensive evaluations
+    - Grid search guarantees finding the best solution in the search space
+    """)
+    
+    # Check if configuration is complete
+    if 'tune_param_space' not in st.session_state or not st.session_state.tune_param_space:
+        st.warning("⚠️ Please configure parameter space in the Configuration tab first.")
+        return
+    
+    st.markdown("---")
+    
+    # Method selection
+    st.subheader("Select Methods to Compare")
+    
+    col1, col2, col3 = st.columns(3)
+    
+    with col1:
+        use_grid_search = st.checkbox(
+            "Grid Search",
+            value=True,
+            help="Exhaustive search - guaranteed to find best solution"
+        )
+    
+    with col2:
+        use_random_search = st.checkbox(
+            "Random Search",
+            value=True,
+            help="Random sampling - good for large search spaces"
+        )
+    
+    with col3:
+        use_bayesian = st.checkbox(
+            "Bayesian Optimization",
+            value=True,
+            help="Smart search - most efficient for expensive evaluations"
+        )
+    
+    # Collect selected methods
+    selected_methods = []
+    if use_grid_search:
+        selected_methods.append('grid_search')
+    if use_random_search:
+        selected_methods.append('random_search')
+    if use_bayesian:
+        selected_methods.append('bayesian_optimization')
+    
+    if not selected_methods:
+        st.warning("⚠️ Please select at least one method to compare.")
+        return
+    
+    st.info(f"**Selected methods:** {', '.join([m.replace('_', ' ').title() for m in selected_methods])}")
+    
+    # Configuration summary
+    st.markdown("---")
+    st.subheader("Configuration Summary")
+    
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        st.metric("Metric", st.session_state.get('tune_metric', 'sharpe_ratio'))
+        st.metric("Parameters", len(st.session_state.tune_param_space))
+    
+    with col2:
+        if 'grid_search' not in selected_methods:
+            st.metric("Trials per Method", st.session_state.get('tune_n_trials', 50))
+        start_date = st.session_state.get('tune_start_date', 'N/A')
+        end_date = st.session_state.get('tune_end_date', 'N/A')
+        st.metric("Period", f"{start_date} to {end_date}")
+    
+    st.markdown("---")
+    
+    # Run comparison button
+    col1, col2, col3 = st.columns([1, 2, 1])
+    
+    with col2:
+        if st.button("🔬 Start Method Comparison", type="primary", use_container_width=True):
+            run_method_comparison(selected_methods)
+    
+    # Display comparison results if available
+    if 'tune_comparison_results' in st.session_state and st.session_state.get('tune_comparison_completed'):
+        display_comparison_results()
+
+
+def run_method_comparison(selected_methods):
+    """Execute method comparison."""
+    
+    try:
+        with st.spinner("Comparing optimization methods... This may take several minutes."):
+            
+            # Progress tracking
+            progress_bar = st.progress(0)
+            status_text = st.empty()
+            
+            status_text.text("Loading data...")
+            progress_bar.progress(10)
+            
+            # Load price data
+            start_date = st.session_state.tune_start_date
+            end_date = st.session_state.tune_end_date
+            universe = st.session_state.tune_universe
+            
+            # Get data provider with proper initialization
+            data_provider = get_default_data_source()
+            
+            # Add some buffer for lookback period
+            buffer_days = 400
+            data_start = pd.to_datetime(start_date) - timedelta(days=buffer_days)
+            
+            price_data = {}
+            for symbol in universe:
+                try:
+                    data = data_provider.fetch_data(
+                        symbol,
+                        start_date=data_start,
+                        end_date=end_date
+                    )
+                    price_data[symbol] = data
+                except Exception as e:
+                    st.warning(f"Could not load data for {symbol}: {e}")
+            
+            if not price_data:
+                st.error("❌ No price data loaded. Please check your symbols and date range.")
+                return
+            
+            progress_bar.progress(20)
+            status_text.text(f"Loaded data for {len(price_data)} assets")
+            
+            # Ensure safe asset data
+            safe_asset = st.session_state.tune_safe_asset
+            if safe_asset and safe_asset not in price_data:
+                try:
+                    data = data_provider.fetch_data(
+                        safe_asset,
+                        start_date=data_start,
+                        end_date=end_date
+                    )
+                    price_data[safe_asset] = data
+                except Exception as e:
+                    st.warning(f"Could not load safe asset {safe_asset}: {e}")
+            
+            # Load benchmark data
+            benchmark_data = None
+            if st.session_state.tune_benchmark:
+                try:
+                    benchmark_data = data_provider.fetch_data(
+                        st.session_state.tune_benchmark,
+                        start_date=data_start,
+                        end_date=end_date
+                    )
+                except Exception as e:
+                    st.warning(f"Could not load benchmark data: {e}")
+            
+            progress_bar.progress(30)
+            status_text.text("Setting up comparison...")
+            
+            # Create backtest engine
+            engine = BacktestEngine(
+                initial_capital=st.session_state.tune_initial_capital,
+                commission=st.session_state.tune_commission,
+                slippage=st.session_state.tune_slippage,
+            )
+            
+            # Create base config
+            base_config = {
+                'safe_asset': safe_asset,
+                'rebalance_frequency': 'monthly',
+                'universe': universe,
+            }
+            
+            # Convert parameter space
+            param_spaces = []
+            for param in st.session_state.tune_param_space:
+                ps = ParameterSpace(
+                    name=param['name'],
+                    param_type=param['type'],
+                    values=param.get('values', [])
+                )
+                param_spaces.append(ps)
+            
+            # Create tuner
+            tuner = HyperparameterTuner(
+                strategy_class=DualMomentumStrategy,
+                backtest_engine=engine,
+                price_data=price_data,
+                base_config=base_config,
+                start_date=pd.to_datetime(start_date),
+                end_date=pd.to_datetime(end_date),
+                benchmark_data=benchmark_data,
+            )
+            
+            progress_bar.progress(40)
+            status_text.text("Running method comparison...")
+            
+            # Run comparison
+            metric = st.session_state.tune_metric
+            higher_is_better = st.session_state.tune_higher_is_better
+            
+            comparison = tuner.compare_optimization_methods(
+                param_space=param_spaces,
+                methods=selected_methods,
+                n_trials=st.session_state.get('tune_n_trials', 50),
+                metric=metric,
+                higher_is_better=higher_is_better,
+                random_state=st.session_state.get('tune_random_seed'),
+                verbose=False,
+            )
+            
+            progress_bar.progress(100)
+            status_text.text("Comparison complete!")
+            
+            # Store results
+            st.session_state.tune_comparison_results = comparison
+            st.session_state.tune_comparison_completed = True
+            
+            st.success("✅ Method comparison completed successfully!")
+            st.balloons()
+            
+            # Auto-refresh to show results
+            st.rerun()
+    
+    except Exception as e:
+        st.error(f"❌ Error during method comparison: {e}")
+        import traceback
+        st.code(traceback.format_exc())
+
+
+def display_comparison_results():
+    """Display method comparison results."""
+    
+    st.markdown("---")
+    st.subheader("🏆 Comparison Results")
+    
+    comparison = st.session_state.tune_comparison_results
+    
+    # Overall winner
+    st.success(f"**Best Method:** {comparison.best_method.replace('_', ' ').title()}")
+    st.metric("Best Overall Score", f"{comparison.best_overall_score:.4f}")
+    
+    st.markdown("---")
+    
+    # Comparison table
+    st.subheader("📊 Method Performance Comparison")
+    
+    # Format the comparison metrics for display
+    display_df = comparison.comparison_metrics.copy()
+    display_df['best_score'] = display_df['best_score'].map('{:.4f}'.format)
+    display_df['optimization_time'] = display_df['optimization_time'].map('{:.2f}s'.format)
+    display_df['time_per_trial'] = display_df['time_per_trial'].map('{:.3f}s'.format)
+    display_df['is_best'] = display_df['is_best'].map(lambda x: '✓' if x else '')
+    
+    st.dataframe(display_df, use_container_width=True)
+    
+    # Visual comparison
+    st.markdown("---")
+    st.subheader("📈 Visual Comparison")
+    
+    # Score comparison chart
+    fig_score = go.Figure()
+    
+    for idx, row in comparison.comparison_metrics.iterrows():
+        color = 'green' if row['is_best'] else 'lightblue'
+        fig_score.add_trace(go.Bar(
+            x=[row['method']],
+            y=[row['best_score']],
+            name=row['method'],
+            marker_color=color,
+            showlegend=False
+        ))
+    
+    fig_score.update_layout(
+        title=f"Best Score by Method ({comparison.metric_name})",
+        xaxis_title="Method",
+        yaxis_title=comparison.metric_name,
+        height=400
+    )
+    
+    st.plotly_chart(fig_score, use_container_width=True)
+    
+    # Time comparison chart
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        fig_time = go.Figure()
+        fig_time.add_trace(go.Bar(
+            x=comparison.comparison_metrics['method'],
+            y=comparison.comparison_metrics['optimization_time'],
+            marker_color='steelblue'
+        ))
+        fig_time.update_layout(
+            title="Total Optimization Time",
+            xaxis_title="Method",
+            yaxis_title="Time (seconds)",
+            height=350
+        )
+        st.plotly_chart(fig_time, use_container_width=True)
+    
+    with col2:
+        fig_efficiency = go.Figure()
+        fig_efficiency.add_trace(go.Bar(
+            x=comparison.comparison_metrics['method'],
+            y=comparison.comparison_metrics['time_per_trial'],
+            marker_color='coral'
+        ))
+        fig_efficiency.update_layout(
+            title="Time per Trial",
+            xaxis_title="Method",
+            yaxis_title="Time (seconds)",
+            height=350
+        )
+        st.plotly_chart(fig_efficiency, use_container_width=True)
+    
+    # Convergence comparison (show all trials from all methods)
+    st.markdown("---")
+    st.subheader("📉 Convergence Comparison")
+    
+    fig_convergence = go.Figure()
+    
+    for method, result in comparison.results.items():
+        if 'trial' in result.all_results.columns and 'score' in result.all_results.columns:
+            method_name = method.replace('_', ' ').title()
+            fig_convergence.add_trace(go.Scatter(
+                x=result.all_results['trial'],
+                y=result.all_results['score'],
+                mode='lines+markers',
+                name=method_name,
+                line=dict(width=2),
+                marker=dict(size=4)
+            ))
+    
+    fig_convergence.update_layout(
+        title="Optimization Progress by Method",
+        xaxis_title="Trial Number",
+        yaxis_title=comparison.metric_name,
+        hovermode='x unified',
+        height=500,
+        legend=dict(
+            yanchor="top",
+            y=0.99,
+            xanchor="left",
+            x=0.01
+        )
+    )
+    
+    st.plotly_chart(fig_convergence, use_container_width=True)
+    
+    # Best parameters from each method
+    st.markdown("---")
+    st.subheader("🎯 Best Parameters by Method")
+    
+    for method, result in comparison.results.items():
+        with st.expander(f"{method.replace('_', ' ').title()} - Score: {result.best_score:.4f}"):
+            params_df = pd.DataFrame([
+                {"Parameter": k, "Value": v}
+                for k, v in result.best_params.items()
+            ])
+            st.table(params_df)
+    
+    # Download comparison results
+    st.markdown("---")
+    st.subheader("💾 Export Comparison Results")
+    
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        csv = comparison.comparison_metrics.to_csv(index=False)
+        st.download_button(
+            label="Download Comparison CSV",
+            data=csv,
+            file_name=f"method_comparison_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv",
+            mime="text/csv",
+            use_container_width=True
+        )
+    
+    with col2:
+        import json
+        summary_json = json.dumps({
+            'best_method': comparison.best_method,
+            'best_overall_score': float(comparison.best_overall_score),
+            'best_overall_params': comparison.best_overall_params,
+            'metric_name': comparison.metric_name,
+            'methods_compared': list(comparison.results.keys()),
+        }, indent=2)
+        
+        st.download_button(
+            label="Download Summary JSON",
+            data=summary_json,
+            file_name=f"comparison_summary_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json",
             mime="application/json",
             use_container_width=True
         )

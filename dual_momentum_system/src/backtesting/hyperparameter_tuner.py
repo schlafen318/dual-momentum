@@ -88,6 +88,30 @@ class OptimizationResult:
     metadata: Dict[str, Any] = field(default_factory=dict)
 
 
+@dataclass
+class MethodComparisonResult:
+    """
+    Results from comparing multiple optimization methods.
+    
+    Attributes:
+        results: Dictionary mapping method names to OptimizationResults
+        best_method: Name of the best performing method
+        best_overall_score: Best score across all methods
+        best_overall_params: Parameters that achieved best score
+        comparison_metrics: DataFrame comparing methods on various metrics
+        metric_name: Name of optimization metric used
+        higher_is_better: Whether higher metric values are better
+    """
+    results: Dict[str, OptimizationResult]
+    best_method: str
+    best_overall_score: float
+    best_overall_params: Dict[str, Any]
+    comparison_metrics: pd.DataFrame
+    metric_name: str
+    higher_is_better: bool
+    metadata: Dict[str, Any] = field(default_factory=dict)
+
+
 class HyperparameterTuner:
     """
     Hyperparameter tuning engine for strategy optimization.
@@ -728,6 +752,190 @@ class HyperparameterTuner:
         df = pd.DataFrame(rows)
         return df
     
+    def compare_optimization_methods(
+        self,
+        param_space: List[ParameterSpace],
+        methods: Optional[List[str]] = None,
+        n_trials: int = 50,
+        n_initial_points: int = 10,
+        metric: str = 'sharpe_ratio',
+        higher_is_better: bool = True,
+        random_state: Optional[int] = None,
+        verbose: bool = True,
+    ) -> MethodComparisonResult:
+        """
+        Compare multiple optimization methods on the same problem.
+        
+        This method runs multiple optimization algorithms (Grid Search, Random Search,
+        and/or Bayesian Optimization) and compares their performance, convergence speed,
+        and parameter exploration strategies.
+        
+        Args:
+            param_space: List of parameter spaces to search
+            methods: List of method names to compare. Options: 'grid_search', 
+                    'random_search', 'bayesian_optimization'. If None, compares all.
+            n_trials: Number of trials for random search and Bayesian optimization
+            n_initial_points: Number of initial random points for Bayesian optimization
+            metric: Metric to optimize
+            higher_is_better: Whether higher metric values are better
+            random_state: Random seed for reproducibility
+            verbose: Whether to print progress
+        
+        Returns:
+            MethodComparisonResult with results from all methods and comparison metrics
+        
+        Example:
+            >>> tuner = HyperparameterTuner(...)
+            >>> param_space = [
+            ...     ParameterSpace('lookback_period', 'int', values=[126, 189, 252]),
+            ...     ParameterSpace('position_count', 'int', values=[1, 2, 3]),
+            ... ]
+            >>> comparison = tuner.compare_optimization_methods(
+            ...     param_space=param_space,
+            ...     methods=['grid_search', 'random_search', 'bayesian_optimization'],
+            ...     n_trials=30,
+            ...     metric='sharpe_ratio'
+            ... )
+            >>> print(f"Best method: {comparison.best_method}")
+            >>> print(comparison.comparison_metrics)
+        """
+        # Default to all methods if not specified
+        if methods is None:
+            methods = ['grid_search', 'random_search', 'bayesian_optimization']
+        
+        # Validate methods
+        valid_methods = ['grid_search', 'random_search', 'bayesian_optimization']
+        for method in methods:
+            if method not in valid_methods:
+                raise ValueError(
+                    f"Invalid method '{method}'. Must be one of {valid_methods}"
+                )
+        
+        logger.info(f"Comparing optimization methods: {methods}")
+        logger.info(f"Optimizing metric: {metric} ({'maximize' if higher_is_better else 'minimize'})")
+        
+        if verbose:
+            print(f"\n{'='*80}")
+            print(f"OPTIMIZATION METHOD COMPARISON")
+            print(f"{'='*80}")
+            print(f"Strategy: {self.strategy_class.__name__}")
+            print(f"Metric: {metric}")
+            print(f"Methods: {', '.join(methods)}")
+            print(f"{'='*80}\n")
+        
+        results = {}
+        
+        # Run each optimization method
+        for method in methods:
+            if verbose:
+                print(f"\n{'='*80}")
+                print(f"Running {method.replace('_', ' ').title()}")
+                print(f"{'='*80}")
+            
+            try:
+                if method == 'grid_search':
+                    result = self.grid_search(
+                        param_space=param_space,
+                        metric=metric,
+                        higher_is_better=higher_is_better,
+                        verbose=verbose,
+                    )
+                elif method == 'random_search':
+                    result = self.random_search(
+                        param_space=param_space,
+                        n_trials=n_trials,
+                        metric=metric,
+                        higher_is_better=higher_is_better,
+                        random_state=random_state,
+                        verbose=verbose,
+                    )
+                elif method == 'bayesian_optimization':
+                    result = self.bayesian_optimization(
+                        param_space=param_space,
+                        n_trials=n_trials,
+                        n_initial_points=n_initial_points,
+                        metric=metric,
+                        higher_is_better=higher_is_better,
+                        random_state=random_state,
+                        verbose=verbose,
+                    )
+                
+                results[method] = result
+                
+                if verbose:
+                    print(f"\n✓ {method} completed:")
+                    print(f"  Best score: {result.best_score:.4f}")
+                    print(f"  Time: {result.optimization_time:.2f}s")
+                    print(f"  Trials: {result.n_trials}")
+            
+            except Exception as e:
+                logger.error(f"Error running {method}: {e}")
+                if verbose:
+                    print(f"\n✗ {method} failed: {e}")
+        
+        if not results:
+            raise RuntimeError("All optimization methods failed")
+        
+        # Determine best method
+        best_method = None
+        best_overall_score = -np.inf if higher_is_better else np.inf
+        best_overall_params = None
+        
+        for method, result in results.items():
+            is_better = (
+                (higher_is_better and result.best_score > best_overall_score) or
+                (not higher_is_better and result.best_score < best_overall_score)
+            )
+            if is_better:
+                best_overall_score = result.best_score
+                best_method = method
+                best_overall_params = result.best_params
+        
+        # Create comparison metrics DataFrame
+        comparison_data = []
+        for method, result in results.items():
+            comparison_data.append({
+                'method': method.replace('_', ' ').title(),
+                'best_score': result.best_score,
+                'optimization_time': result.optimization_time,
+                'n_trials': result.n_trials,
+                'time_per_trial': result.optimization_time / result.n_trials if result.n_trials > 0 else 0,
+                'is_best': method == best_method,
+            })
+        
+        comparison_df = pd.DataFrame(comparison_data)
+        
+        # Sort by best score
+        comparison_df = comparison_df.sort_values(
+            by='best_score',
+            ascending=not higher_is_better
+        )
+        
+        if verbose:
+            print(f"\n{'='*80}")
+            print(f"COMPARISON COMPLETE")
+            print(f"{'='*80}")
+            print(f"\nBest method: {best_method.replace('_', ' ').title()}")
+            print(f"Best score: {best_overall_score:.4f}")
+            print(f"\nComparison metrics:")
+            print(comparison_df.to_string(index=False))
+            print(f"{'='*80}\n")
+        
+        return MethodComparisonResult(
+            results=results,
+            best_method=best_method,
+            best_overall_score=best_overall_score,
+            best_overall_params=best_overall_params,
+            comparison_metrics=comparison_df,
+            metric_name=metric,
+            higher_is_better=higher_is_better,
+            metadata={
+                'n_trials': n_trials,
+                'n_initial_points': n_initial_points,
+                'random_state': random_state,
+            }
+        )
+    
     def save_results(
         self,
         results: OptimizationResult,
@@ -779,6 +987,67 @@ class HyperparameterTuner:
             pickle.dump(results, f)
         saved_files['pickle'] = pickle_path
         logger.info(f"Saved full results to {pickle_path}")
+        
+        return saved_files
+    
+    def save_comparison_results(
+        self,
+        comparison: MethodComparisonResult,
+        output_dir: Union[str, Path],
+        prefix: str = 'method_comparison'
+    ) -> Dict[str, Path]:
+        """
+        Save method comparison results to disk.
+        
+        Args:
+            comparison: Method comparison results to save
+            output_dir: Output directory
+            prefix: Filename prefix
+        
+        Returns:
+            Dictionary mapping file types to paths
+        """
+        output_dir = Path(output_dir)
+        output_dir.mkdir(parents=True, exist_ok=True)
+        
+        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+        base_name = f"{prefix}_{timestamp}"
+        
+        saved_files = {}
+        
+        # Save comparison metrics as CSV
+        csv_path = output_dir / f"{base_name}_comparison.csv"
+        comparison.comparison_metrics.to_csv(csv_path, index=False)
+        saved_files['comparison_csv'] = csv_path
+        logger.info(f"Saved comparison metrics to {csv_path}")
+        
+        # Save each method's results
+        for method, result in comparison.results.items():
+            method_csv_path = output_dir / f"{base_name}_{method}_results.csv"
+            result.all_results.to_csv(method_csv_path, index=False)
+            saved_files[f'{method}_csv'] = method_csv_path
+        
+        # Save summary as JSON
+        json_path = output_dir / f"{base_name}_summary.json"
+        with open(json_path, 'w') as f:
+            json.dump({
+                'best_method': comparison.best_method,
+                'best_overall_score': float(comparison.best_overall_score),
+                'best_overall_params': comparison.best_overall_params,
+                'metric_name': comparison.metric_name,
+                'higher_is_better': comparison.higher_is_better,
+                'methods_compared': list(comparison.results.keys()),
+                'metadata': comparison.metadata,
+            }, f, indent=2)
+        saved_files['json'] = json_path
+        logger.info(f"Saved comparison summary to {json_path}")
+        
+        # Save full comparison result as pickle
+        pickle_path = output_dir / f"{base_name}_full_comparison.pkl"
+        with open(pickle_path, 'wb') as f:
+            pickle.dump(comparison, f)
+        saved_files['pickle'] = pickle_path
+        logger.info(f"Saved full comparison to {pickle_path}")
         
         return saved_files
 

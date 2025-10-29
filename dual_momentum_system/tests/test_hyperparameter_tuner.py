@@ -12,6 +12,7 @@ from src.backtesting import (
     HyperparameterTuner,
     ParameterSpace,
     OptimizationResult,
+    MethodComparisonResult,
     create_default_param_space,
 )
 from src.strategies.dual_momentum import DualMomentumStrategy
@@ -384,6 +385,246 @@ class TestOptimizationResult:
         assert result.n_trials == 3
         assert result.method == 'grid_search'
         assert not result.all_results.empty
+
+
+class TestMethodComparison:
+    """Tests for method comparison functionality."""
+    
+    def test_compare_two_methods(self, hyperparameter_tuner):
+        """Test comparing two optimization methods."""
+        param_space = [
+            ParameterSpace(
+                name='lookback_period',
+                param_type='int',
+                values=[126, 252]
+            ),
+            ParameterSpace(
+                name='position_count',
+                param_type='int',
+                values=[1, 2]
+            ),
+        ]
+        
+        comparison = hyperparameter_tuner.compare_optimization_methods(
+            param_space=param_space,
+            methods=['grid_search', 'random_search'],
+            n_trials=5,
+            metric='sharpe_ratio',
+            higher_is_better=True,
+            random_state=42,
+            verbose=False,
+        )
+        
+        # Check comparison structure
+        assert isinstance(comparison, MethodComparisonResult)
+        assert len(comparison.results) == 2
+        assert 'grid_search' in comparison.results
+        assert 'random_search' in comparison.results
+        assert comparison.best_method in ['grid_search', 'random_search']
+        assert comparison.best_overall_score is not None
+        assert comparison.best_overall_params is not None
+        assert not comparison.comparison_metrics.empty
+        assert comparison.metric_name == 'sharpe_ratio'
+        assert comparison.higher_is_better is True
+    
+    @pytest.mark.skipif(
+        not _has_optuna(),
+        reason="Optuna not installed"
+    )
+    def test_compare_all_methods(self, hyperparameter_tuner):
+        """Test comparing all three optimization methods."""
+        param_space = [
+            ParameterSpace(
+                name='lookback_period',
+                param_type='int',
+                values=[126, 189, 252]
+            ),
+            ParameterSpace(
+                name='position_count',
+                param_type='int',
+                values=[1, 2]
+            ),
+        ]
+        
+        comparison = hyperparameter_tuner.compare_optimization_methods(
+            param_space=param_space,
+            methods=None,  # Should default to all methods
+            n_trials=8,
+            metric='sharpe_ratio',
+            higher_is_better=True,
+            random_state=42,
+            verbose=False,
+        )
+        
+        # Check all methods were run
+        assert len(comparison.results) == 3
+        assert 'grid_search' in comparison.results
+        assert 'random_search' in comparison.results
+        assert 'bayesian_optimization' in comparison.results
+        
+        # Check comparison metrics
+        assert len(comparison.comparison_metrics) == 3
+        assert 'method' in comparison.comparison_metrics.columns
+        assert 'best_score' in comparison.comparison_metrics.columns
+        assert 'optimization_time' in comparison.comparison_metrics.columns
+        assert 'n_trials' in comparison.comparison_metrics.columns
+        assert 'time_per_trial' in comparison.comparison_metrics.columns
+        assert 'is_best' in comparison.comparison_metrics.columns
+        
+        # Check that exactly one method is marked as best
+        assert comparison.comparison_metrics['is_best'].sum() == 1
+    
+    def test_comparison_metrics_calculation(self, hyperparameter_tuner):
+        """Test that comparison metrics are calculated correctly."""
+        param_space = [
+            ParameterSpace(
+                name='lookback_period',
+                param_type='int',
+                values=[126, 252]
+            ),
+        ]
+        
+        comparison = hyperparameter_tuner.compare_optimization_methods(
+            param_space=param_space,
+            methods=['grid_search', 'random_search'],
+            n_trials=5,
+            metric='sharpe_ratio',
+            higher_is_better=True,
+            random_state=42,
+            verbose=False,
+        )
+        
+        # Check time per trial is calculated
+        for idx, row in comparison.comparison_metrics.iterrows():
+            assert row['time_per_trial'] >= 0
+            assert row['time_per_trial'] == row['optimization_time'] / row['n_trials']
+    
+    def test_comparison_with_invalid_method(self, hyperparameter_tuner):
+        """Test that invalid method name raises error."""
+        param_space = [
+            ParameterSpace(
+                name='lookback_period',
+                param_type='int',
+                values=[126, 252]
+            ),
+        ]
+        
+        with pytest.raises(ValueError, match="Invalid method"):
+            hyperparameter_tuner.compare_optimization_methods(
+                param_space=param_space,
+                methods=['invalid_method'],
+                n_trials=5,
+                metric='sharpe_ratio',
+            )
+    
+    def test_comparison_best_method_selection(self, hyperparameter_tuner):
+        """Test that best method is selected correctly."""
+        param_space = [
+            ParameterSpace(
+                name='lookback_period',
+                param_type='int',
+                values=[126, 252]
+            ),
+            ParameterSpace(
+                name='position_count',
+                param_type='int',
+                values=[1, 2]
+            ),
+        ]
+        
+        # Test with maximize
+        comparison = hyperparameter_tuner.compare_optimization_methods(
+            param_space=param_space,
+            methods=['grid_search', 'random_search'],
+            n_trials=4,
+            metric='sharpe_ratio',
+            higher_is_better=True,
+            random_state=42,
+            verbose=False,
+        )
+        
+        # Verify best method has highest score
+        best_result = comparison.results[comparison.best_method]
+        for method, result in comparison.results.items():
+            assert best_result.best_score >= result.best_score
+    
+    def test_comparison_metadata(self, hyperparameter_tuner):
+        """Test that comparison metadata is stored correctly."""
+        param_space = [
+            ParameterSpace(
+                name='lookback_period',
+                param_type='int',
+                values=[126, 252]
+            ),
+        ]
+        
+        comparison = hyperparameter_tuner.compare_optimization_methods(
+            param_space=param_space,
+            methods=['grid_search', 'random_search'],
+            n_trials=10,
+            n_initial_points=5,
+            metric='sharpe_ratio',
+            random_state=42,
+            verbose=False,
+        )
+        
+        assert 'n_trials' in comparison.metadata
+        assert 'n_initial_points' in comparison.metadata
+        assert 'random_state' in comparison.metadata
+        assert comparison.metadata['n_trials'] == 10
+        assert comparison.metadata['n_initial_points'] == 5
+        assert comparison.metadata['random_state'] == 42
+    
+    def test_save_comparison_results(self, hyperparameter_tuner, tmp_path):
+        """Test saving comparison results to disk."""
+        param_space = [
+            ParameterSpace(
+                name='lookback_period',
+                param_type='int',
+                values=[126, 252]
+            ),
+        ]
+        
+        comparison = hyperparameter_tuner.compare_optimization_methods(
+            param_space=param_space,
+            methods=['grid_search', 'random_search'],
+            n_trials=5,
+            metric='sharpe_ratio',
+            verbose=False,
+        )
+        
+        # Save results
+        saved_files = hyperparameter_tuner.save_comparison_results(
+            comparison=comparison,
+            output_dir=tmp_path,
+            prefix='test_comparison'
+        )
+        
+        # Check that files were created
+        assert 'comparison_csv' in saved_files
+        assert 'json' in saved_files
+        assert 'pickle' in saved_files
+        assert 'grid_search_csv' in saved_files
+        assert 'random_search_csv' in saved_files
+        
+        # Verify files exist
+        for file_path in saved_files.values():
+            assert file_path.exists()
+        
+        # Verify CSV content
+        comparison_df = pd.read_csv(saved_files['comparison_csv'])
+        assert not comparison_df.empty
+        assert 'method' in comparison_df.columns
+        assert 'best_score' in comparison_df.columns
+        
+        # Verify JSON content
+        import json
+        with open(saved_files['json'], 'r') as f:
+            summary = json.load(f)
+        assert 'best_method' in summary
+        assert 'best_overall_score' in summary
+        assert 'best_overall_params' in summary
+        assert 'methods_compared' in summary
 
 
 if __name__ == '__main__':
