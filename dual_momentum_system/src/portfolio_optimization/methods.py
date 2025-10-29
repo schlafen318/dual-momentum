@@ -457,29 +457,58 @@ class HierarchicalRiskParityOptimizer(PortfolioOptimizer):
         """
         self._validate_returns(returns)
         
+        n_assets = len(returns.columns)
+        
+        # Handle edge case: too few assets for clustering
+        if n_assets < 3:
+            logger.warning(f"HRP requires at least 3 assets, got {n_assets}. Falling back to equal weight.")
+            weights = np.ones(n_assets) / n_assets
+            weights = self._apply_constraints(weights)
+            cov_matrix = returns.cov()
+            metrics = self._calculate_portfolio_metrics(weights, returns, cov_matrix)
+            
+            return OptimizationResult(
+                weights=dict(zip(returns.columns, weights)),
+                method='hierarchical_risk_parity',
+                expected_return=metrics['return'],
+                expected_volatility=metrics['volatility'],
+                sharpe_ratio=metrics['sharpe_ratio'],
+                diversification_ratio=metrics['diversification_ratio'],
+                risk_contributions=dict(zip(returns.columns, metrics['risk_contributions'])),
+                metadata={'fallback': 'equal_weight', 'reason': 'insufficient_assets'},
+            )
+        
         linkage_method = kwargs.get('linkage_method', 'single')
         
-        # Step 1: Compute correlation and distance matrices
-        corr_matrix = returns.corr()
-        distance_matrix = np.sqrt(0.5 * (1 - corr_matrix))
-        
-        # Step 2: Hierarchical clustering
-        dist_condensed = squareform(distance_matrix, checks=False)
-        link = linkage(dist_condensed, method=linkage_method)
-        
-        # Step 3: Quasi-diagonalization (get optimal leaf order)
-        sorted_indices = self._get_quasi_diag(link, len(returns.columns))
-        
-        # Step 4: Recursive bisection
-        cov_matrix = returns.cov()
-        weights = self._recursive_bisection(cov_matrix, sorted_indices)
-        
-        # Reorder weights to match original column order
-        weights_reordered = np.zeros(len(returns.columns))
-        for i, idx in enumerate(sorted_indices):
-            weights_reordered[idx] = weights[i]
-        
-        weights = self._apply_constraints(weights_reordered)
+        try:
+            # Step 1: Compute correlation and distance matrices
+            corr_matrix = returns.corr()
+            distance_matrix = np.sqrt(0.5 * (1 - corr_matrix))
+            
+            # Step 2: Hierarchical clustering
+            dist_condensed = squareform(distance_matrix.values, checks=False)
+            link = linkage(dist_condensed, method=linkage_method)
+            
+            # Step 3: Quasi-diagonalization (get optimal leaf order)
+            sorted_indices = self._get_quasi_diag(link, n_assets)
+            
+            # Step 4: Recursive bisection
+            cov_matrix = returns.cov()
+            weights = self._recursive_bisection(cov_matrix.values, sorted_indices)
+            
+            # Reorder weights to match original column order
+            weights_reordered = np.zeros(n_assets)
+            for i, idx in enumerate(sorted_indices):
+                if idx < n_assets:
+                    weights_reordered[idx] = weights[i]
+            
+            weights = self._apply_constraints(weights_reordered)
+            
+        except Exception as e:
+            logger.error(f"HRP clustering failed: {e}, falling back to equal weight")
+            weights = np.ones(n_assets) / n_assets
+            weights = self._apply_constraints(weights)
+            cov_matrix = returns.cov()
         
         # Calculate metrics
         metrics = self._calculate_portfolio_metrics(weights, returns, cov_matrix)
@@ -497,17 +526,37 @@ class HierarchicalRiskParityOptimizer(PortfolioOptimizer):
     
     def _get_quasi_diag(self, link, n_assets):
         """Get quasi-diagonal order from linkage matrix."""
+        if n_assets <= 1:
+            return list(range(n_assets))
+        
+        if len(link) == 0:
+            return list(range(n_assets))
+        
         # Get clusters at each level
         clusters = [[i] for i in range(n_assets)]
         
         for i in range(len(link)):
-            clusters.append(clusters[int(link[i, 0])] + clusters[int(link[i, 1])])
+            left_idx = int(link[i, 0])
+            right_idx = int(link[i, 1])
+            
+            # Ensure indices are within bounds
+            if left_idx < len(clusters) and right_idx < len(clusters):
+                clusters.append(clusters[left_idx] + clusters[right_idx])
+            else:
+                logger.warning(f"Invalid cluster indices: {left_idx}, {right_idx}")
+                return list(range(n_assets))
         
         # Return the final cluster (optimal order)
-        return clusters[-1]
+        if len(clusters) > 0:
+            return clusters[-1]
+        else:
+            return list(range(n_assets))
     
     def _recursive_bisection(self, cov_matrix, sorted_indices):
         """Recursively bisect clusters and allocate weights."""
+        if len(sorted_indices) == 0:
+            return np.array([])
+        
         weights = np.ones(len(sorted_indices))
         
         def bisect(indices):
@@ -548,14 +597,24 @@ class HierarchicalRiskParityOptimizer(PortfolioOptimizer):
     
     def _cluster_variance(self, cov_matrix, indices):
         """Calculate variance of a cluster."""
+        if len(indices) == 0:
+            return 0.0
+        
         if len(indices) == 1:
-            return cov_matrix[indices[0], indices[0]]
+            idx = indices[0]
+            if idx < len(cov_matrix):
+                return cov_matrix[idx, idx]
+            else:
+                return 0.0
         
         # Equal weight within cluster
         weights = np.ones(len(indices)) / len(indices)
         
         # Cluster covariance submatrix
-        cluster_cov = cov_matrix[np.ix_(indices, indices)]
-        
-        # Cluster variance
-        return np.dot(weights, np.dot(cluster_cov, weights))
+        try:
+            cluster_cov = cov_matrix[np.ix_(indices, indices)]
+            # Cluster variance
+            return np.dot(weights, np.dot(cluster_cov, weights))
+        except Exception as e:
+            logger.warning(f"Error calculating cluster variance: {e}")
+            return 1.0  # Return default variance
