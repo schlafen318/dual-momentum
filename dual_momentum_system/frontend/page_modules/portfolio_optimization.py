@@ -386,10 +386,34 @@ def run_optimization():
             
             progress_bar.progress(90)
             
-            # Store results
-            st.session_state.portfolio_opt_comparison = comparison
-            st.session_state.portfolio_opt_returns = returns_df
+            # Store results - ONLY store serializable data, not large DataFrames
+            # Convert comparison results to lightweight format
+            results_dict = {
+                method: {
+                    'weights': result.weights,
+                    'expected_return': result.expected_return,
+                    'expected_volatility': result.expected_volatility,
+                    'sharpe_ratio': result.sharpe_ratio,
+                    'diversification_ratio': result.diversification_ratio,
+                    'risk_contributions': result.risk_contributions,
+                }
+                for method, result in comparison.results.items()
+            }
+            
+            # Store lightweight comparison metrics DataFrame as dict
+            metrics_dict = comparison.comparison_metrics.to_dict('records')
+            
+            # Store only essential data
+            st.session_state.portfolio_opt_results = results_dict
+            st.session_state.portfolio_opt_metrics = metrics_dict
+            st.session_state.portfolio_opt_best_sharpe = comparison.best_sharpe_method
+            st.session_state.portfolio_opt_best_div = comparison.best_diversification_method
+            st.session_state.portfolio_opt_low_vol = comparison.lowest_volatility_method
             st.session_state.portfolio_opt_completed = True
+            
+            # DO NOT store large DataFrames in session state - they cause WebSocket errors
+            # st.session_state.portfolio_opt_comparison = comparison  # TOO LARGE
+            # st.session_state.portfolio_opt_returns = returns_df     # TOO LARGE
             
             progress_bar.progress(100)
             status_text.text("Optimization complete!")
@@ -411,11 +435,17 @@ def render_results_tab():
     
     st.header("Optimization Results")
     
-    if 'portfolio_opt_comparison' not in st.session_state or not st.session_state.portfolio_opt_completed:
+    # Check for results using NEW lightweight storage
+    if 'portfolio_opt_results' not in st.session_state or not st.session_state.portfolio_opt_completed:
         st.info("No optimization results yet. Configure and run optimization first.")
         return
     
-    comparison = st.session_state.portfolio_opt_comparison
+    # Use lightweight stored data
+    results_dict = st.session_state.portfolio_opt_results
+    metrics_list = st.session_state.portfolio_opt_metrics
+    best_sharpe_method = st.session_state.portfolio_opt_best_sharpe
+    best_div_method = st.session_state.portfolio_opt_best_div
+    low_vol_method = st.session_state.portfolio_opt_low_vol
     
     # Summary metrics
     st.subheader("🏆 Best Methods")
@@ -424,23 +454,23 @@ def render_results_tab():
     
     with col1:
         st.markdown("**Best Sharpe Ratio**")
-        best_sharpe_method = comparison.best_sharpe_method.replace('_', ' ').title()
-        best_sharpe_score = comparison.results[comparison.best_sharpe_method].sharpe_ratio
-        st.success(f"**{best_sharpe_method}**")
+        best_sharpe_display = best_sharpe_method.replace('_', ' ').title()
+        best_sharpe_score = results_dict[best_sharpe_method]['sharpe_ratio']
+        st.success(f"**{best_sharpe_display}**")
         st.metric("Sharpe Ratio", f"{best_sharpe_score:.4f}")
     
     with col2:
         st.markdown("**Best Diversification**")
-        best_div_method = comparison.best_diversification_method.replace('_', ' ').title()
-        best_div_score = comparison.results[comparison.best_diversification_method].diversification_ratio
-        st.success(f"**{best_div_method}**")
+        best_div_display = best_div_method.replace('_', ' ').title()
+        best_div_score = results_dict[best_div_method]['diversification_ratio']
+        st.success(f"**{best_div_display}**")
         st.metric("Diversification Ratio", f"{best_div_score:.4f}")
     
     with col3:
         st.markdown("**Lowest Volatility**")
-        low_vol_method = comparison.lowest_volatility_method.replace('_', ' ').title()
-        low_vol_score = comparison.results[comparison.lowest_volatility_method].expected_volatility
-        st.success(f"**{low_vol_method}**")
+        low_vol_display = low_vol_method.replace('_', ' ').title()
+        low_vol_score = results_dict[low_vol_method]['expected_volatility']
+        st.success(f"**{low_vol_display}**")
         # expected_volatility is already annualized from base.py
         st.metric("Volatility", f"{low_vol_score*100:.2f}% (annual)")
     
@@ -450,7 +480,7 @@ def render_results_tab():
     st.subheader("📊 Method Comparison")
     
     # Format comparison metrics for display
-    display_df = comparison.comparison_metrics.copy()
+    display_df = pd.DataFrame(metrics_list)
     
     # Convert to percentage (values are already annualized from base.py)
     if 'expected_return' in display_df.columns:
@@ -488,7 +518,11 @@ def render_results_tab():
     # Portfolio weights
     st.subheader("💼 Portfolio Weights")
     
-    weights_df = comparison.get_weights_df()
+    # Build weights DataFrame from results_dict
+    weights_data = {}
+    for method, result in results_dict.items():
+        weights_data[method.replace('_', ' ').title()] = result['weights']
+    weights_df = pd.DataFrame(weights_data).T
     
     # Display as percentages
     weights_display = (weights_df * 100).round(2)
@@ -509,16 +543,16 @@ def render_results_tab():
     ])
     
     with viz_tab1:
-        plot_sharpe_comparison(comparison)
+        plot_sharpe_comparison_lightweight(display_df)
     
     with viz_tab2:
-        plot_weights_heatmap(comparison)
+        plot_weights_heatmap_lightweight(weights_df)
     
     with viz_tab3:
-        plot_risk_return(comparison)
+        plot_risk_return_lightweight(display_df, best_sharpe_method)
     
     with viz_tab4:
-        plot_weight_distribution(comparison)
+        plot_weight_distribution_lightweight(weights_df)
     
     st.markdown("---")
     
@@ -527,36 +561,36 @@ def render_results_tab():
     
     method_to_view = st.selectbox(
         "Select Method",
-        options=list(comparison.results.keys()),
+        options=list(results_dict.keys()),
         format_func=lambda x: x.replace('_', ' ').title()
     )
     
     if method_to_view:
-        result = comparison.results[method_to_view]
+        result = results_dict[method_to_view]
         
         col1, col2 = st.columns(2)
         
         with col1:
             st.markdown("**Performance Metrics**")
             # Values are already annualized from base.py, just convert to percentage
-            st.metric("Expected Return", f"{result.expected_return*100:.2f}% (annual)")
-            st.metric("Expected Volatility", f"{result.expected_volatility*100:.2f}% (annual)")
-            st.metric("Sharpe Ratio", f"{result.sharpe_ratio:.4f}")
-            st.metric("Diversification Ratio", f"{result.diversification_ratio:.4f}")
+            st.metric("Expected Return", f"{result['expected_return']*100:.2f}% (annual)")
+            st.metric("Expected Volatility", f"{result['expected_volatility']*100:.2f}% (annual)")
+            st.metric("Sharpe Ratio", f"{result['sharpe_ratio']:.4f}")
+            st.metric("Diversification Ratio", f"{result['diversification_ratio']:.4f}")
         
         with col2:
             st.markdown("**Portfolio Weights**")
-            weights_series = pd.Series(result.weights)
+            weights_series = pd.Series(result['weights'])
             weights_pct = (weights_series * 100).round(2)
             for asset, weight in weights_pct.items():
                 st.write(f"{asset}: {weight:.2f}%")
         
         # Risk contributions (if available)
-        if result.risk_contributions:
+        if result['risk_contributions']:
             st.markdown("**Risk Contributions**")
             risk_contrib_df = pd.DataFrame({
-                'Asset': list(result.risk_contributions.keys()),
-                'Risk Contribution (%)': [v * 100 for v in result.risk_contributions.values()]
+                'Asset': list(result['risk_contributions'].keys()),
+                'Risk Contribution (%)': [v * 100 for v in result['risk_contributions'].values()]
             })
             
             fig = go.Figure(data=[
@@ -585,7 +619,7 @@ def render_results_tab():
     
     with col1:
         # Download comparison CSV
-        csv_comparison = comparison.comparison_metrics.to_csv(index=False)
+        csv_comparison = display_df.to_csv(index=False)
         st.download_button(
             label="📥 Comparison CSV",
             data=csv_comparison,
@@ -596,7 +630,7 @@ def render_results_tab():
     
     with col2:
         # Download weights CSV
-        csv_weights = comparison.get_weights_df().to_csv()
+        csv_weights = weights_df.to_csv()
         st.download_button(
             label="📥 Weights CSV",
             data=csv_weights,
@@ -607,7 +641,12 @@ def render_results_tab():
     
     with col3:
         # Download summary JSON
-        summary = comparison.get_summary()
+        summary = {
+            'best_sharpe_method': best_sharpe_method,
+            'best_diversification_method': best_div_method,
+            'lowest_volatility_method': low_vol_method,
+            'results': results_dict
+        }
         json_summary = json.dumps(summary, indent=2)
         st.download_button(
             label="📥 Summary JSON",
@@ -618,6 +657,138 @@ def render_results_tab():
         )
 
 
+def plot_sharpe_comparison_lightweight(metrics_df):
+    """Plot Sharpe ratio comparison (lightweight version)."""
+    
+    fig = go.Figure()
+    
+    # Create bar chart
+    fig.add_trace(go.Bar(
+        x=metrics_df['method'],
+        y=metrics_df['sharpe_ratio'],
+        marker_color='steelblue',
+        text=metrics_df['sharpe_ratio'].round(4),
+        textposition='outside',
+    ))
+    
+    fig.update_layout(
+        title="Sharpe Ratio by Optimization Method",
+        xaxis_title="Method",
+        yaxis_title="Sharpe Ratio",
+        height=500,
+        showlegend=False
+    )
+    
+    st.plotly_chart(fig, use_container_width=True)
+
+
+def plot_weights_heatmap_lightweight(weights_df):
+    """Plot portfolio weights heatmap (lightweight version)."""
+    
+    # Convert to percentages
+    weights_pct = weights_df * 100
+    
+    fig = go.Figure(data=go.Heatmap(
+        z=weights_pct.values,
+        x=weights_pct.columns,
+        y=weights_pct.index,
+        colorscale='RdYlGn',
+        text=weights_pct.values.round(1),
+        texttemplate='%{text}%',
+        textfont={"size": 10},
+        colorbar=dict(title="Weight (%)")
+    ))
+    
+    fig.update_layout(
+        title="Portfolio Weights by Method",
+        xaxis_title="Asset",
+        yaxis_title="Method",
+        height=max(400, len(weights_df) * 40)
+    )
+    
+    st.plotly_chart(fig, use_container_width=True)
+
+
+def plot_risk_return_lightweight(metrics_df, best_sharpe_method):
+    """Plot risk-return scatter (lightweight version)."""
+    
+    fig = go.Figure()
+    
+    for _, row in metrics_df.iterrows():
+        # Convert to percentage (values are already annualized from base.py)
+        ret = row['expected_return'] * 100
+        vol = row['expected_volatility'] * 100
+        method = row['method']
+        method_key = method.lower().replace(' ', '_')
+        
+        # Highlight best Sharpe
+        if method_key == best_sharpe_method:
+            fig.add_trace(go.Scatter(
+                x=[vol],
+                y=[ret],
+                mode='markers+text',
+                name=method,
+                marker=dict(size=20, color='green', symbol='star'),
+                text=[method],
+                textposition='top center',
+                textfont=dict(size=12, color='green')
+            ))
+        else:
+            fig.add_trace(go.Scatter(
+                x=[vol],
+                y=[ret],
+                mode='markers+text',
+                name=method,
+                marker=dict(size=15, color='steelblue'),
+                text=[method],
+                textposition='top center',
+                textfont=dict(size=10)
+            ))
+    
+    fig.update_layout(
+        title="Risk-Return Profile",
+        xaxis_title="Annual Volatility (%)",
+        yaxis_title="Annual Return (%)",
+        height=600,
+        showlegend=False,
+        hovermode='closest'
+    )
+    
+    st.plotly_chart(fig, use_container_width=True)
+
+
+def plot_weight_distribution_lightweight(weights_df):
+    """Plot weight distribution (lightweight version)."""
+    
+    fig = go.Figure()
+    
+    # Create stacked bar chart
+    for asset in weights_df.columns:
+        fig.add_trace(go.Bar(
+            name=asset,
+            x=weights_df.index,
+            y=weights_df[asset] * 100,  # Convert to percentage
+        ))
+    
+    fig.update_layout(
+        title="Portfolio Weight Distribution by Method",
+        xaxis_title="Optimization Method",
+        yaxis_title="Weight (%)",
+        barmode='stack',
+        height=500,
+        legend=dict(
+            orientation="v",
+            yanchor="top",
+            y=1,
+            xanchor="left",
+            x=1.02
+        )
+    )
+    
+    st.plotly_chart(fig, use_container_width=True)
+
+
+# Old plotting functions (deprecated but kept for compatibility)
 def plot_sharpe_comparison(comparison):
     """Plot Sharpe ratio comparison."""
     
