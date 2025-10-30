@@ -17,6 +17,14 @@ from loguru import logger
 from ..core.base_data_source import BaseDataSource
 from ..core.types import AssetType
 
+# Try to import yfinance as fallback
+try:
+    import yfinance as yf
+    YFINANCE_AVAILABLE = True
+except ImportError:
+    YFINANCE_AVAILABLE = False
+    logger.warning("[INIT] yfinance not available - only direct API will be used")
+
 
 class YahooFinanceDirectSource(BaseDataSource):
     """
@@ -40,6 +48,7 @@ class YahooFinanceDirectSource(BaseDataSource):
                    - timeout: Request timeout in seconds (default: 10)
                    - max_retries: Maximum retry attempts (default: 3)
                    - retry_delay: Delay between retries in seconds (default: 1)
+                   - use_yfinance_fallback: Use yfinance library as fallback (default: True)
         """
         super().__init__(config)
         
@@ -47,6 +56,7 @@ class YahooFinanceDirectSource(BaseDataSource):
         self.max_retries = self.config.get('max_retries', 3)
         self.retry_delay = self.config.get('retry_delay', 2)
         self.request_delay = self.config.get('request_delay', 0.5)
+        self.use_yfinance_fallback = self.config.get('use_yfinance_fallback', True)
         self.session = requests.Session()
         self.session.headers.update({
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
@@ -154,6 +164,23 @@ class YahooFinanceDirectSource(BaseDataSource):
             if df.empty:
                 logger.warning(f"[PARSE WARNING] Empty dataframe after parsing {symbol} (parse time: {parse_duration:.2f}s)")
                 logger.debug(f"[PARSE WARNING] Response data: {str(data)[:500]}...")
+                
+                # Try yfinance fallback if available
+                if self.use_yfinance_fallback and YFINANCE_AVAILABLE:
+                    logger.info(f"[FALLBACK] Trying yfinance library for {symbol}")
+                    try:
+                        df = self._fetch_with_yfinance(symbol, start_date, end_date, timeframe)
+                        if not df.empty and isinstance(df, pd.DataFrame):
+                            logger.info(f"[FALLBACK SUCCESS] Retrieved {len(df)} rows using yfinance")
+                            # Cache the successful result
+                            try:
+                                self.add_to_cache(symbol, df.copy(), start_date, end_date, timeframe)
+                            except Exception as cache_error:
+                                logger.warning(f"[CACHE] Failed to cache yfinance data: {cache_error}")
+                            return df
+                    except Exception as e:
+                        logger.error(f"[FALLBACK FAILED] yfinance also failed: {e}")
+                
                 return pd.DataFrame()
             
             # Validate data quality
@@ -566,6 +593,84 @@ class YahooFinanceDirectSource(BaseDataSource):
                 logger.warning(f"[BATCH FAILED]   - {symbol}: {reason}")
         
         return result
+    
+    def _fetch_with_yfinance(
+        self,
+        symbol: str,
+        start_date: datetime,
+        end_date: datetime,
+        timeframe: str
+    ) -> pd.DataFrame:
+        """
+        Fetch data using yfinance library as fallback.
+        
+        Args:
+            symbol: Ticker symbol
+            start_date: Start date
+            end_date: End date
+            timeframe: Data timeframe
+            
+        Returns:
+            DataFrame with price data
+        """
+        if not YFINANCE_AVAILABLE:
+            logger.error(f"[YFINANCE] Library not available")
+            return pd.DataFrame()
+        
+        try:
+            logger.debug(f"[YFINANCE] Downloading {symbol} from {start_date.date()} to {end_date.date()}")
+            
+            # Create ticker object
+            ticker = yf.Ticker(symbol)
+            
+            # Map timeframe
+            interval_map = {
+                '1m': '1m', '5m': '5m', '15m': '15m', '30m': '30m', '1h': '1h',
+                '1d': '1d', '1wk': '1wk', '1mo': '1mo'
+            }
+            yf_interval = interval_map.get(timeframe, '1d')
+            
+            # Download data
+            df = ticker.history(
+                start=start_date,
+                end=end_date,
+                interval=yf_interval,
+                auto_adjust=False
+            )
+            
+            if df.empty:
+                logger.warning(f"[YFINANCE] No data returned for {symbol}")
+                return pd.DataFrame()
+            
+            # Standardize column names
+            df.columns = df.columns.str.lower()
+            
+            # Ensure we have the required columns
+            required_cols = ['open', 'high', 'low', 'close', 'volume']
+            if not all(col in df.columns for col in required_cols):
+                logger.warning(f"[YFINANCE] Missing required columns in {symbol} data")
+                return pd.DataFrame()
+            
+            # Keep only OHLCV columns
+            df = df[required_cols].copy()
+            
+            # Remove timezone info if present
+            if df.index.tz is not None:
+                df.index = df.index.tz_localize(None)
+            
+            # Remove rows with all NaN values
+            df = df.dropna(how='all')
+            
+            logger.info(f"[YFINANCE] Successfully fetched {len(df)} rows for {symbol}")
+            logger.debug(f"[YFINANCE] Date range: {df.index[0]} to {df.index[-1]}")
+            
+            return df
+            
+        except Exception as e:
+            logger.error(f"[YFINANCE] Error fetching {symbol}: {e}")
+            import traceback
+            logger.debug(f"[YFINANCE] Traceback: {traceback.format_exc()}")
+            return pd.DataFrame()
     
     @classmethod
     def requires_authentication(cls) -> bool:
