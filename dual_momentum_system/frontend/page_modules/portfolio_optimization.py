@@ -479,8 +479,11 @@ def render_results_tab():
     # Comparison table
     st.subheader("📊 Method Comparison")
     
-    # Format comparison metrics for display
-    display_df = pd.DataFrame(metrics_list)
+    # Create metrics DataFrame for plotting (keep original column names)
+    metrics_df = pd.DataFrame(metrics_list)
+    
+    # Create display DataFrame for table (with renamed columns)
+    display_df = metrics_df.copy()
     
     # Convert to percentage (values are already annualized from base.py)
     if 'expected_return' in display_df.columns:
@@ -501,7 +504,7 @@ def render_results_tab():
     
     display_df = display_df[display_cols]
     
-    # Rename columns
+    # Rename columns for display
     display_df.columns = ['Method', 'Annual Return (%)', 'Annual Volatility (%)', 
                           'Sharpe Ratio', 'Diversification Ratio']
     
@@ -543,13 +546,15 @@ def render_results_tab():
     ])
     
     with viz_tab1:
-        plot_sharpe_comparison_lightweight(display_df)
+        # Pass metrics_df with original column names, not display_df
+        plot_sharpe_comparison_lightweight(metrics_df)
     
     with viz_tab2:
         plot_weights_heatmap_lightweight(weights_df)
     
     with viz_tab3:
-        plot_risk_return_lightweight(display_df, best_sharpe_method)
+        # Pass metrics_df with original column names, not display_df
+        plot_risk_return_lightweight(metrics_df, best_sharpe_method)
     
     with viz_tab4:
         plot_weight_distribution_lightweight(weights_df)
