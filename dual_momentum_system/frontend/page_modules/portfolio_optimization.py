@@ -344,11 +344,17 @@ def run_optimization():
                         start_date=start_date,
                         end_date=end_date
                     )
-                    price_data[symbol] = data.data
+                    # data is already a DataFrame, no .data attribute needed
+                    if data is not None and not data.empty:
+                        price_data[symbol] = data
+                    else:
+                        st.warning(f"Could not load data for {symbol}: Empty data returned")
                     progress = 10 + int(30 * (i + 1) / len(symbols))
                     progress_bar.progress(progress)
                 except Exception as e:
                     st.warning(f"Could not load data for {symbol}: {e}")
+                    import traceback
+                    st.caption(f"Debug info: {traceback.format_exc()}")
             
             if not price_data:
                 st.error("❌ No price data loaded. Please check your symbols and date range.")
