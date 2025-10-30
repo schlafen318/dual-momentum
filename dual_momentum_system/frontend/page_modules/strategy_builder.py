@@ -503,6 +503,17 @@ def render_configuration_summary():
             f"universe size ({len(symbols)}). It will be reduced automatically.",
             "warning"
         )
+    
+    # Add Portfolio Optimization navigation
+    if symbols:  # Only show if assets are selected
+        st.markdown("---")
+        st.markdown("### 💼 Portfolio Optimization")
+        st.markdown("Compare allocation methods with your selected assets")
+        
+        if st.button("📊 Go to Portfolio Optimization →", use_container_width=True, type="secondary", help="Navigate to Portfolio Optimization with current assets"):
+            st.session_state.navigate_to = "💼 Portfolio Optimization"
+            st.session_state._portfolio_opt_initialized = False  # Reset to show welcome banner
+            st.rerun()
 
 
 def render_advanced_options():

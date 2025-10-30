@@ -32,6 +32,16 @@ def render():
     
     st.title("💼 Portfolio Optimization")
     
+    # Check if we have pre-populated data from Strategy Builder
+    if st.session_state.get('selected_symbols') and not st.session_state.get('_portfolio_opt_initialized'):
+        st.info("""
+        ✨ **Assets loaded from Strategy Builder!**
+        
+        Your selected assets and parameters have been automatically populated from the Strategy Builder page.
+        Review the configuration below and adjust if needed.
+        """)
+        st.session_state._portfolio_opt_initialized = True
+    
     st.markdown("""
     Compare **7 portfolio construction methods** to find the optimal allocation for your assets.
     
@@ -68,14 +78,46 @@ def render_configuration_tab():
     with col1:
         st.subheader("Asset Selection")
         
+        # Check if we have symbols from Strategy Builder
+        strategy_builder_symbols = st.session_state.get('selected_symbols', [])
+        has_imported_symbols = len(strategy_builder_symbols) > 0
+        
         # Asset universe selection
+        if has_imported_symbols:
+            universe_options = ["From Strategy Builder", "Default (Multi-Asset)", "Custom"]
+            default_option = "From Strategy Builder"
+            default_value = '\n'.join(strategy_builder_symbols)
+        else:
+            universe_options = ["Default (Multi-Asset)", "Custom"]
+            default_option = "Default (Multi-Asset)"
+            default_value = "SPY\nAGG\nGLD\nTLT"
+        
         universe_option = st.radio(
             "Select Universe",
-            ["Default (Multi-Asset)", "Custom"],
+            universe_options,
+            index=0 if has_imported_symbols else 0,
             horizontal=True
         )
         
-        if universe_option == "Custom":
+        if universe_option == "From Strategy Builder":
+            # Show imported symbols in a text area (editable)
+            universe_input = st.text_area(
+                "Assets from Strategy Builder (edit if needed)",
+                value=default_value,
+                height=150,
+                help="These assets were imported from Strategy Builder"
+            )
+            symbols = [s.strip().upper() for s in universe_input.replace(',', '\n').split('\n') if s.strip()]
+            
+            # Show info about import
+            col_a, col_b = st.columns(2)
+            with col_a:
+                st.caption(f"✓ Imported {len(strategy_builder_symbols)} assets from Strategy Builder")
+            with col_b:
+                if st.button("🔄 Refresh from Strategy Builder", help="Reload symbols from Strategy Builder"):
+                    st.rerun()
+        
+        elif universe_option == "Custom":
             universe_input = st.text_area(
                 "Enter symbols (one per line or comma-separated)",
                 value="SPY\nAGG\nGLD\nTLT",
@@ -84,7 +126,7 @@ def render_configuration_tab():
             )
             # Parse symbols
             symbols = [s.strip().upper() for s in universe_input.replace(',', '\n').split('\n') if s.strip()]
-        else:
+        else:  # Default
             symbols = ['SPY', 'EFA', 'EEM', 'AGG', 'TLT', 'GLD']
         
         st.session_state.portfolio_opt_symbols = symbols
@@ -96,12 +138,31 @@ def render_configuration_tab():
         st.markdown("---")
         st.subheader("Date Range")
         
+        # Check for dates from Strategy Builder
+        strategy_builder_start = st.session_state.get('start_date')
+        strategy_builder_end = st.session_state.get('end_date')
+        
         end_date = datetime.now().date()
-        default_start = end_date - timedelta(days=3*365)  # 3 years
+        
+        # Use Strategy Builder dates if available, otherwise default to 3 years
+        if strategy_builder_start and strategy_builder_end:
+            # Convert to date if datetime
+            if isinstance(strategy_builder_start, datetime):
+                strategy_builder_start = strategy_builder_start.date()
+            if isinstance(strategy_builder_end, datetime):
+                strategy_builder_end = strategy_builder_end.date()
+            default_start = strategy_builder_start
+            default_end = strategy_builder_end
+            
+            if has_imported_symbols:
+                st.caption(f"📅 Using date range from Strategy Builder: {default_start} to {default_end}")
+        else:
+            default_start = end_date - timedelta(days=3*365)  # 3 years
+            default_end = end_date
         
         date_range = st.date_input(
             "Historical Period",
-            value=(default_start, end_date),
+            value=(default_start, default_end),
             help="Longer periods produce more robust estimates"
         )
         
