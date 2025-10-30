@@ -441,7 +441,8 @@ def render_results_tab():
         low_vol_method = comparison.lowest_volatility_method.replace('_', ' ').title()
         low_vol_score = comparison.results[comparison.lowest_volatility_method].expected_volatility
         st.success(f"**{low_vol_method}**")
-        st.metric("Volatility", f"{low_vol_score*np.sqrt(252)*100:.2f}%")
+        # expected_volatility is already annualized from base.py
+        st.metric("Volatility", f"{low_vol_score*100:.2f}% (annual)")
     
     st.markdown("---")
     
@@ -451,11 +452,11 @@ def render_results_tab():
     # Format comparison metrics for display
     display_df = comparison.comparison_metrics.copy()
     
-    # Annualize returns and volatility
+    # Convert to percentage (values are already annualized from base.py)
     if 'expected_return' in display_df.columns:
-        display_df['annual_return'] = display_df['expected_return'] * 252 * 100
+        display_df['annual_return'] = display_df['expected_return'] * 100  # Already annualized, just convert to %
     if 'expected_volatility' in display_df.columns:
-        display_df['annual_volatility'] = display_df['expected_volatility'] * np.sqrt(252) * 100
+        display_df['annual_volatility'] = display_df['expected_volatility'] * 100  # Already annualized, just convert to %
     
     # Select and order columns
     display_cols = ['method']
@@ -537,8 +538,9 @@ def render_results_tab():
         
         with col1:
             st.markdown("**Performance Metrics**")
-            st.metric("Expected Return", f"{result.expected_return*252*100:.2f}% (annualized)")
-            st.metric("Expected Volatility", f"{result.expected_volatility*np.sqrt(252)*100:.2f}% (annualized)")
+            # Values are already annualized from base.py, just convert to percentage
+            st.metric("Expected Return", f"{result.expected_return*100:.2f}% (annual)")
+            st.metric("Expected Volatility", f"{result.expected_volatility*100:.2f}% (annual)")
             st.metric("Sharpe Ratio", f"{result.sharpe_ratio:.4f}")
             st.metric("Diversification Ratio", f"{result.diversification_ratio:.4f}")
         
@@ -683,9 +685,9 @@ def plot_risk_return(comparison):
     fig = go.Figure()
     
     for idx, row in comparison_df.iterrows():
-        # Annualize
-        ret = row['expected_return'] * 252 * 100
-        vol = row['expected_volatility'] * np.sqrt(252) * 100
+        # Convert to percentage (values are already annualized from base.py)
+        ret = row['expected_return'] * 100
+        vol = row['expected_volatility'] * 100
         method = row['method']
         
         # Highlight best Sharpe

@@ -136,45 +136,50 @@ class PortfolioOptimizer(ABC):
         
         Args:
             weights: Portfolio weights
-            returns: Asset returns DataFrame
+            returns: Asset returns DataFrame (assumed to be daily returns)
             cov_matrix: Covariance matrix (will be calculated if not provided)
         
         Returns:
-            Dictionary with portfolio metrics
+            Dictionary with portfolio metrics (annualized)
         """
         if cov_matrix is None:
             cov_matrix = returns.cov()
         
         mean_returns = returns.mean()
         
-        # Portfolio return and volatility
-        portfolio_return = np.dot(weights, mean_returns)
-        portfolio_variance = np.dot(weights, np.dot(cov_matrix, weights))
-        portfolio_volatility = np.sqrt(portfolio_variance)
+        # Portfolio return and volatility (daily)
+        portfolio_return_daily = np.dot(weights, mean_returns)
+        portfolio_variance_daily = np.dot(weights, np.dot(cov_matrix, weights))
+        portfolio_volatility_daily = np.sqrt(portfolio_variance_daily)
         
-        # Sharpe ratio
+        # Annualize return and volatility (assuming 252 trading days)
+        TRADING_DAYS = 252
+        portfolio_return_annual = portfolio_return_daily * TRADING_DAYS
+        portfolio_volatility_annual = portfolio_volatility_daily * np.sqrt(TRADING_DAYS)
+        
+        # Sharpe ratio (annualized return, annualized volatility, annual risk-free rate)
         sharpe_ratio = (
-            (portfolio_return - self.risk_free_rate) / portfolio_volatility
-            if portfolio_volatility > 0 else 0.0
+            (portfolio_return_annual - self.risk_free_rate) / portfolio_volatility_annual
+            if portfolio_volatility_annual > 0 else 0.0
         )
         
-        # Diversification ratio
+        # Diversification ratio (uses daily volatility, no annualization needed)
         asset_volatilities = np.sqrt(np.diag(cov_matrix))
         weighted_volatilities = np.dot(weights, asset_volatilities)
         diversification_ratio = (
-            weighted_volatilities / portfolio_volatility
-            if portfolio_volatility > 0 else 1.0
+            weighted_volatilities / portfolio_volatility_daily
+            if portfolio_volatility_daily > 0 else 1.0
         )
         
-        # Risk contributions
+        # Risk contributions (uses daily covariance)
         marginal_contrib = np.dot(cov_matrix, weights)
         risk_contrib = weights * marginal_contrib
         risk_contrib_pct = risk_contrib / np.sum(risk_contrib) if np.sum(risk_contrib) > 0 else weights
         
         return {
-            'return': float(portfolio_return),
-            'volatility': float(portfolio_volatility),
-            'sharpe_ratio': float(sharpe_ratio),
+            'return': float(portfolio_return_annual),  # Annualized
+            'volatility': float(portfolio_volatility_annual),  # Annualized
+            'sharpe_ratio': float(sharpe_ratio),  # Computed with annualized values
             'diversification_ratio': float(diversification_ratio),
             'risk_contributions': risk_contrib_pct,
         }
