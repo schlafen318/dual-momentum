@@ -87,17 +87,20 @@ def main():
         ]
         
         # Check if navigation is triggered programmatically
-        default_index = 0
-        if 'navigate_to' in st.session_state:
-            if st.session_state.navigate_to in pages:
-                default_index = pages.index(st.session_state.navigate_to)
-            del st.session_state.navigate_to
+        # If navigate_to is set, update the page_navigation widget state directly
+        if 'navigate_to' in st.session_state and st.session_state.navigate_to:
+            target_page = st.session_state.navigate_to
+            if target_page in pages:
+                # Directly set the widget state to force navigation
+                st.session_state.page_navigation = target_page
+            # Clear navigate_to after using it
+            st.session_state.navigate_to = None
         
+        # Get current page from radio button (will use session state if set above)
         page = st.radio(
             "Select Page",
             pages,
-            index=default_index,
-            key="page_navigation",  # Explicit key to preserve state on rerun
+            key="page_navigation",
             label_visibility="collapsed"
         )
         
