@@ -618,10 +618,24 @@ def render_portfolio_optimization_controls(symbols: List[str]) -> None:
     comparison_metrics = st.session_state.get('portfolio_opt_comparison_metrics')
     if comparison_metrics is not None and not comparison_metrics.empty:
         summary = st.session_state.get('portfolio_opt_comparison_summary', {})
-        st.success(
-            f"Best method: {summary.get('best_method', 'N/A').replace('_', ' ').title()} | "
-            f"Score: {summary.get('best_overall_score', float('nan')):.4f}"
-        )
+        sharpe_method = summary.get('best_sharpe_method')
+        sharpe_score = summary.get('best_sharpe_ratio')
+        if sharpe_method and sharpe_score is not None:
+            st.success(
+                f"Sharpe winner: {method_display(sharpe_method)} | Sharpe {sharpe_score:.4f}"
+            )
+        else:
+            st.success("Optimization comparison complete.")
+        if summary.get('lowest_volatility_method'):
+            st.caption(
+                f"Lowest volatility: {method_display(summary['lowest_volatility_method'])} "
+                f"({summary.get('lowest_volatility', float('nan')):.4f})"
+            )
+        if summary.get('best_diversification_method'):
+            st.caption(
+                f"Best diversification: {method_display(summary['best_diversification_method'])} "
+                f"({summary.get('best_diversification_ratio', float('nan')):.4f})"
+            )
         st.dataframe(comparison_metrics, use_container_width=True, height=240)
 
         weights_df = st.session_state.get('portfolio_opt_comparison_weights')
@@ -630,7 +644,7 @@ def render_portfolio_optimization_controls(symbols: List[str]) -> None:
             st.dataframe(weights_df, use_container_width=True, height=200)
 
         if st.button("✅ Apply Best Method to Backtest"):
-            best_method = summary.get('best_method')
+            best_method = summary.get('best_sharpe_method')
             if best_method:
                 st.session_state.portfolio_opt_enabled = True
                 st.session_state.portfolio_opt_method = best_method
@@ -724,10 +738,20 @@ def run_portfolio_optimization_comparison(symbols: List[str]) -> None:
 
         st.session_state.portfolio_opt_comparison_metrics = comparison.comparison_metrics
         st.session_state.portfolio_opt_comparison_weights = comparison.get_weights_df()
+        sharpe_method = comparison.best_sharpe_method
+        best_sharpe_result = comparison.results.get(sharpe_method)
+        diversification_method = comparison.best_diversification_method
+        diversification_result = comparison.results.get(diversification_method)
+        low_vol_method = comparison.lowest_volatility_method
+        low_vol_result = comparison.results.get(low_vol_method)
+
         st.session_state.portfolio_opt_comparison_summary = {
-            'best_method': comparison.best_method,
-            'best_overall_score': comparison.best_overall_score,
-            'best_overall_params': comparison.best_overall_params,
+            'best_sharpe_method': sharpe_method,
+            'best_sharpe_ratio': best_sharpe_result.sharpe_ratio if best_sharpe_result else None,
+            'best_diversification_method': diversification_method,
+            'best_diversification_ratio': diversification_result.diversification_ratio if diversification_result else None,
+            'lowest_volatility_method': low_vol_method,
+            'lowest_volatility': low_vol_result.expected_volatility if low_vol_result else None,
         }
 
         progress_bar.progress(100)
