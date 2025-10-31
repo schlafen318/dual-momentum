@@ -1,0 +1,759 @@
+2025-10-31 10:28:22.021 | INFO     | src.backtesting.engine:_setup_logging:142 - Backtest logging enabled: logs/backtest_DualMomentumStrategy_20251031_102822.log
+2025-10-31 10:28:22.021 | INFO     | src.backtesting.engine:_setup_logging:143 - Strategy: DualMomentumStrategy
+2025-10-31 10:28:22.022 | INFO     | src.backtesting.engine:_setup_logging:144 - Period: 2023-01-01 to 2023-12-31
+2025-10-31 10:28:22.024 | INFO     | src.backtesting.engine:run:200 - Backtesting from 2023-01-01 00:00:00 to 2023-12-31 00:00:00 (365 periods)
+2025-10-31 10:28:22.025 | INFO     | src.backtesting.engine:run:217 - First rebalancing expected on or after 2023-03-02 00:00:00 (after 60 periods of warm-up data)
+2025-10-31 10:28:22.025 | DEBUG    | src.backtesting.engine:_record_position_snapshot:573 - Position snapshot #1: 0 positions, cash=$100,000.00
+2025-10-31 10:28:22.026 | DEBUG    | src.backtesting.engine:_record_position_snapshot:573 - Position snapshot #2: 0 positions, cash=$100,000.00
+2025-10-31 10:28:22.026 | DEBUG    | src.backtesting.engine:_record_position_snapshot:573 - Position snapshot #3: 0 positions, cash=$100,000.00
+2025-10-31 10:28:22.027 | INFO     | src.backtesting.engine:run:280 - ?? Performance tracking starts from first rebalancing: 2023-03-02
+2025-10-31 10:28:22.028 | INFO     | src.backtesting.engine:run:283 - ?? REBALANCING on 2023-03-02
+2025-10-31 10:28:22.029 | INFO     | src.backtesting.engine:run:284 -    Portfolio Value: $100,000.00
+2025-10-31 10:28:22.029 | INFO     | src.backtesting.engine:run:285 -    Available Cash: $100,000.00
+2025-10-31 10:28:22.030 | INFO     | src.backtesting.engine:run:296 -    Current Positions: None
+2025-10-31 10:28:22.032 | DEBUG    | src.strategies.dual_momentum:generate_signals:189 - Calculated momentum for 4 assets
+2025-10-31 10:28:22.033 | DEBUG    | src.strategies.dual_momentum:generate_signals:191 -   SPY: 61 momentum values, 1 non-NaN
+2025-10-31 10:28:22.034 | DEBUG    | src.strategies.dual_momentum:generate_signals:191 -   QQQ: 61 momentum values, 1 non-NaN
+2025-10-31 10:28:22.035 | DEBUG    | src.strategies.dual_momentum:generate_signals:191 -   DIA: 61 momentum values, 1 non-NaN
+2025-10-31 10:28:22.035 | DEBUG    | src.strategies.dual_momentum:generate_signals:191 -   IWM: 61 momentum values, 1 non-NaN
+2025-10-31 10:28:22.036 | DEBUG    | src.strategies.dual_momentum:generate_signals:203 -   SPY latest momentum: -0.04499753275362561
+2025-10-31 10:28:22.037 | DEBUG    | src.strategies.dual_momentum:generate_signals:203 -   QQQ latest momentum: 0.11410227867333256
+2025-10-31 10:28:22.037 | DEBUG    | src.strategies.dual_momentum:generate_signals:203 -   DIA latest momentum: -0.06402916556234939
+2025-10-31 10:28:22.038 | DEBUG    | src.strategies.dual_momentum:generate_signals:203 -   IWM latest momentum: -0.03043683262574659
+2025-10-31 10:28:22.038 | DEBUG    | src.strategies.dual_momentum:generate_signals:211 - Latest momentum scores at 2023-03-02 00:00:00:
+2025-10-31 10:28:22.039 | DEBUG    | src.strategies.dual_momentum:generate_signals:215 -   SPY: -0.0450 (-4.50%) - FAIL
+2025-10-31 10:28:22.040 | DEBUG    | src.strategies.dual_momentum:generate_signals:215 -   QQQ: 0.1141 (11.41%) - PASS
+2025-10-31 10:28:22.040 | DEBUG    | src.strategies.dual_momentum:generate_signals:215 -   DIA: -0.0640 (-6.40%) - FAIL
+2025-10-31 10:28:22.041 | DEBUG    | src.strategies.dual_momentum:generate_signals:215 -   IWM: -0.0304 (-3.04%) - FAIL
+2025-10-31 10:28:22.041 | INFO     | src.strategies.dual_momentum:generate_signals:273 - Generated 1 long signals for: ['QQQ']
+2025-10-31 10:28:22.042 | INFO     | src.backtesting.engine:run:309 -    Generated 1 signals:
+2025-10-31 10:28:22.042 | INFO     | src.backtesting.engine:run:312 -      QQQ: LONG (strength: 1.00)
+2025-10-31 10:28:22.043 | INFO     | src.backtesting.engine:_execute_signals:923 - [ORDER SIZING] 2023-03-02: PV=$100,000.00, Cash=$100,000.00, Comm=0.1000%, Slip=0.0500%, Scale=1.000000
+2025-10-31 10:28:22.044 | INFO     | src.backtesting.engine:_execute_signals:926 - [ORDER SIZING] Weights: QQQ=33.33%
+2025-10-31 10:28:22.044 | INFO     | src.backtesting.engine:_execute_signals:959 - [EXECUTION ORDER] Sells first: [], then buys: ['QQQ']
+2025-10-31 10:28:22.045 | INFO     | src.backtesting.engine:_execute_signals:1058 -      ?? BUY QQQ [relative_top]
+2025-10-31 10:28:22.046 | INFO     | src.backtesting.engine:_execute_signals:1059 -         Price: $200.02 ? $200.12 (slippage: 0.050%)
+2025-10-31 10:28:22.046 | INFO     | src.backtesting.engine:_execute_signals:1060 -         Signal: strength=1.00 confidence=1.00
+2025-10-31 10:28:22.047 | INFO     | src.backtesting.engine:_execute_signals:1061 -         Target Shares: 166.57
+2025-10-31 10:28:22.047 | INFO     | src.backtesting.engine:_execute_signals:1067 -         Commission: $33.33
+2025-10-31 10:28:22.048 | INFO     | src.backtesting.engine:_execute_signals:1068 -         Total Cost: $33,366.67
+2025-10-31 10:28:22.049 | DEBUG    | src.backtesting.engine:_open_position:1160 - Opened position: QQQ x 166.57 @ $200.12
+2025-10-31 10:28:22.049 | INFO     | src.backtesting.engine:_execute_signals:1129 -         ? Position opened successfully
+2025-10-31 10:28:22.050 | INFO     | src.backtesting.engine:_execute_signals:1133 -         ?? Cash remaining: $66,633.33
+2025-10-31 10:28:22.050 | INFO     | src.backtesting.engine:_execute_signals:1139 - [ORDER SIZING] Batch total cost=$33,366.67, Cash end=$66,633.33
+2025-10-31 10:28:22.051 | INFO     | src.backtesting.engine:_log_position_changes:1316 -    Positions Opened:
+2025-10-31 10:28:22.052 | INFO     | src.backtesting.engine:_log_position_changes:1320 -      QQQ: 166.57 shares @ $200.12 (Value: $33,333.33)
+2025-10-31 10:28:22.052 | INFO     | src.backtesting.engine:run:333 -    After Rebalancing:
+2025-10-31 10:28:22.053 | INFO     | src.backtesting.engine:run:334 -      Portfolio Value: $99,966.67
+2025-10-31 10:28:22.053 | INFO     | src.backtesting.engine:run:335 -      Available Cash: $66,633.33
+2025-10-31 10:28:22.054 | INFO     | src.backtesting.engine:run:336 -      Change: $-33.33
+2025-10-31 10:28:22.055 | INFO     | src.backtesting.engine:run:342 -    ? Rebalancing complete
+2025-10-31 10:28:22.056 | INFO     | src.backtesting.engine:run:283 - ?? REBALANCING on 2023-04-01
+2025-10-31 10:28:22.056 | INFO     | src.backtesting.engine:run:284 -    Portfolio Value: $101,791.68
+2025-10-31 10:28:22.057 | INFO     | src.backtesting.engine:run:285 -    Available Cash: $66,633.33
+2025-10-31 10:28:22.058 | INFO     | src.backtesting.engine:run:289 -    Current Positions:
+2025-10-31 10:28:22.058 | INFO     | src.backtesting.engine:run:293 -      QQQ: 166.57 shares @ $211.07 (Value: $35,158.35, P&L: $1,825.01)
+2025-10-31 10:28:22.060 | DEBUG    | src.strategies.dual_momentum:generate_signals:189 - Calculated momentum for 4 assets
+2025-10-31 10:28:22.061 | DEBUG    | src.strategies.dual_momentum:generate_signals:191 -   SPY: 61 momentum values, 1 non-NaN
+2025-10-31 10:28:22.062 | DEBUG    | src.strategies.dual_momentum:generate_signals:191 -   QQQ: 61 momentum values, 1 non-NaN
+2025-10-31 10:28:22.063 | DEBUG    | src.strategies.dual_momentum:generate_signals:191 -   DIA: 61 momentum values, 1 non-NaN
+2025-10-31 10:28:22.063 | DEBUG    | src.strategies.dual_momentum:generate_signals:191 -   IWM: 61 momentum values, 1 non-NaN
+2025-10-31 10:28:22.064 | DEBUG    | src.strategies.dual_momentum:generate_signals:203 -   SPY latest momentum: 0.015725998040660993
+2025-10-31 10:28:22.065 | DEBUG    | src.strategies.dual_momentum:generate_signals:203 -   QQQ latest momentum: 0.05316804719891466
+2025-10-31 10:28:22.065 | DEBUG    | src.strategies.dual_momentum:generate_signals:203 -   DIA latest momentum: 0.05842940431667065
+2025-10-31 10:28:22.066 | DEBUG    | src.strategies.dual_momentum:generate_signals:203 -   IWM latest momentum: -0.031081946897098534
+2025-10-31 10:28:22.066 | DEBUG    | src.strategies.dual_momentum:generate_signals:211 - Latest momentum scores at 2023-04-01 00:00:00:
+2025-10-31 10:28:22.067 | DEBUG    | src.strategies.dual_momentum:generate_signals:215 -   SPY: 0.0157 (1.57%) - PASS
+2025-10-31 10:28:22.068 | DEBUG    | src.strategies.dual_momentum:generate_signals:215 -   QQQ: 0.0532 (5.32%) - PASS
+2025-10-31 10:28:22.068 | DEBUG    | src.strategies.dual_momentum:generate_signals:215 -   DIA: 0.0584 (5.84%) - PASS
+2025-10-31 10:28:22.069 | DEBUG    | src.strategies.dual_momentum:generate_signals:215 -   IWM: -0.0311 (-3.11%) - FAIL
+2025-10-31 10:28:22.069 | INFO     | src.strategies.dual_momentum:generate_signals:273 - Generated 3 long signals for: ['DIA', 'QQQ', 'SPY']
+2025-10-31 10:28:22.070 | INFO     | src.backtesting.engine:run:309 -    Generated 3 signals:
+2025-10-31 10:28:22.071 | INFO     | src.backtesting.engine:run:312 -      DIA: LONG (strength: 1.00)
+2025-10-31 10:28:22.071 | INFO     | src.backtesting.engine:run:312 -      QQQ: LONG (strength: 0.91)
+2025-10-31 10:28:22.072 | INFO     | src.backtesting.engine:run:312 -      SPY: LONG (strength: 0.27)
+2025-10-31 10:28:22.072 | INFO     | src.backtesting.engine:_execute_signals:792 -    Keeping existing positions:
+2025-10-31 10:28:22.073 | INFO     | src.backtesting.engine:_execute_signals:796 -      QQQ: 166.57 shares @ $211.07 (Value: $35,158.35)
+2025-10-31 10:28:22.074 | INFO     | src.backtesting.engine:_execute_signals:923 - [ORDER SIZING] 2023-04-01: PV=$101,791.68, Cash=$66,633.33, Comm=0.1000%, Slip=0.0500%, Scale=0.999001
+2025-10-31 10:28:22.074 | INFO     | src.backtesting.engine:_execute_signals:926 - [ORDER SIZING] Weights: DIA=45.89%, QQQ=41.76%, SPY=12.35%
+2025-10-31 10:28:22.075 | INFO     | src.backtesting.engine:_execute_signals:930 - [ORDER SIZING] Keeping 1 existing positions (may adjust sizes)
+2025-10-31 10:28:22.075 | INFO     | src.backtesting.engine:_execute_signals:959 - [EXECUTION ORDER] Sells first: [], then buys: ['DIA', 'QQQ', 'SPY']
+2025-10-31 10:28:22.076 | INFO     | src.backtesting.engine:_execute_signals:1058 -      ?? BUY DIA [relative_top]
+2025-10-31 10:28:22.077 | INFO     | src.backtesting.engine:_execute_signals:1059 -         Price: $159.65 ? $159.73 (slippage: 0.050%)
+2025-10-31 10:28:22.077 | INFO     | src.backtesting.engine:_execute_signals:1060 -         Signal: strength=1.00 confidence=0.73
+2025-10-31 10:28:22.078 | INFO     | src.backtesting.engine:_execute_signals:1061 -         Target Shares: 292.46
+2025-10-31 10:28:22.079 | INFO     | src.backtesting.engine:_execute_signals:1067 -         Commission: $46.71
+2025-10-31 10:28:22.079 | INFO     | src.backtesting.engine:_execute_signals:1068 -         Total Cost: $46,759.45
+2025-10-31 10:28:22.080 | DEBUG    | src.backtesting.engine:_open_position:1160 - Opened position: DIA x 292.46 @ $159.73
+2025-10-31 10:28:22.080 | INFO     | src.backtesting.engine:_execute_signals:1129 -         ? Position opened successfully
+2025-10-31 10:28:22.081 | INFO     | src.backtesting.engine:_execute_signals:1133 -         ?? Cash remaining: $19,873.88
+2025-10-31 10:28:22.082 | DEBUG    | src.backtesting.engine:_execute_signals:998 -       Existing position: 166.57 shares worth $35,158.35
+2025-10-31 10:28:22.082 | INFO     | src.backtesting.engine:_execute_signals:1058 -      ?? ADD QQQ [relative_top]
+2025-10-31 10:28:22.083 | INFO     | src.backtesting.engine:_execute_signals:1059 -         Price: $211.07 ? $211.18 (slippage: 0.050%)
+2025-10-31 10:28:22.083 | INFO     | src.backtesting.engine:_execute_signals:1060 -         Signal: strength=0.91 confidence=0.73
+2025-10-31 10:28:22.084 | INFO     | src.backtesting.engine:_execute_signals:1061 -         Target Shares: 201.28
+2025-10-31 10:28:22.085 | INFO     | src.backtesting.engine:_execute_signals:1064 -         Current Shares: 166.57
+2025-10-31 10:28:22.085 | INFO     | src.backtesting.engine:_execute_signals:1065 -         Share Change: +34.71
+2025-10-31 10:28:22.086 | INFO     | src.backtesting.engine:_execute_signals:1067 -         Commission: $7.33
+2025-10-31 10:28:22.086 | INFO     | src.backtesting.engine:_execute_signals:1068 -         Total Cost: $7,337.83
+2025-10-31 10:28:22.087 | DEBUG    | src.backtesting.engine:_adjust_position:1207 - Adjusting QQQ: buying 34.71 more shares at $211.18 (cost: $7,337.83)
+2025-10-31 10:28:22.088 | INFO     | src.backtesting.engine:_execute_signals:1120 -         ? Position adjusted successfully
+2025-10-31 10:28:22.088 | INFO     | src.backtesting.engine:_execute_signals:1133 -         ?? Cash remaining: $12,536.05
+2025-10-31 10:28:22.089 | INFO     | src.backtesting.engine:_execute_signals:1058 -      ?? BUY SPY [relative_top]
+2025-10-31 10:28:22.090 | INFO     | src.backtesting.engine:_execute_signals:1059 -         Price: $147.65 ? $147.73 (slippage: 0.050%)
+2025-10-31 10:28:22.090 | INFO     | src.backtesting.engine:_execute_signals:1060 -         Signal: strength=0.27 confidence=0.73
+2025-10-31 10:28:22.091 | INFO     | src.backtesting.engine:_execute_signals:1061 -         Target Shares: 85.11
+2025-10-31 10:28:22.091 | INFO     | src.backtesting.engine:_execute_signals:1067 -         Commission: $12.57
+2025-10-31 10:28:22.092 | INFO     | src.backtesting.engine:_execute_signals:1068 -         Total Cost: $12,585.09
+2025-10-31 10:28:22.093 | DEBUG    | src.backtesting.engine:_open_position:1160 - Opened position: SPY x 84.77 @ $147.73
+2025-10-31 10:28:22.093 | INFO     | src.backtesting.engine:_execute_signals:1129 -         ? Position opened successfully
+2025-10-31 10:28:22.094 | INFO     | src.backtesting.engine:_execute_signals:1133 -         ?? Cash remaining: $-0.00
+2025-10-31 10:28:22.094 | INFO     | src.backtesting.engine:_execute_signals:1139 - [ORDER SIZING] Batch total cost=$66,633.33, Cash end=$-0.00
+2025-10-31 10:28:22.095 | INFO     | src.backtesting.engine:_log_position_changes:1316 -    Positions Opened:
+2025-10-31 10:28:22.096 | INFO     | src.backtesting.engine:_log_position_changes:1320 -      SPY: 84.77 shares @ $147.73 (Value: $12,523.53)
+2025-10-31 10:28:22.096 | INFO     | src.backtesting.engine:_log_position_changes:1320 -      DIA: 292.46 shares @ $159.73 (Value: $46,712.74)
+2025-10-31 10:28:22.097 | INFO     | src.backtesting.engine:run:333 -    After Rebalancing:
+2025-10-31 10:28:22.097 | INFO     | src.backtesting.engine:run:334 -      Portfolio Value: $101,721.45
+2025-10-31 10:28:22.098 | INFO     | src.backtesting.engine:run:335 -      Available Cash: $-0.00
+2025-10-31 10:28:22.098 | INFO     | src.backtesting.engine:run:336 -      Change: $-70.23
+2025-10-31 10:28:22.099 | INFO     | src.backtesting.engine:run:342 -    ? Rebalancing complete
+2025-10-31 10:28:22.101 | INFO     | src.backtesting.engine:run:283 - ?? REBALANCING on 2023-05-01
+2025-10-31 10:28:22.102 | INFO     | src.backtesting.engine:run:284 -    Portfolio Value: $102,945.18
+2025-10-31 10:28:22.102 | INFO     | src.backtesting.engine:run:285 -    Available Cash: $-0.00
+2025-10-31 10:28:22.103 | INFO     | src.backtesting.engine:run:289 -    Current Positions:
+2025-10-31 10:28:22.104 | INFO     | src.backtesting.engine:run:293 -      QQQ: 201.28 shares @ $218.15 (Value: $43,910.51, P&L: $3,630.66)
+2025-10-31 10:28:22.104 | INFO     | src.backtesting.engine:run:293 -      DIA: 292.46 shares @ $158.25 (Value: $46,281.24, P&L: $-431.50)
+2025-10-31 10:28:22.105 | INFO     | src.backtesting.engine:run:293 -      SPY: 84.77 shares @ $150.44 (Value: $12,753.43, P&L: $229.90)
+2025-10-31 10:28:22.107 | DEBUG    | src.strategies.dual_momentum:generate_signals:189 - Calculated momentum for 4 assets
+2025-10-31 10:28:22.108 | DEBUG    | src.strategies.dual_momentum:generate_signals:191 -   SPY: 61 momentum values, 1 non-NaN
+2025-10-31 10:28:22.109 | DEBUG    | src.strategies.dual_momentum:generate_signals:191 -   QQQ: 61 momentum values, 1 non-NaN
+2025-10-31 10:28:22.109 | DEBUG    | src.strategies.dual_momentum:generate_signals:191 -   DIA: 61 momentum values, 1 non-NaN
+2025-10-31 10:28:22.110 | DEBUG    | src.strategies.dual_momentum:generate_signals:191 -   IWM: 61 momentum values, 1 non-NaN
+2025-10-31 10:28:22.111 | DEBUG    | src.strategies.dual_momentum:generate_signals:203 -   SPY latest momentum: 0.045393745602212654
+2025-10-31 10:28:22.111 | DEBUG    | src.strategies.dual_momentum:generate_signals:203 -   QQQ latest momentum: 0.09068098737114672
+2025-10-31 10:28:22.112 | DEBUG    | src.strategies.dual_momentum:generate_signals:203 -   DIA latest momentum: 0.06923287243941179
+2025-10-31 10:28:22.112 | DEBUG    | src.strategies.dual_momentum:generate_signals:203 -   IWM latest momentum: 0.01663965694722691
+2025-10-31 10:28:22.113 | DEBUG    | src.strategies.dual_momentum:generate_signals:211 - Latest momentum scores at 2023-05-01 00:00:00:
+2025-10-31 10:28:22.114 | DEBUG    | src.strategies.dual_momentum:generate_signals:215 -   SPY: 0.0454 (4.54%) - PASS
+2025-10-31 10:28:22.114 | DEBUG    | src.strategies.dual_momentum:generate_signals:215 -   QQQ: 0.0907 (9.07%) - PASS
+2025-10-31 10:28:22.115 | DEBUG    | src.strategies.dual_momentum:generate_signals:215 -   DIA: 0.0692 (6.92%) - PASS
+2025-10-31 10:28:22.115 | DEBUG    | src.strategies.dual_momentum:generate_signals:215 -   IWM: 0.0166 (1.66%) - PASS
+2025-10-31 10:28:22.116 | INFO     | src.strategies.dual_momentum:generate_signals:273 - Generated 3 long signals for: ['QQQ', 'DIA', 'SPY']
+2025-10-31 10:28:22.117 | INFO     | src.backtesting.engine:run:309 -    Generated 3 signals:
+2025-10-31 10:28:22.117 | INFO     | src.backtesting.engine:run:312 -      QQQ: LONG (strength: 1.00)
+2025-10-31 10:28:22.118 | INFO     | src.backtesting.engine:run:312 -      DIA: LONG (strength: 0.76)
+2025-10-31 10:28:22.118 | INFO     | src.backtesting.engine:run:312 -      SPY: LONG (strength: 0.50)
+2025-10-31 10:28:22.119 | INFO     | src.backtesting.engine:_execute_signals:792 -    Keeping existing positions:
+2025-10-31 10:28:22.120 | INFO     | src.backtesting.engine:_execute_signals:796 -      QQQ: 201.28 shares @ $218.15 (Value: $43,910.51)
+2025-10-31 10:28:22.120 | INFO     | src.backtesting.engine:_execute_signals:796 -      DIA: 292.46 shares @ $158.25 (Value: $46,281.24)
+2025-10-31 10:28:22.121 | INFO     | src.backtesting.engine:_execute_signals:796 -      SPY: 84.77 shares @ $150.44 (Value: $12,753.43)
+2025-10-31 10:28:22.121 | INFO     | src.backtesting.engine:_execute_signals:923 - [ORDER SIZING] 2023-05-01: PV=$102,945.18, Cash=$-0.00, Comm=0.1000%, Slip=0.0500%, Scale=-0.000000
+2025-10-31 10:28:22.122 | INFO     | src.backtesting.engine:_execute_signals:926 - [ORDER SIZING] Weights: QQQ=44.17%, DIA=33.72%, SPY=22.11%
+2025-10-31 10:28:22.123 | INFO     | src.backtesting.engine:_execute_signals:930 - [ORDER SIZING] Keeping 3 existing positions (may adjust sizes)
+2025-10-31 10:28:22.123 | INFO     | src.backtesting.engine:_execute_signals:959 - [EXECUTION ORDER] Sells first: ['DIA'], then buys: ['QQQ', 'SPY']
+2025-10-31 10:28:22.124 | DEBUG    | src.backtesting.engine:_execute_signals:998 -       Existing position: 292.46 shares worth $46,281.24
+2025-10-31 10:28:22.124 | INFO     | src.backtesting.engine:_execute_signals:1058 -      ?? REDUCE DIA [relative_top]
+2025-10-31 10:28:22.125 | INFO     | src.backtesting.engine:_execute_signals:1059 -         Price: $158.25 ? $158.33 (slippage: 0.050%)
+2025-10-31 10:28:22.126 | INFO     | src.backtesting.engine:_execute_signals:1060 -         Signal: strength=0.76 confidence=0.77
+2025-10-31 10:28:22.126 | INFO     | src.backtesting.engine:_execute_signals:1061 -         Target Shares: 219.26
+2025-10-31 10:28:22.127 | INFO     | src.backtesting.engine:_execute_signals:1064 -         Current Shares: 292.46
+2025-10-31 10:28:22.127 | INFO     | src.backtesting.engine:_execute_signals:1065 -         Share Change: -73.20
+2025-10-31 10:28:22.128 | INFO     | src.backtesting.engine:_execute_signals:1067 -         Commission: $11.59
+2025-10-31 10:28:22.129 | INFO     | src.backtesting.engine:_execute_signals:1068 -         Total Cost: $-11,578.10
+2025-10-31 10:28:22.129 | DEBUG    | src.backtesting.engine:_adjust_position:1212 - Adjusting DIA: selling 73.20 shares at $158.17 (proceeds: $11,566.53)
+2025-10-31 10:28:22.130 | INFO     | src.backtesting.engine:_execute_signals:1120 -         ? Position adjusted successfully
+2025-10-31 10:28:22.130 | INFO     | src.backtesting.engine:_execute_signals:1133 -         ?? Cash remaining: $11,566.53
+2025-10-31 10:28:22.131 | DEBUG    | src.backtesting.engine:_execute_signals:998 -       Existing position: 201.28 shares worth $43,910.51
+2025-10-31 10:28:22.132 | INFO     | src.backtesting.engine:_execute_signals:1058 -      ?? ADD QQQ [relative_top]
+2025-10-31 10:28:22.132 | INFO     | src.backtesting.engine:_execute_signals:1059 -         Price: $218.15 ? $218.26 (slippage: 0.050%)
+2025-10-31 10:28:22.133 | INFO     | src.backtesting.engine:_execute_signals:1060 -         Signal: strength=1.00 confidence=0.77
+2025-10-31 10:28:22.133 | INFO     | src.backtesting.engine:_execute_signals:1061 -         Target Shares: 208.32
+2025-10-31 10:28:22.134 | INFO     | src.backtesting.engine:_execute_signals:1064 -         Current Shares: 201.28
+2025-10-31 10:28:22.135 | INFO     | src.backtesting.engine:_execute_signals:1065 -         Share Change: +7.04
+2025-10-31 10:28:22.135 | INFO     | src.backtesting.engine:_execute_signals:1067 -         Commission: $1.54
+2025-10-31 10:28:22.136 | INFO     | src.backtesting.engine:_execute_signals:1068 -         Total Cost: $1,538.26
+2025-10-31 10:28:22.136 | DEBUG    | src.backtesting.engine:_adjust_position:1207 - Adjusting QQQ: buying 7.04 more shares at $218.26 (cost: $1,538.26)
+2025-10-31 10:28:22.137 | INFO     | src.backtesting.engine:_execute_signals:1120 -         ? Position adjusted successfully
+2025-10-31 10:28:22.138 | INFO     | src.backtesting.engine:_execute_signals:1133 -         ?? Cash remaining: $10,028.26
+2025-10-31 10:28:22.138 | DEBUG    | src.backtesting.engine:_execute_signals:998 -       Existing position: 84.77 shares worth $12,753.43
+2025-10-31 10:28:22.139 | INFO     | src.backtesting.engine:_execute_signals:1058 -      ?? ADD SPY [relative_top]
+2025-10-31 10:28:22.139 | INFO     | src.backtesting.engine:_execute_signals:1059 -         Price: $150.44 ? $150.51 (slippage: 0.050%)
+2025-10-31 10:28:22.140 | INFO     | src.backtesting.engine:_execute_signals:1060 -         Signal: strength=0.50 confidence=0.77
+2025-10-31 10:28:22.141 | INFO     | src.backtesting.engine:_execute_signals:1061 -         Target Shares: 151.22
+2025-10-31 10:28:22.141 | INFO     | src.backtesting.engine:_execute_signals:1064 -         Current Shares: 84.77
+2025-10-31 10:28:22.142 | INFO     | src.backtesting.engine:_execute_signals:1065 -         Share Change: +66.45
+2025-10-31 10:28:22.142 | INFO     | src.backtesting.engine:_execute_signals:1067 -         Commission: $10.00
+2025-10-31 10:28:22.143 | INFO     | src.backtesting.engine:_execute_signals:1068 -         Total Cost: $10,011.49
+2025-10-31 10:28:22.144 | DEBUG    | src.backtesting.engine:_adjust_position:1207 - Adjusting SPY: buying 66.45 more shares at $150.51 (cost: $10,011.49)
+2025-10-31 10:28:22.144 | INFO     | src.backtesting.engine:_execute_signals:1120 -         ? Position adjusted successfully
+2025-10-31 10:28:22.145 | INFO     | src.backtesting.engine:_execute_signals:1133 -         ?? Cash remaining: $16.77
+2025-10-31 10:28:22.145 | INFO     | src.backtesting.engine:_execute_signals:1139 - [ORDER SIZING] Batch total cost=$23,127.85, Cash end=$16.77
+2025-10-31 10:28:22.146 | INFO     | src.backtesting.engine:_log_position_changes:1341 -    No position changes made
+2025-10-31 10:28:22.147 | INFO     | src.backtesting.engine:run:333 -    After Rebalancing:
+2025-10-31 10:28:22.147 | INFO     | src.backtesting.engine:run:334 -      Portfolio Value: $102,910.50
+2025-10-31 10:28:22.148 | INFO     | src.backtesting.engine:run:335 -      Available Cash: $16.77
+2025-10-31 10:28:22.148 | INFO     | src.backtesting.engine:run:336 -      Change: $-34.67
+2025-10-31 10:28:22.149 | INFO     | src.backtesting.engine:run:342 -    ? Rebalancing complete
+2025-10-31 10:28:22.151 | INFO     | src.backtesting.engine:run:283 - ?? REBALANCING on 2023-06-01
+2025-10-31 10:28:22.152 | INFO     | src.backtesting.engine:run:284 -    Portfolio Value: $102,774.69
+2025-10-31 10:28:22.152 | INFO     | src.backtesting.engine:run:285 -    Available Cash: $16.77
+2025-10-31 10:28:22.153 | INFO     | src.backtesting.engine:run:289 -    Current Positions:
+2025-10-31 10:28:22.153 | INFO     | src.backtesting.engine:run:293 -      QQQ: 208.32 shares @ $222.26 (Value: $46,301.62, P&L: $4,612.82)
+2025-10-31 10:28:22.154 | INFO     | src.backtesting.engine:run:293 -      DIA: 219.26 shares @ $154.33 (Value: $33,836.65, P&L: $-1,184.19)
+2025-10-31 10:28:22.155 | INFO     | src.backtesting.engine:run:293 -      SPY: 151.22 shares @ $149.58 (Value: $22,619.65, P&L: $279.84)
+2025-10-31 10:28:22.157 | DEBUG    | src.strategies.dual_momentum:generate_signals:189 - Calculated momentum for 4 assets
+2025-10-31 10:28:22.158 | DEBUG    | src.strategies.dual_momentum:generate_signals:191 -   SPY: 61 momentum values, 1 non-NaN
+2025-10-31 10:28:22.159 | DEBUG    | src.strategies.dual_momentum:generate_signals:191 -   QQQ: 61 momentum values, 1 non-NaN
+2025-10-31 10:28:22.159 | DEBUG    | src.strategies.dual_momentum:generate_signals:191 -   DIA: 61 momentum values, 1 non-NaN
+2025-10-31 10:28:22.160 | DEBUG    | src.strategies.dual_momentum:generate_signals:191 -   IWM: 61 momentum values, 1 non-NaN
+2025-10-31 10:28:22.161 | DEBUG    | src.strategies.dual_momentum:generate_signals:203 -   SPY latest momentum: 0.004610003578679356
+2025-10-31 10:28:22.161 | DEBUG    | src.strategies.dual_momentum:generate_signals:203 -   QQQ latest momentum: 0.06348391297189138
+2025-10-31 10:28:22.162 | DEBUG    | src.strategies.dual_momentum:generate_signals:203 -   DIA latest momentum: -0.03305545502013918
+2025-10-31 10:28:22.163 | DEBUG    | src.strategies.dual_momentum:generate_signals:203 -   IWM latest momentum: 0.009852101656577128
+2025-10-31 10:28:22.163 | DEBUG    | src.strategies.dual_momentum:generate_signals:211 - Latest momentum scores at 2023-06-01 00:00:00:
+2025-10-31 10:28:22.164 | DEBUG    | src.strategies.dual_momentum:generate_signals:215 -   SPY: 0.0046 (0.46%) - PASS
+2025-10-31 10:28:22.164 | DEBUG    | src.strategies.dual_momentum:generate_signals:215 -   QQQ: 0.0635 (6.35%) - PASS
+2025-10-31 10:28:22.165 | DEBUG    | src.strategies.dual_momentum:generate_signals:215 -   DIA: -0.0331 (-3.31%) - FAIL
+2025-10-31 10:28:22.165 | DEBUG    | src.strategies.dual_momentum:generate_signals:215 -   IWM: 0.0099 (0.99%) - PASS
+2025-10-31 10:28:22.166 | INFO     | src.strategies.dual_momentum:generate_signals:273 - Generated 3 long signals for: ['QQQ', 'IWM', 'SPY']
+2025-10-31 10:28:22.167 | INFO     | src.backtesting.engine:run:309 -    Generated 3 signals:
+2025-10-31 10:28:22.167 | INFO     | src.backtesting.engine:run:312 -      QQQ: LONG (strength: 1.00)
+2025-10-31 10:28:22.168 | INFO     | src.backtesting.engine:run:312 -      IWM: LONG (strength: 0.16)
+2025-10-31 10:28:22.168 | INFO     | src.backtesting.engine:run:312 -      SPY: LONG (strength: 0.07)
+2025-10-31 10:28:22.169 | INFO     | src.backtesting.engine:_execute_signals:782 -    Closing positions no longer in signals:
+2025-10-31 10:28:22.170 | INFO     | src.backtesting.engine:_execute_signals:787 -      DIA: 219.26 shares @ $154.33 (Value: $33,836.65, P&L: $-1,184.19)
+2025-10-31 10:28:22.170 | DEBUG    | src.backtesting.engine:_close_position:1280 - Closed position: DIA x 219.26 @ $154.25 (P&L: $-1,201.11)
+2025-10-31 10:28:22.171 | INFO     | src.backtesting.engine:_execute_signals:789 -    Proceeds from sales added to cash. New cash: $33,802.68
+2025-10-31 10:28:22.171 | INFO     | src.backtesting.engine:_execute_signals:792 -    Keeping existing positions:
+2025-10-31 10:28:22.172 | INFO     | src.backtesting.engine:_execute_signals:796 -      QQQ: 208.32 shares @ $222.26 (Value: $46,301.62)
+2025-10-31 10:28:22.173 | INFO     | src.backtesting.engine:_execute_signals:796 -      SPY: 151.22 shares @ $149.58 (Value: $22,619.65)
+2025-10-31 10:28:22.173 | INFO     | src.backtesting.engine:_execute_signals:923 - [ORDER SIZING] 2023-06-01: PV=$102,774.69, Cash=$33,802.68, Comm=0.1000%, Slip=0.0500%, Scale=0.670090
+2025-10-31 10:28:22.174 | INFO     | src.backtesting.engine:_execute_signals:926 - [ORDER SIZING] Weights: QQQ=81.45%, IWM=12.64%, SPY=5.91%
+2025-10-31 10:28:22.174 | INFO     | src.backtesting.engine:_execute_signals:930 - [ORDER SIZING] Keeping 2 existing positions (may adjust sizes)
+2025-10-31 10:28:22.175 | INFO     | src.backtesting.engine:_execute_signals:959 - [EXECUTION ORDER] Sells first: ['SPY'], then buys: ['QQQ', 'IWM']
+2025-10-31 10:28:22.176 | DEBUG    | src.backtesting.engine:_execute_signals:998 -       Existing position: 151.22 shares worth $22,619.65
+2025-10-31 10:28:22.176 | INFO     | src.backtesting.engine:_execute_signals:1058 -      ?? REDUCE SPY [relative_top]
+2025-10-31 10:28:22.177 | INFO     | src.backtesting.engine:_execute_signals:1059 -         Price: $149.58 ? $149.65 (slippage: 0.050%)
+2025-10-31 10:28:22.178 | INFO     | src.backtesting.engine:_execute_signals:1060 -         Signal: strength=0.07 confidence=0.95
+2025-10-31 10:28:22.178 | INFO     | src.backtesting.engine:_execute_signals:1061 -         Target Shares: 40.62
+2025-10-31 10:28:22.179 | INFO     | src.backtesting.engine:_execute_signals:1064 -         Current Shares: 151.22
+2025-10-31 10:28:22.179 | INFO     | src.backtesting.engine:_execute_signals:1065 -         Share Change: -110.61
+2025-10-31 10:28:22.180 | INFO     | src.backtesting.engine:_execute_signals:1067 -         Commission: $16.55
+2025-10-31 10:28:22.180 | INFO     | src.backtesting.engine:_execute_signals:1068 -         Total Cost: $-16,535.95
+2025-10-31 10:28:22.181 | DEBUG    | src.backtesting.engine:_adjust_position:1212 - Adjusting SPY: selling 110.61 shares at $149.50 (proceeds: $16,519.42)
+2025-10-31 10:28:22.182 | INFO     | src.backtesting.engine:_execute_signals:1120 -         ? Position adjusted successfully
+2025-10-31 10:28:22.182 | INFO     | src.backtesting.engine:_execute_signals:1133 -         ?? Cash remaining: $50,322.10
+2025-10-31 10:28:22.183 | DEBUG    | src.backtesting.engine:_execute_signals:998 -       Existing position: 208.32 shares worth $46,301.62
+2025-10-31 10:28:22.184 | INFO     | src.backtesting.engine:_execute_signals:1058 -      ?? ADD QQQ [relative_top]
+2025-10-31 10:28:22.184 | INFO     | src.backtesting.engine:_execute_signals:1059 -         Price: $222.26 ? $222.37 (slippage: 0.050%)
+2025-10-31 10:28:22.185 | INFO     | src.backtesting.engine:_execute_signals:1060 -         Signal: strength=1.00 confidence=0.95
+2025-10-31 10:28:22.185 | INFO     | src.backtesting.engine:_execute_signals:1061 -         Target Shares: 376.43
+2025-10-31 10:28:22.186 | INFO     | src.backtesting.engine:_execute_signals:1064 -         Current Shares: 208.32
+2025-10-31 10:28:22.187 | INFO     | src.backtesting.engine:_execute_signals:1065 -         Share Change: +168.10
+2025-10-31 10:28:22.187 | INFO     | src.backtesting.engine:_execute_signals:1067 -         Commission: $37.38
+2025-10-31 10:28:22.188 | INFO     | src.backtesting.engine:_execute_signals:1068 -         Total Cost: $37,418.48
+2025-10-31 10:28:22.188 | DEBUG    | src.backtesting.engine:_adjust_position:1207 - Adjusting QQQ: buying 168.10 more shares at $222.37 (cost: $37,418.48)
+2025-10-31 10:28:22.189 | INFO     | src.backtesting.engine:_execute_signals:1120 -         ? Position adjusted successfully
+2025-10-31 10:28:22.190 | INFO     | src.backtesting.engine:_execute_signals:1133 -         ?? Cash remaining: $12,903.62
+2025-10-31 10:28:22.190 | INFO     | src.backtesting.engine:_execute_signals:1058 -      ?? BUY IWM [relative_top]
+2025-10-31 10:28:22.191 | INFO     | src.backtesting.engine:_execute_signals:1059 -         Price: $139.90 ? $139.97 (slippage: 0.050%)
+2025-10-31 10:28:22.191 | INFO     | src.backtesting.engine:_execute_signals:1060 -         Signal: strength=0.16 confidence=0.95
+2025-10-31 10:28:22.192 | INFO     | src.backtesting.engine:_execute_signals:1061 -         Target Shares: 92.81
+2025-10-31 10:28:22.193 | INFO     | src.backtesting.engine:_execute_signals:1067 -         Commission: $12.99
+2025-10-31 10:28:22.193 | INFO     | src.backtesting.engine:_execute_signals:1068 -         Total Cost: $13,003.35
+2025-10-31 10:28:22.194 | DEBUG    | src.backtesting.engine:_open_position:1160 - Opened position: IWM x 92.10 @ $139.97
+2025-10-31 10:28:22.194 | INFO     | src.backtesting.engine:_execute_signals:1129 -         ? Position opened successfully
+2025-10-31 10:28:22.195 | INFO     | src.backtesting.engine:_execute_signals:1133 -         ?? Cash remaining: $-0.00
+2025-10-31 10:28:22.196 | INFO     | src.backtesting.engine:_execute_signals:1139 - [ORDER SIZING] Batch total cost=$66,858.05, Cash end=$-0.00
+2025-10-31 10:28:22.196 | INFO     | src.backtesting.engine:_log_position_changes:1305 -    Positions Closed:
+2025-10-31 10:28:22.197 | INFO     | src.backtesting.engine:_log_position_changes:1310 -      DIA: 219.26 shares @ $154.33 (Value: $33,836.65, P&L: $-1,184.19)
+2025-10-31 10:28:22.197 | INFO     | src.backtesting.engine:_log_position_changes:1316 -    Positions Opened:
+2025-10-31 10:28:22.198 | INFO     | src.backtesting.engine:_log_position_changes:1320 -      IWM: 92.10 shares @ $139.97 (Value: $12,890.73)
+2025-10-31 10:28:22.199 | INFO     | src.backtesting.engine:run:333 -    After Rebalancing:
+2025-10-31 10:28:22.199 | INFO     | src.backtesting.engine:run:334 -      Portfolio Value: $102,630.20
+2025-10-31 10:28:22.200 | INFO     | src.backtesting.engine:run:335 -      Available Cash: $-0.00
+2025-10-31 10:28:22.200 | INFO     | src.backtesting.engine:run:336 -      Change: $-144.50
+2025-10-31 10:28:22.201 | INFO     | src.backtesting.engine:run:342 -    ? Rebalancing complete
+2025-10-31 10:28:22.203 | INFO     | src.backtesting.engine:run:283 - ?? REBALANCING on 2023-07-01
+2025-10-31 10:28:22.204 | INFO     | src.backtesting.engine:run:284 -    Portfolio Value: $100,657.36
+2025-10-31 10:28:22.204 | INFO     | src.backtesting.engine:run:285 -    Available Cash: $-0.00
+2025-10-31 10:28:22.205 | INFO     | src.backtesting.engine:run:289 -    Current Positions:
+2025-10-31 10:28:22.205 | INFO     | src.backtesting.engine:run:293 -      QQQ: 376.43 shares @ $216.65 (Value: $81,552.91, P&L: $6,223.93)
+2025-10-31 10:28:22.206 | INFO     | src.backtesting.engine:run:293 -      SPY: 40.62 shares @ $161.76 (Value: $6,570.12, P&L: $569.86)
+2025-10-31 10:28:22.207 | INFO     | src.backtesting.engine:run:293 -      IWM: 92.10 shares @ $136.10 (Value: $12,534.33, P&L: $-356.40)
+2025-10-31 10:28:22.209 | DEBUG    | src.strategies.dual_momentum:generate_signals:189 - Calculated momentum for 4 assets
+2025-10-31 10:28:22.210 | DEBUG    | src.strategies.dual_momentum:generate_signals:191 -   SPY: 61 momentum values, 1 non-NaN
+2025-10-31 10:28:22.211 | DEBUG    | src.strategies.dual_momentum:generate_signals:191 -   QQQ: 61 momentum values, 1 non-NaN
+2025-10-31 10:28:22.211 | DEBUG    | src.strategies.dual_momentum:generate_signals:191 -   DIA: 61 momentum values, 1 non-NaN
+2025-10-31 10:28:22.212 | DEBUG    | src.strategies.dual_momentum:generate_signals:191 -   IWM: 61 momentum values, 1 non-NaN
+2025-10-31 10:28:22.213 | DEBUG    | src.strategies.dual_momentum:generate_signals:203 -   SPY latest momentum: 0.08243568296077863
+2025-10-31 10:28:22.213 | DEBUG    | src.strategies.dual_momentum:generate_signals:203 -   QQQ latest momentum: -0.011855044558411465
+2025-10-31 10:28:22.214 | DEBUG    | src.strategies.dual_momentum:generate_signals:203 -   DIA latest momentum: -0.04793936688623612
+2025-10-31 10:28:22.214 | DEBUG    | src.strategies.dual_momentum:generate_signals:203 -   IWM latest momentum: -0.014465489862648284
+2025-10-31 10:28:22.215 | DEBUG    | src.strategies.dual_momentum:generate_signals:211 - Latest momentum scores at 2023-07-01 00:00:00:
+2025-10-31 10:28:22.216 | DEBUG    | src.strategies.dual_momentum:generate_signals:215 -   SPY: 0.0824 (8.24%) - PASS
+2025-10-31 10:28:22.216 | DEBUG    | src.strategies.dual_momentum:generate_signals:215 -   QQQ: -0.0119 (-1.19%) - FAIL
+2025-10-31 10:28:22.217 | DEBUG    | src.strategies.dual_momentum:generate_signals:215 -   DIA: -0.0479 (-4.79%) - FAIL
+2025-10-31 10:28:22.217 | DEBUG    | src.strategies.dual_momentum:generate_signals:215 -   IWM: -0.0145 (-1.45%) - FAIL
+2025-10-31 10:28:22.218 | INFO     | src.strategies.dual_momentum:generate_signals:273 - Generated 1 long signals for: ['SPY']
+2025-10-31 10:28:22.219 | INFO     | src.backtesting.engine:run:309 -    Generated 1 signals:
+2025-10-31 10:28:22.219 | INFO     | src.backtesting.engine:run:312 -      SPY: LONG (strength: 1.00)
+2025-10-31 10:28:22.220 | INFO     | src.backtesting.engine:_execute_signals:782 -    Closing positions no longer in signals:
+2025-10-31 10:28:22.220 | INFO     | src.backtesting.engine:_execute_signals:787 -      QQQ: 376.43 shares @ $216.65 (Value: $81,552.91, P&L: $6,223.93)
+2025-10-31 10:28:22.221 | DEBUG    | src.backtesting.engine:_close_position:1280 - Closed position: QQQ x 376.43 @ $216.54 (P&L: $6,183.15)
+2025-10-31 10:28:22.222 | INFO     | src.backtesting.engine:_execute_signals:787 -      IWM: 92.10 shares @ $136.10 (Value: $12,534.33, P&L: $-356.40)
+2025-10-31 10:28:22.222 | DEBUG    | src.backtesting.engine:_close_position:1280 - Closed position: IWM x 92.10 @ $136.03 (P&L: $-362.67)
+2025-10-31 10:28:22.223 | INFO     | src.backtesting.engine:_execute_signals:789 -    Proceeds from sales added to cash. New cash: $93,946.16
+2025-10-31 10:28:22.223 | INFO     | src.backtesting.engine:_execute_signals:792 -    Keeping existing positions:
+2025-10-31 10:28:22.224 | INFO     | src.backtesting.engine:_execute_signals:796 -      SPY: 40.62 shares @ $161.76 (Value: $6,570.12)
+2025-10-31 10:28:22.225 | INFO     | src.backtesting.engine:_execute_signals:923 - [ORDER SIZING] 2023-07-01: PV=$100,657.36, Cash=$93,946.16, Comm=0.1000%, Slip=0.0500%, Scale=1.000000
+2025-10-31 10:28:22.225 | INFO     | src.backtesting.engine:_execute_signals:926 - [ORDER SIZING] Weights: SPY=33.33%
+2025-10-31 10:28:22.226 | INFO     | src.backtesting.engine:_execute_signals:930 - [ORDER SIZING] Keeping 1 existing positions (may adjust sizes)
+2025-10-31 10:28:22.226 | INFO     | src.backtesting.engine:_execute_signals:959 - [EXECUTION ORDER] Sells first: [], then buys: ['SPY']
+2025-10-31 10:28:22.227 | DEBUG    | src.backtesting.engine:_execute_signals:998 -       Existing position: 40.62 shares worth $6,570.12
+2025-10-31 10:28:22.228 | INFO     | src.backtesting.engine:_execute_signals:1058 -      ?? ADD SPY [relative_top]
+2025-10-31 10:28:22.228 | INFO     | src.backtesting.engine:_execute_signals:1059 -         Price: $161.76 ? $161.84 (slippage: 0.050%)
+2025-10-31 10:28:22.229 | INFO     | src.backtesting.engine:_execute_signals:1060 -         Signal: strength=1.00 confidence=1.00
+2025-10-31 10:28:22.230 | INFO     | src.backtesting.engine:_execute_signals:1061 -         Target Shares: 207.32
+2025-10-31 10:28:22.230 | INFO     | src.backtesting.engine:_execute_signals:1064 -         Current Shares: 40.62
+2025-10-31 10:28:22.231 | INFO     | src.backtesting.engine:_execute_signals:1065 -         Share Change: +166.70
+2025-10-31 10:28:22.231 | INFO     | src.backtesting.engine:_execute_signals:1067 -         Commission: $26.98
+2025-10-31 10:28:22.232 | INFO     | src.backtesting.engine:_execute_signals:1068 -         Total Cost: $27,006.02
+2025-10-31 10:28:22.232 | DEBUG    | src.backtesting.engine:_adjust_position:1207 - Adjusting SPY: buying 166.70 more shares at $161.84 (cost: $27,006.02)
+2025-10-31 10:28:22.233 | INFO     | src.backtesting.engine:_execute_signals:1120 -         ? Position adjusted successfully
+2025-10-31 10:28:22.234 | INFO     | src.backtesting.engine:_execute_signals:1133 -         ?? Cash remaining: $66,940.13
+2025-10-31 10:28:22.234 | INFO     | src.backtesting.engine:_execute_signals:1139 - [ORDER SIZING] Batch total cost=$27,006.02, Cash end=$66,940.13
+2025-10-31 10:28:22.235 | INFO     | src.backtesting.engine:_log_position_changes:1305 -    Positions Closed:
+2025-10-31 10:28:22.235 | INFO     | src.backtesting.engine:_log_position_changes:1310 -      QQQ: 376.43 shares @ $216.65 (Value: $81,552.91, P&L: $6,223.93)
+2025-10-31 10:28:22.236 | INFO     | src.backtesting.engine:_log_position_changes:1310 -      IWM: 92.10 shares @ $136.10 (Value: $12,534.33, P&L: $-356.40)
+2025-10-31 10:28:22.237 | INFO     | src.backtesting.engine:run:333 -    After Rebalancing:
+2025-10-31 10:28:22.237 | INFO     | src.backtesting.engine:run:334 -      Portfolio Value: $100,475.82
+2025-10-31 10:28:22.238 | INFO     | src.backtesting.engine:run:335 -      Available Cash: $66,940.13
+2025-10-31 10:28:22.238 | INFO     | src.backtesting.engine:run:336 -      Change: $-181.55
+2025-10-31 10:28:22.239 | INFO     | src.backtesting.engine:run:342 -    ? Rebalancing complete
+2025-10-31 10:28:22.240 | INFO     | src.backtesting.engine:run:283 - ?? REBALANCING on 2023-08-01
+2025-10-31 10:28:22.241 | INFO     | src.backtesting.engine:run:284 -    Portfolio Value: $102,459.85
+2025-10-31 10:28:22.241 | INFO     | src.backtesting.engine:run:285 -    Available Cash: $66,940.13
+2025-10-31 10:28:22.242 | INFO     | src.backtesting.engine:run:289 -    Current Positions:
+2025-10-31 10:28:22.243 | INFO     | src.backtesting.engine:run:293 -      SPY: 207.32 shares @ $171.33 (Value: $35,519.71, P&L: $4,892.77)
+2025-10-31 10:28:22.245 | DEBUG    | src.strategies.dual_momentum:generate_signals:189 - Calculated momentum for 4 assets
+2025-10-31 10:28:22.246 | DEBUG    | src.strategies.dual_momentum:generate_signals:191 -   SPY: 61 momentum values, 1 non-NaN
+2025-10-31 10:28:22.246 | DEBUG    | src.strategies.dual_momentum:generate_signals:191 -   QQQ: 61 momentum values, 1 non-NaN
+2025-10-31 10:28:22.247 | DEBUG    | src.strategies.dual_momentum:generate_signals:191 -   DIA: 61 momentum values, 1 non-NaN
+2025-10-31 10:28:22.248 | DEBUG    | src.strategies.dual_momentum:generate_signals:191 -   IWM: 61 momentum values, 1 non-NaN
+2025-10-31 10:28:22.249 | DEBUG    | src.strategies.dual_momentum:generate_signals:203 -   SPY latest momentum: 0.1509633395417309
+2025-10-31 10:28:22.249 | DEBUG    | src.strategies.dual_momentum:generate_signals:203 -   QQQ latest momentum: 0.025289187687097314
+2025-10-31 10:28:22.250 | DEBUG    | src.strategies.dual_momentum:generate_signals:203 -   DIA latest momentum: 0.062017589828790465
+2025-10-31 10:28:22.250 | DEBUG    | src.strategies.dual_momentum:generate_signals:203 -   IWM latest momentum: -0.03926623386501071
+2025-10-31 10:28:22.251 | DEBUG    | src.strategies.dual_momentum:generate_signals:211 - Latest momentum scores at 2023-08-01 00:00:00:
+2025-10-31 10:28:22.252 | DEBUG    | src.strategies.dual_momentum:generate_signals:215 -   SPY: 0.1510 (15.10%) - PASS
+2025-10-31 10:28:22.252 | DEBUG    | src.strategies.dual_momentum:generate_signals:215 -   QQQ: 0.0253 (2.53%) - PASS
+2025-10-31 10:28:22.253 | DEBUG    | src.strategies.dual_momentum:generate_signals:215 -   DIA: 0.0620 (6.20%) - PASS
+2025-10-31 10:28:22.253 | DEBUG    | src.strategies.dual_momentum:generate_signals:215 -   IWM: -0.0393 (-3.93%) - FAIL
+2025-10-31 10:28:22.254 | INFO     | src.strategies.dual_momentum:generate_signals:273 - Generated 3 long signals for: ['SPY', 'DIA', 'QQQ']
+2025-10-31 10:28:22.255 | INFO     | src.backtesting.engine:run:309 -    Generated 3 signals:
+2025-10-31 10:28:22.255 | INFO     | src.backtesting.engine:run:312 -      SPY: LONG (strength: 1.00)
+2025-10-31 10:28:22.256 | INFO     | src.backtesting.engine:run:312 -      DIA: LONG (strength: 0.41)
+2025-10-31 10:28:22.256 | INFO     | src.backtesting.engine:run:312 -      QQQ: LONG (strength: 0.17)
+2025-10-31 10:28:22.257 | INFO     | src.backtesting.engine:_execute_signals:792 -    Keeping existing positions:
+2025-10-31 10:28:22.258 | INFO     | src.backtesting.engine:_execute_signals:796 -      SPY: 207.32 shares @ $171.33 (Value: $35,519.71)
+2025-10-31 10:28:22.258 | INFO     | src.backtesting.engine:_execute_signals:923 - [ORDER SIZING] 2023-08-01: PV=$102,459.85, Cash=$66,940.13, Comm=0.1000%, Slip=0.0500%, Scale=0.999001
+2025-10-31 10:28:22.259 | INFO     | src.backtesting.engine:_execute_signals:926 - [ORDER SIZING] Weights: SPY=63.36%, DIA=26.03%, QQQ=10.61%
+2025-10-31 10:28:22.259 | INFO     | src.backtesting.engine:_execute_signals:930 - [ORDER SIZING] Keeping 1 existing positions (may adjust sizes)
+2025-10-31 10:28:22.260 | INFO     | src.backtesting.engine:_execute_signals:959 - [EXECUTION ORDER] Sells first: [], then buys: ['SPY', 'DIA', 'QQQ']
+2025-10-31 10:28:22.261 | DEBUG    | src.backtesting.engine:_execute_signals:998 -       Existing position: 207.32 shares worth $35,519.71
+2025-10-31 10:28:22.261 | INFO     | src.backtesting.engine:_execute_signals:1058 -      ?? ADD SPY [relative_top]
+2025-10-31 10:28:22.262 | INFO     | src.backtesting.engine:_execute_signals:1059 -         Price: $171.33 ? $171.41 (slippage: 0.050%)
+2025-10-31 10:28:22.263 | INFO     | src.backtesting.engine:_execute_signals:1060 -         Signal: strength=1.00 confidence=0.88
+2025-10-31 10:28:22.263 | INFO     | src.backtesting.engine:_execute_signals:1061 -         Target Shares: 378.71
+2025-10-31 10:28:22.264 | INFO     | src.backtesting.engine:_execute_signals:1064 -         Current Shares: 207.32
+2025-10-31 10:28:22.264 | INFO     | src.backtesting.engine:_execute_signals:1065 -         Share Change: +171.39
+2025-10-31 10:28:22.265 | INFO     | src.backtesting.engine:_execute_signals:1067 -         Commission: $29.38
+2025-10-31 10:28:22.265 | INFO     | src.backtesting.engine:_execute_signals:1068 -         Total Cost: $29,408.48
+2025-10-31 10:28:22.266 | DEBUG    | src.backtesting.engine:_adjust_position:1207 - Adjusting SPY: buying 171.39 more shares at $171.41 (cost: $29,408.48)
+2025-10-31 10:28:22.267 | INFO     | src.backtesting.engine:_execute_signals:1120 -         ? Position adjusted successfully
+2025-10-31 10:28:22.267 | INFO     | src.backtesting.engine:_execute_signals:1133 -         ?? Cash remaining: $37,531.65
+2025-10-31 10:28:22.268 | INFO     | src.backtesting.engine:_execute_signals:1058 -      ?? BUY DIA [relative_top]
+2025-10-31 10:28:22.269 | INFO     | src.backtesting.engine:_execute_signals:1059 -         Price: $161.45 ? $161.53 (slippage: 0.050%)
+2025-10-31 10:28:22.269 | INFO     | src.backtesting.engine:_execute_signals:1060 -         Signal: strength=0.41 confidence=0.88
+2025-10-31 10:28:22.270 | INFO     | src.backtesting.engine:_execute_signals:1061 -         Target Shares: 165.10
+2025-10-31 10:28:22.270 | INFO     | src.backtesting.engine:_execute_signals:1067 -         Commission: $26.67
+2025-10-31 10:28:22.271 | INFO     | src.backtesting.engine:_execute_signals:1068 -         Total Cost: $26,695.19
+2025-10-31 10:28:22.272 | DEBUG    | src.backtesting.engine:_open_position:1160 - Opened position: DIA x 165.10 @ $161.53
+2025-10-31 10:28:22.272 | INFO     | src.backtesting.engine:_execute_signals:1129 -         ? Position opened successfully
+2025-10-31 10:28:22.273 | INFO     | src.backtesting.engine:_execute_signals:1133 -         ?? Cash remaining: $10,836.46
+2025-10-31 10:28:22.274 | INFO     | src.backtesting.engine:_execute_signals:1058 -      ?? BUY QQQ [relative_top]
+2025-10-31 10:28:22.274 | INFO     | src.backtesting.engine:_execute_signals:1059 -         Price: $226.13 ? $226.24 (slippage: 0.050%)
+2025-10-31 10:28:22.275 | INFO     | src.backtesting.engine:_execute_signals:1060 -         Signal: strength=0.17 confidence=0.88
+2025-10-31 10:28:22.275 | INFO     | src.backtesting.engine:_execute_signals:1061 -         Target Shares: 48.07
+2025-10-31 10:28:22.276 | INFO     | src.backtesting.engine:_execute_signals:1067 -         Commission: $10.87
+2025-10-31 10:28:22.277 | INFO     | src.backtesting.engine:_execute_signals:1068 -         Total Cost: $10,885.62
+2025-10-31 10:28:22.277 | DEBUG    | src.backtesting.engine:_open_position:1160 - Opened position: QQQ x 47.85 @ $226.24
+2025-10-31 10:28:22.278 | INFO     | src.backtesting.engine:_execute_signals:1129 -         ? Position opened successfully
+2025-10-31 10:28:22.278 | INFO     | src.backtesting.engine:_execute_signals:1133 -         ?? Cash remaining: $-0.00
+2025-10-31 10:28:22.279 | INFO     | src.backtesting.engine:_execute_signals:1139 - [ORDER SIZING] Batch total cost=$66,940.13, Cash end=$-0.00
+2025-10-31 10:28:22.280 | INFO     | src.backtesting.engine:_log_position_changes:1316 -    Positions Opened:
+2025-10-31 10:28:22.280 | INFO     | src.backtesting.engine:_log_position_changes:1320 -      QQQ: 47.85 shares @ $226.24 (Value: $10,825.63)
+2025-10-31 10:28:22.281 | INFO     | src.backtesting.engine:_log_position_changes:1320 -      DIA: 165.10 shares @ $161.53 (Value: $26,668.53)
+2025-10-31 10:28:22.281 | INFO     | src.backtesting.engine:run:333 -    After Rebalancing:
+2025-10-31 10:28:22.282 | INFO     | src.backtesting.engine:run:334 -      Portfolio Value: $102,378.29
+2025-10-31 10:28:22.283 | INFO     | src.backtesting.engine:run:335 -      Available Cash: $-0.00
+2025-10-31 10:28:22.283 | INFO     | src.backtesting.engine:run:336 -      Change: $-81.56
+2025-10-31 10:28:22.284 | INFO     | src.backtesting.engine:run:342 -    ? Rebalancing complete
+2025-10-31 10:28:22.287 | INFO     | src.backtesting.engine:run:283 - ?? REBALANCING on 2023-09-01
+2025-10-31 10:28:22.288 | INFO     | src.backtesting.engine:run:284 -    Portfolio Value: $103,776.38
+2025-10-31 10:28:22.289 | INFO     | src.backtesting.engine:run:285 -    Available Cash: $-0.00
+2025-10-31 10:28:22.290 | INFO     | src.backtesting.engine:run:289 -    Current Positions:
+2025-10-31 10:28:22.290 | INFO     | src.backtesting.engine:run:293 -      SPY: 378.71 shares @ $173.49 (Value: $65,703.75, P&L: $9,757.28)
+2025-10-31 10:28:22.291 | INFO     | src.backtesting.engine:run:293 -      DIA: 165.10 shares @ $163.51 (Value: $26,996.63, P&L: $328.11)
+2025-10-31 10:28:22.291 | INFO     | src.backtesting.engine:run:293 -      QQQ: 47.85 shares @ $231.48 (Value: $11,076.00, P&L: $250.37)
+2025-10-31 10:28:22.294 | DEBUG    | src.strategies.dual_momentum:generate_signals:189 - Calculated momentum for 4 assets
+2025-10-31 10:28:22.295 | DEBUG    | src.strategies.dual_momentum:generate_signals:191 -   SPY: 61 momentum values, 1 non-NaN
+2025-10-31 10:28:22.295 | DEBUG    | src.strategies.dual_momentum:generate_signals:191 -   QQQ: 61 momentum values, 1 non-NaN
+2025-10-31 10:28:22.296 | DEBUG    | src.strategies.dual_momentum:generate_signals:191 -   DIA: 61 momentum values, 1 non-NaN
+2025-10-31 10:28:22.297 | DEBUG    | src.strategies.dual_momentum:generate_signals:191 -   IWM: 61 momentum values, 1 non-NaN
+2025-10-31 10:28:22.297 | DEBUG    | src.strategies.dual_momentum:generate_signals:203 -   SPY latest momentum: 0.07630945219379859
+2025-10-31 10:28:22.298 | DEBUG    | src.strategies.dual_momentum:generate_signals:203 -   QQQ latest momentum: 0.06449609968159464
+2025-10-31 10:28:22.299 | DEBUG    | src.strategies.dual_momentum:generate_signals:203 -   DIA latest momentum: 0.09037486049938193
+2025-10-31 10:28:22.299 | DEBUG    | src.strategies.dual_momentum:generate_signals:203 -   IWM latest momentum: 0.07872675247019179
+2025-10-31 10:28:22.300 | DEBUG    | src.strategies.dual_momentum:generate_signals:211 - Latest momentum scores at 2023-09-01 00:00:00:
+2025-10-31 10:28:22.301 | DEBUG    | src.strategies.dual_momentum:generate_signals:215 -   SPY: 0.0763 (7.63%) - PASS
+2025-10-31 10:28:22.301 | DEBUG    | src.strategies.dual_momentum:generate_signals:215 -   QQQ: 0.0645 (6.45%) - PASS
+2025-10-31 10:28:22.302 | DEBUG    | src.strategies.dual_momentum:generate_signals:215 -   DIA: 0.0904 (9.04%) - PASS
+2025-10-31 10:28:22.302 | DEBUG    | src.strategies.dual_momentum:generate_signals:215 -   IWM: 0.0787 (7.87%) - PASS
+2025-10-31 10:28:22.303 | INFO     | src.strategies.dual_momentum:generate_signals:273 - Generated 3 long signals for: ['DIA', 'IWM', 'SPY']
+2025-10-31 10:28:22.304 | INFO     | src.backtesting.engine:run:309 -    Generated 3 signals:
+2025-10-31 10:28:22.304 | INFO     | src.backtesting.engine:run:312 -      DIA: LONG (strength: 1.00)
+2025-10-31 10:28:22.305 | INFO     | src.backtesting.engine:run:312 -      IWM: LONG (strength: 0.87)
+2025-10-31 10:28:22.305 | INFO     | src.backtesting.engine:run:312 -      SPY: LONG (strength: 0.84)
+2025-10-31 10:28:22.306 | INFO     | src.backtesting.engine:_execute_signals:782 -    Closing positions no longer in signals:
+2025-10-31 10:28:22.306 | INFO     | src.backtesting.engine:_execute_signals:787 -      QQQ: 47.85 shares @ $231.48 (Value: $11,076.00, P&L: $250.37)
+2025-10-31 10:28:22.307 | DEBUG    | src.backtesting.engine:_close_position:1280 - Closed position: QQQ x 47.85 @ $231.36 (P&L: $244.83)
+2025-10-31 10:28:22.308 | INFO     | src.backtesting.engine:_execute_signals:789 -    Proceeds from sales added to cash. New cash: $11,059.39
+2025-10-31 10:28:22.308 | INFO     | src.backtesting.engine:_execute_signals:792 -    Keeping existing positions:
+2025-10-31 10:28:22.309 | INFO     | src.backtesting.engine:_execute_signals:796 -      SPY: 378.71 shares @ $173.49 (Value: $65,703.75)
+2025-10-31 10:28:22.310 | INFO     | src.backtesting.engine:_execute_signals:796 -      DIA: 165.10 shares @ $163.51 (Value: $26,996.63)
+2025-10-31 10:28:22.310 | INFO     | src.backtesting.engine:_execute_signals:923 - [ORDER SIZING] 2023-09-01: PV=$103,776.38, Cash=$11,059.39, Comm=0.1000%, Slip=0.0500%, Scale=0.248216
+2025-10-31 10:28:22.311 | INFO     | src.backtesting.engine:_execute_signals:926 - [ORDER SIZING] Weights: DIA=36.83%, IWM=32.08%, SPY=31.09%
+2025-10-31 10:28:22.311 | INFO     | src.backtesting.engine:_execute_signals:930 - [ORDER SIZING] Keeping 2 existing positions (may adjust sizes)
+2025-10-31 10:28:22.312 | INFO     | src.backtesting.engine:_execute_signals:959 - [EXECUTION ORDER] Sells first: ['SPY'], then buys: ['DIA', 'IWM']
+2025-10-31 10:28:22.313 | DEBUG    | src.backtesting.engine:_execute_signals:998 -       Existing position: 378.71 shares worth $65,703.75
+2025-10-31 10:28:22.313 | INFO     | src.backtesting.engine:_execute_signals:1058 -      ?? REDUCE SPY [relative_top]
+2025-10-31 10:28:22.314 | INFO     | src.backtesting.engine:_execute_signals:1059 -         Price: $173.49 ? $173.58 (slippage: 0.050%)
+2025-10-31 10:28:22.314 | INFO     | src.backtesting.engine:_execute_signals:1060 -         Signal: strength=0.84 confidence=0.74
+2025-10-31 10:28:22.315 | INFO     | src.backtesting.engine:_execute_signals:1061 -         Target Shares: 185.90
+2025-10-31 10:28:22.316 | INFO     | src.backtesting.engine:_execute_signals:1064 -         Current Shares: 378.71
+2025-10-31 10:28:22.316 | INFO     | src.backtesting.engine:_execute_signals:1065 -         Share Change: -192.81
+2025-10-31 10:28:22.317 | INFO     | src.backtesting.engine:_execute_signals:1067 -         Commission: $33.47
+2025-10-31 10:28:22.317 | INFO     | src.backtesting.engine:_execute_signals:1068 -         Total Cost: $-33,434.34
+2025-10-31 10:28:22.318 | DEBUG    | src.backtesting.engine:_adjust_position:1212 - Adjusting SPY: selling 192.81 shares at $173.41 (proceeds: $33,400.93)
+2025-10-31 10:28:22.319 | INFO     | src.backtesting.engine:_execute_signals:1120 -         ? Position adjusted successfully
+2025-10-31 10:28:22.319 | INFO     | src.backtesting.engine:_execute_signals:1133 -         ?? Cash remaining: $44,460.31
+2025-10-31 10:28:22.320 | DEBUG    | src.backtesting.engine:_execute_signals:998 -       Existing position: 165.10 shares worth $26,996.63
+2025-10-31 10:28:22.320 | INFO     | src.backtesting.engine:_execute_signals:1058 -      ?? ADD DIA [relative_top]
+2025-10-31 10:28:22.321 | INFO     | src.backtesting.engine:_execute_signals:1059 -         Price: $163.51 ? $163.60 (slippage: 0.050%)
+2025-10-31 10:28:22.322 | INFO     | src.backtesting.engine:_execute_signals:1060 -         Signal: strength=1.00 confidence=0.74
+2025-10-31 10:28:22.322 | INFO     | src.backtesting.engine:_execute_signals:1061 -         Target Shares: 233.60
+2025-10-31 10:28:22.323 | INFO     | src.backtesting.engine:_execute_signals:1064 -         Current Shares: 165.10
+2025-10-31 10:28:22.323 | INFO     | src.backtesting.engine:_execute_signals:1065 -         Share Change: +68.50
+2025-10-31 10:28:22.324 | INFO     | src.backtesting.engine:_execute_signals:1067 -         Commission: $11.21
+2025-10-31 10:28:22.325 | INFO     | src.backtesting.engine:_execute_signals:1068 -         Total Cost: $11,217.67
+2025-10-31 10:28:22.325 | DEBUG    | src.backtesting.engine:_adjust_position:1207 - Adjusting DIA: buying 68.50 more shares at $163.60 (cost: $11,217.67)
+2025-10-31 10:28:22.326 | INFO     | src.backtesting.engine:_execute_signals:1120 -         ? Position adjusted successfully
+2025-10-31 10:28:22.327 | INFO     | src.backtesting.engine:_execute_signals:1133 -         ?? Cash remaining: $33,242.64
+2025-10-31 10:28:22.328 | INFO     | src.backtesting.engine:_execute_signals:1058 -      ?? BUY IWM [relative_top]
+2025-10-31 10:28:22.328 | INFO     | src.backtesting.engine:_execute_signals:1059 -         Price: $147.47 ? $147.54 (slippage: 0.050%)
+2025-10-31 10:28:22.329 | INFO     | src.backtesting.engine:_execute_signals:1060 -         Signal: strength=0.87 confidence=0.74
+2025-10-31 10:28:22.330 | INFO     | src.backtesting.engine:_execute_signals:1061 -         Target Shares: 225.64
+2025-10-31 10:28:22.330 | INFO     | src.backtesting.engine:_execute_signals:1067 -         Commission: $33.29
+2025-10-31 10:28:22.331 | INFO     | src.backtesting.engine:_execute_signals:1068 -         Total Cost: $33,324.28
+2025-10-31 10:28:22.331 | DEBUG    | src.backtesting.engine:_open_position:1160 - Opened position: IWM x 225.09 @ $147.54
+2025-10-31 10:28:22.332 | INFO     | src.backtesting.engine:_execute_signals:1129 -         ? Position opened successfully
+2025-10-31 10:28:22.333 | INFO     | src.backtesting.engine:_execute_signals:1133 -         ?? Cash remaining: $0.00
+2025-10-31 10:28:22.333 | INFO     | src.backtesting.engine:_execute_signals:1139 - [ORDER SIZING] Batch total cost=$77,894.66, Cash end=$0.00
+2025-10-31 10:28:22.334 | INFO     | src.backtesting.engine:_log_position_changes:1305 -    Positions Closed:
+2025-10-31 10:28:22.334 | INFO     | src.backtesting.engine:_log_position_changes:1310 -      QQQ: 47.85 shares @ $231.48 (Value: $11,076.00, P&L: $250.37)
+2025-10-31 10:28:22.335 | INFO     | src.backtesting.engine:_log_position_changes:1316 -    Positions Opened:
+2025-10-31 10:28:22.335 | INFO     | src.backtesting.engine:_log_position_changes:1320 -      IWM: 225.09 shares @ $147.54 (Value: $33,209.43)
+2025-10-31 10:28:22.336 | INFO     | src.backtesting.engine:run:333 -    After Rebalancing:
+2025-10-31 10:28:22.337 | INFO     | src.backtesting.engine:run:334 -      Portfolio Value: $103,659.60
+2025-10-31 10:28:22.337 | INFO     | src.backtesting.engine:run:335 -      Available Cash: $0.00
+2025-10-31 10:28:22.338 | INFO     | src.backtesting.engine:run:336 -      Change: $-116.78
+2025-10-31 10:28:22.338 | INFO     | src.backtesting.engine:run:342 -    ? Rebalancing complete
+2025-10-31 10:28:22.341 | INFO     | src.backtesting.engine:run:283 - ?? REBALANCING on 2023-10-01
+2025-10-31 10:28:22.341 | INFO     | src.backtesting.engine:run:284 -    Portfolio Value: $103,935.60
+2025-10-31 10:28:22.342 | INFO     | src.backtesting.engine:run:285 -    Available Cash: $0.00
+2025-10-31 10:28:22.342 | INFO     | src.backtesting.engine:run:289 -    Current Positions:
+2025-10-31 10:28:22.343 | INFO     | src.backtesting.engine:run:293 -      SPY: 185.90 shares @ $171.65 (Value: $31,909.37, P&L: $4,446.36)
+2025-10-31 10:28:22.343 | INFO     | src.backtesting.engine:run:293 -      DIA: 233.60 shares @ $171.04 (Value: $39,954.76, P&L: $2,221.50)
+2025-10-31 10:28:22.344 | INFO     | src.backtesting.engine:run:293 -      IWM: 225.09 shares @ $142.48 (Value: $32,071.47, P&L: $-1,137.96)
+2025-10-31 10:28:22.346 | DEBUG    | src.strategies.dual_momentum:generate_signals:189 - Calculated momentum for 4 assets
+2025-10-31 10:28:22.347 | DEBUG    | src.strategies.dual_momentum:generate_signals:191 -   SPY: 61 momentum values, 1 non-NaN
+2025-10-31 10:28:22.348 | DEBUG    | src.strategies.dual_momentum:generate_signals:191 -   QQQ: 61 momentum values, 1 non-NaN
+2025-10-31 10:28:22.349 | DEBUG    | src.strategies.dual_momentum:generate_signals:191 -   DIA: 61 momentum values, 1 non-NaN
+2025-10-31 10:28:22.349 | DEBUG    | src.strategies.dual_momentum:generate_signals:191 -   IWM: 61 momentum values, 1 non-NaN
+2025-10-31 10:28:22.350 | DEBUG    | src.strategies.dual_momentum:generate_signals:203 -   SPY latest momentum: -0.0039514597871386226
+2025-10-31 10:28:22.351 | DEBUG    | src.strategies.dual_momentum:generate_signals:203 -   QQQ latest momentum: 0.10084006286237446
+2025-10-31 10:28:22.351 | DEBUG    | src.strategies.dual_momentum:generate_signals:203 -   DIA latest momentum: 0.051236546823340445
+2025-10-31 10:28:22.352 | DEBUG    | src.strategies.dual_momentum:generate_signals:203 -   IWM latest momentum: 0.04667704995213828
+2025-10-31 10:28:22.353 | DEBUG    | src.strategies.dual_momentum:generate_signals:211 - Latest momentum scores at 2023-10-01 00:00:00:
+2025-10-31 10:28:22.353 | DEBUG    | src.strategies.dual_momentum:generate_signals:215 -   SPY: -0.0040 (-0.40%) - FAIL
+2025-10-31 10:28:22.354 | DEBUG    | src.strategies.dual_momentum:generate_signals:215 -   QQQ: 0.1008 (10.08%) - PASS
+2025-10-31 10:28:22.354 | DEBUG    | src.strategies.dual_momentum:generate_signals:215 -   DIA: 0.0512 (5.12%) - PASS
+2025-10-31 10:28:22.355 | DEBUG    | src.strategies.dual_momentum:generate_signals:215 -   IWM: 0.0467 (4.67%) - PASS
+2025-10-31 10:28:22.356 | INFO     | src.strategies.dual_momentum:generate_signals:273 - Generated 3 long signals for: ['QQQ', 'DIA', 'IWM']
+2025-10-31 10:28:22.356 | INFO     | src.backtesting.engine:run:309 -    Generated 3 signals:
+2025-10-31 10:28:22.357 | INFO     | src.backtesting.engine:run:312 -      QQQ: LONG (strength: 1.00)
+2025-10-31 10:28:22.357 | INFO     | src.backtesting.engine:run:312 -      DIA: LONG (strength: 0.51)
+2025-10-31 10:28:22.358 | INFO     | src.backtesting.engine:run:312 -      IWM: LONG (strength: 0.46)
+2025-10-31 10:28:22.358 | INFO     | src.backtesting.engine:_execute_signals:782 -    Closing positions no longer in signals:
+2025-10-31 10:28:22.359 | INFO     | src.backtesting.engine:_execute_signals:787 -      SPY: 185.90 shares @ $171.65 (Value: $31,909.37, P&L: $4,446.36)
+2025-10-31 10:28:22.360 | DEBUG    | src.backtesting.engine:_close_position:1280 - Closed position: SPY x 185.90 @ $171.56 (P&L: $4,430.40)
+2025-10-31 10:28:22.360 | INFO     | src.backtesting.engine:_execute_signals:789 -    Proceeds from sales added to cash. New cash: $31,861.52
+2025-10-31 10:28:22.361 | INFO     | src.backtesting.engine:_execute_signals:792 -    Keeping existing positions:
+2025-10-31 10:28:22.361 | INFO     | src.backtesting.engine:_execute_signals:796 -      DIA: 233.60 shares @ $171.04 (Value: $39,954.76)
+2025-10-31 10:28:22.362 | INFO     | src.backtesting.engine:_execute_signals:796 -      IWM: 225.09 shares @ $142.48 (Value: $32,071.47)
+2025-10-31 10:28:22.363 | INFO     | src.backtesting.engine:_execute_signals:923 - [ORDER SIZING] 2023-10-01: PV=$103,935.60, Cash=$31,861.52, Comm=0.1000%, Slip=0.0500%, Scale=0.603601
+2025-10-31 10:28:22.363 | INFO     | src.backtesting.engine:_execute_signals:926 - [ORDER SIZING] Weights: QQQ=50.74%, DIA=25.78%, IWM=23.48%
+2025-10-31 10:28:22.364 | INFO     | src.backtesting.engine:_execute_signals:930 - [ORDER SIZING] Keeping 2 existing positions (may adjust sizes)
+2025-10-31 10:28:22.365 | INFO     | src.backtesting.engine:_execute_signals:959 - [EXECUTION ORDER] Sells first: ['DIA', 'IWM'], then buys: ['QQQ']
+2025-10-31 10:28:22.365 | DEBUG    | src.backtesting.engine:_execute_signals:998 -       Existing position: 233.60 shares worth $39,954.76
+2025-10-31 10:28:22.366 | INFO     | src.backtesting.engine:_execute_signals:1058 -      ?? REDUCE DIA [relative_top]
+2025-10-31 10:28:22.366 | INFO     | src.backtesting.engine:_execute_signals:1059 -         Price: $171.04 ? $171.12 (slippage: 0.050%)
+2025-10-31 10:28:22.367 | INFO     | src.backtesting.engine:_execute_signals:1060 -         Signal: strength=0.51 confidence=0.85
+2025-10-31 10:28:22.368 | INFO     | src.backtesting.engine:_execute_signals:1061 -         Target Shares: 156.57
+2025-10-31 10:28:22.368 | INFO     | src.backtesting.engine:_execute_signals:1064 -         Current Shares: 233.60
+2025-10-31 10:28:22.369 | INFO     | src.backtesting.engine:_execute_signals:1065 -         Share Change: -77.03
+2025-10-31 10:28:22.369 | INFO     | src.backtesting.engine:_execute_signals:1067 -         Commission: $13.18
+2025-10-31 10:28:22.370 | INFO     | src.backtesting.engine:_execute_signals:1068 -         Total Cost: $-13,168.08
+2025-10-31 10:28:22.371 | DEBUG    | src.backtesting.engine:_adjust_position:1212 - Adjusting DIA: selling 77.03 shares at $170.95 (proceeds: $13,154.92)
+2025-10-31 10:28:22.371 | INFO     | src.backtesting.engine:_execute_signals:1120 -         ? Position adjusted successfully
+2025-10-31 10:28:22.372 | INFO     | src.backtesting.engine:_execute_signals:1133 -         ?? Cash remaining: $45,016.44
+2025-10-31 10:28:22.372 | DEBUG    | src.backtesting.engine:_execute_signals:998 -       Existing position: 225.09 shares worth $32,071.47
+2025-10-31 10:28:22.373 | INFO     | src.backtesting.engine:_execute_signals:1058 -      ?? REDUCE IWM [relative_top]
+2025-10-31 10:28:22.374 | INFO     | src.backtesting.engine:_execute_signals:1059 -         Price: $142.48 ? $142.56 (slippage: 0.050%)
+2025-10-31 10:28:22.374 | INFO     | src.backtesting.engine:_execute_signals:1060 -         Signal: strength=0.46 confidence=0.85
+2025-10-31 10:28:22.375 | INFO     | src.backtesting.engine:_execute_signals:1061 -         Target Shares: 171.23
+2025-10-31 10:28:22.375 | INFO     | src.backtesting.engine:_execute_signals:1064 -         Current Shares: 225.09
+2025-10-31 10:28:22.376 | INFO     | src.backtesting.engine:_execute_signals:1065 -         Share Change: -53.86
+2025-10-31 10:28:22.377 | INFO     | src.backtesting.engine:_execute_signals:1067 -         Commission: $7.68
+2025-10-31 10:28:22.377 | INFO     | src.backtesting.engine:_execute_signals:1068 -         Total Cost: $-7,670.69
+2025-10-31 10:28:22.378 | DEBUG    | src.backtesting.engine:_adjust_position:1212 - Adjusting IWM: selling 53.86 shares at $142.41 (proceeds: $7,663.02)
+2025-10-31 10:28:22.378 | INFO     | src.backtesting.engine:_execute_signals:1120 -         ? Position adjusted successfully
+2025-10-31 10:28:22.379 | INFO     | src.backtesting.engine:_execute_signals:1133 -         ?? Cash remaining: $52,679.46
+2025-10-31 10:28:22.380 | INFO     | src.backtesting.engine:_execute_signals:1058 -      ?? BUY QQQ [relative_top]
+2025-10-31 10:28:22.380 | INFO     | src.backtesting.engine:_execute_signals:1059 -         Price: $248.11 ? $248.24 (slippage: 0.050%)
+2025-10-31 10:28:22.381 | INFO     | src.backtesting.engine:_execute_signals:1060 -         Signal: strength=1.00 confidence=0.85
+2025-10-31 10:28:22.381 | INFO     | src.backtesting.engine:_execute_signals:1061 -         Target Shares: 212.43
+2025-10-31 10:28:22.382 | INFO     | src.backtesting.engine:_execute_signals:1067 -         Commission: $52.73
+2025-10-31 10:28:22.383 | INFO     | src.backtesting.engine:_execute_signals:1068 -         Total Cost: $52,785.71
+2025-10-31 10:28:22.383 | DEBUG    | src.backtesting.engine:_open_position:1160 - Opened position: QQQ x 212.00 @ $248.24
+2025-10-31 10:28:22.384 | INFO     | src.backtesting.engine:_execute_signals:1129 -         ? Position opened successfully
+2025-10-31 10:28:22.384 | INFO     | src.backtesting.engine:_execute_signals:1133 -         ?? Cash remaining: $-0.00
+2025-10-31 10:28:22.385 | INFO     | src.backtesting.engine:_execute_signals:1139 - [ORDER SIZING] Batch total cost=$73,518.22, Cash end=$-0.00
+2025-10-31 10:28:22.386 | INFO     | src.backtesting.engine:_log_position_changes:1305 -    Positions Closed:
+2025-10-31 10:28:22.386 | INFO     | src.backtesting.engine:_log_position_changes:1310 -      SPY: 185.90 shares @ $171.65 (Value: $31,909.37, P&L: $4,446.36)
+2025-10-31 10:28:22.387 | INFO     | src.backtesting.engine:_log_position_changes:1316 -    Positions Opened:
+2025-10-31 10:28:22.387 | INFO     | src.backtesting.engine:_log_position_changes:1320 -      QQQ: 212.00 shares @ $248.24 (Value: $52,626.83)
+2025-10-31 10:28:22.388 | INFO     | src.backtesting.engine:run:333 -    After Rebalancing:
+2025-10-31 10:28:22.388 | INFO     | src.backtesting.engine:run:334 -      Portfolio Value: $103,803.86
+2025-10-31 10:28:22.389 | INFO     | src.backtesting.engine:run:335 -      Available Cash: $-0.00
+2025-10-31 10:28:22.390 | INFO     | src.backtesting.engine:run:336 -      Change: $-131.74
+2025-10-31 10:28:22.390 | INFO     | src.backtesting.engine:run:342 -    ? Rebalancing complete
+2025-10-31 10:28:22.392 | INFO     | src.backtesting.engine:run:283 - ?? REBALANCING on 2023-11-01
+2025-10-31 10:28:22.393 | INFO     | src.backtesting.engine:run:284 -    Portfolio Value: $102,349.31
+2025-10-31 10:28:22.394 | INFO     | src.backtesting.engine:run:285 -    Available Cash: $-0.00
+2025-10-31 10:28:22.394 | INFO     | src.backtesting.engine:run:289 -    Current Positions:
+2025-10-31 10:28:22.395 | INFO     | src.backtesting.engine:run:293 -      DIA: 156.57 shares @ $171.58 (Value: $26,865.36, P&L: $1,574.25)
+2025-10-31 10:28:22.395 | INFO     | src.backtesting.engine:run:293 -      IWM: 171.23 shares @ $141.44 (Value: $24,218.90, P&L: $-1,043.70)
+2025-10-31 10:28:22.396 | INFO     | src.backtesting.engine:run:293 -      QQQ: 212.00 shares @ $241.81 (Value: $51,265.05, P&L: $-1,361.77)
+2025-10-31 10:28:22.398 | DEBUG    | src.strategies.dual_momentum:generate_signals:189 - Calculated momentum for 4 assets
+2025-10-31 10:28:22.399 | DEBUG    | src.strategies.dual_momentum:generate_signals:191 -   SPY: 61 momentum values, 1 non-NaN
+2025-10-31 10:28:22.400 | DEBUG    | src.strategies.dual_momentum:generate_signals:191 -   QQQ: 61 momentum values, 1 non-NaN
+2025-10-31 10:28:22.401 | DEBUG    | src.strategies.dual_momentum:generate_signals:191 -   DIA: 61 momentum values, 1 non-NaN
+2025-10-31 10:28:22.401 | DEBUG    | src.strategies.dual_momentum:generate_signals:191 -   IWM: 61 momentum values, 1 non-NaN
+2025-10-31 10:28:22.402 | DEBUG    | src.strategies.dual_momentum:generate_signals:203 -   SPY latest momentum: 0.03331412880741369
+2025-10-31 10:28:22.403 | DEBUG    | src.strategies.dual_momentum:generate_signals:203 -   QQQ latest momentum: 0.025524862883118393
+2025-10-31 10:28:22.403 | DEBUG    | src.strategies.dual_momentum:generate_signals:203 -   DIA latest momentum: 0.055422735445618265
+2025-10-31 10:28:22.404 | DEBUG    | src.strategies.dual_momentum:generate_signals:203 -   IWM latest momentum: -0.041833731525131146
+2025-10-31 10:28:22.405 | DEBUG    | src.strategies.dual_momentum:generate_signals:211 - Latest momentum scores at 2023-11-01 00:00:00:
+2025-10-31 10:28:22.405 | DEBUG    | src.strategies.dual_momentum:generate_signals:215 -   SPY: 0.0333 (3.33%) - PASS
+2025-10-31 10:28:22.406 | DEBUG    | src.strategies.dual_momentum:generate_signals:215 -   QQQ: 0.0255 (2.55%) - PASS
+2025-10-31 10:28:22.406 | DEBUG    | src.strategies.dual_momentum:generate_signals:215 -   DIA: 0.0554 (5.54%) - PASS
+2025-10-31 10:28:22.407 | DEBUG    | src.strategies.dual_momentum:generate_signals:215 -   IWM: -0.0418 (-4.18%) - FAIL
+2025-10-31 10:28:22.408 | INFO     | src.strategies.dual_momentum:generate_signals:273 - Generated 3 long signals for: ['DIA', 'SPY', 'QQQ']
+2025-10-31 10:28:22.408 | INFO     | src.backtesting.engine:run:309 -    Generated 3 signals:
+2025-10-31 10:28:22.409 | INFO     | src.backtesting.engine:run:312 -      DIA: LONG (strength: 1.00)
+2025-10-31 10:28:22.409 | INFO     | src.backtesting.engine:run:312 -      SPY: LONG (strength: 0.60)
+2025-10-31 10:28:22.410 | INFO     | src.backtesting.engine:run:312 -      QQQ: LONG (strength: 0.46)
+2025-10-31 10:28:22.410 | INFO     | src.backtesting.engine:_execute_signals:782 -    Closing positions no longer in signals:
+2025-10-31 10:28:22.411 | INFO     | src.backtesting.engine:_execute_signals:787 -      IWM: 171.23 shares @ $141.44 (Value: $24,218.90, P&L: $-1,043.70)
+2025-10-31 10:28:22.412 | DEBUG    | src.backtesting.engine:_close_position:1280 - Closed position: IWM x 171.23 @ $141.37 (P&L: $-1,055.81)
+2025-10-31 10:28:22.412 | INFO     | src.backtesting.engine:_execute_signals:789 -    Proceeds from sales added to cash. New cash: $24,182.58
+2025-10-31 10:28:22.413 | INFO     | src.backtesting.engine:_execute_signals:792 -    Keeping existing positions:
+2025-10-31 10:28:22.414 | INFO     | src.backtesting.engine:_execute_signals:796 -      DIA: 156.57 shares @ $171.58 (Value: $26,865.36)
+2025-10-31 10:28:22.414 | INFO     | src.backtesting.engine:_execute_signals:796 -      QQQ: 212.00 shares @ $241.81 (Value: $51,265.05)
+2025-10-31 10:28:22.415 | INFO     | src.backtesting.engine:_execute_signals:923 - [ORDER SIZING] 2023-11-01: PV=$102,349.31, Cash=$24,182.58, Comm=0.1000%, Slip=0.0500%, Scale=0.459109
+2025-10-31 10:28:22.415 | INFO     | src.backtesting.engine:_execute_signals:926 - [ORDER SIZING] Weights: DIA=48.51%, SPY=29.16%, QQQ=22.34%
+2025-10-31 10:28:22.416 | INFO     | src.backtesting.engine:_execute_signals:930 - [ORDER SIZING] Keeping 2 existing positions (may adjust sizes)
+2025-10-31 10:28:22.417 | INFO     | src.backtesting.engine:_execute_signals:959 - [EXECUTION ORDER] Sells first: ['QQQ'], then buys: ['DIA', 'SPY']
+2025-10-31 10:28:22.417 | DEBUG    | src.backtesting.engine:_execute_signals:998 -       Existing position: 212.00 shares worth $51,265.05
+2025-10-31 10:28:22.418 | INFO     | src.backtesting.engine:_execute_signals:1058 -      ?? REDUCE QQQ [relative_top]
+2025-10-31 10:28:22.418 | INFO     | src.backtesting.engine:_execute_signals:1059 -         Price: $241.81 ? $241.93 (slippage: 0.050%)
+2025-10-31 10:28:22.419 | INFO     | src.backtesting.engine:_execute_signals:1060 -         Signal: strength=0.46 confidence=0.82
+2025-10-31 10:28:22.420 | INFO     | src.backtesting.engine:_execute_signals:1061 -         Target Shares: 94.50
+2025-10-31 10:28:22.420 | INFO     | src.backtesting.engine:_execute_signals:1064 -         Current Shares: 212.00
+2025-10-31 10:28:22.421 | INFO     | src.backtesting.engine:_execute_signals:1065 -         Share Change: -117.50
+2025-10-31 10:28:22.421 | INFO     | src.backtesting.engine:_execute_signals:1067 -         Commission: $28.43
+2025-10-31 10:28:22.422 | INFO     | src.backtesting.engine:_execute_signals:1068 -         Total Cost: $-28,398.51
+2025-10-31 10:28:22.423 | DEBUG    | src.backtesting.engine:_adjust_position:1212 - Adjusting QQQ: selling 117.50 shares at $241.69 (proceeds: $28,370.12)
+2025-10-31 10:28:22.423 | INFO     | src.backtesting.engine:_execute_signals:1120 -         ? Position adjusted successfully
+2025-10-31 10:28:22.424 | INFO     | src.backtesting.engine:_execute_signals:1133 -         ?? Cash remaining: $52,552.70
+2025-10-31 10:28:22.424 | DEBUG    | src.backtesting.engine:_execute_signals:998 -       Existing position: 156.57 shares worth $26,865.36
+2025-10-31 10:28:22.425 | INFO     | src.backtesting.engine:_execute_signals:1058 -      ?? ADD DIA [relative_top]
+2025-10-31 10:28:22.426 | INFO     | src.backtesting.engine:_execute_signals:1059 -         Price: $171.58 ? $171.67 (slippage: 0.050%)
+2025-10-31 10:28:22.426 | INFO     | src.backtesting.engine:_execute_signals:1060 -         Signal: strength=1.00 confidence=0.82
+2025-10-31 10:28:22.427 | INFO     | src.backtesting.engine:_execute_signals:1061 -         Target Shares: 289.19
+2025-10-31 10:28:22.427 | INFO     | src.backtesting.engine:_execute_signals:1064 -         Current Shares: 156.57
+2025-10-31 10:28:22.428 | INFO     | src.backtesting.engine:_execute_signals:1065 -         Share Change: +132.62
+2025-10-31 10:28:22.429 | INFO     | src.backtesting.engine:_execute_signals:1067 -         Commission: $22.77
+2025-10-31 10:28:22.429 | INFO     | src.backtesting.engine:_execute_signals:1068 -         Total Cost: $22,788.58
+2025-10-31 10:28:22.430 | DEBUG    | src.backtesting.engine:_adjust_position:1207 - Adjusting DIA: buying 132.62 more shares at $171.67 (cost: $22,788.58)
+2025-10-31 10:28:22.430 | INFO     | src.backtesting.engine:_execute_signals:1120 -         ? Position adjusted successfully
+2025-10-31 10:28:22.431 | INFO     | src.backtesting.engine:_execute_signals:1133 -         ?? Cash remaining: $29,764.12
+2025-10-31 10:28:22.432 | INFO     | src.backtesting.engine:_execute_signals:1058 -      ?? BUY SPY [relative_top]
+2025-10-31 10:28:22.432 | INFO     | src.backtesting.engine:_execute_signals:1059 -         Price: $177.66 ? $177.75 (slippage: 0.050%)
+2025-10-31 10:28:22.433 | INFO     | src.backtesting.engine:_execute_signals:1060 -         Signal: strength=0.60 confidence=0.82
+2025-10-31 10:28:22.433 | INFO     | src.backtesting.engine:_execute_signals:1061 -         Target Shares: 167.88
+2025-10-31 10:28:22.434 | INFO     | src.backtesting.engine:_execute_signals:1067 -         Commission: $29.84
+2025-10-31 10:28:22.435 | INFO     | src.backtesting.engine:_execute_signals:1068 -         Total Cost: $29,870.79
+2025-10-31 10:28:22.435 | DEBUG    | src.backtesting.engine:_open_position:1160 - Opened position: SPY x 167.28 @ $177.75
+2025-10-31 10:28:22.436 | INFO     | src.backtesting.engine:_execute_signals:1129 -         ? Position opened successfully
+2025-10-31 10:28:22.436 | INFO     | src.backtesting.engine:_execute_signals:1133 -         ?? Cash remaining: $-0.00
+2025-10-31 10:28:22.437 | INFO     | src.backtesting.engine:_execute_signals:1139 - [ORDER SIZING] Batch total cost=$80,951.21, Cash end=$-0.00
+2025-10-31 10:28:22.438 | INFO     | src.backtesting.engine:_log_position_changes:1305 -    Positions Closed:
+2025-10-31 10:28:22.438 | INFO     | src.backtesting.engine:_log_position_changes:1310 -      IWM: 171.23 shares @ $141.44 (Value: $24,218.90, P&L: $-1,043.70)
+2025-10-31 10:28:22.439 | INFO     | src.backtesting.engine:_log_position_changes:1316 -    Positions Opened:
+2025-10-31 10:28:22.439 | INFO     | src.backtesting.engine:_log_position_changes:1320 -      SPY: 167.28 shares @ $177.75 (Value: $29,734.38)
+2025-10-31 10:28:22.440 | INFO     | src.backtesting.engine:run:333 -    After Rebalancing:
+2025-10-31 10:28:22.441 | INFO     | src.backtesting.engine:run:334 -      Portfolio Value: $102,206.51
+2025-10-31 10:28:22.441 | INFO     | src.backtesting.engine:run:335 -      Available Cash: $-0.00
+2025-10-31 10:28:22.442 | INFO     | src.backtesting.engine:run:336 -      Change: $-142.80
+2025-10-31 10:28:22.442 | INFO     | src.backtesting.engine:run:342 -    ? Rebalancing complete
+2025-10-31 10:28:22.444 | INFO     | src.backtesting.engine:run:283 - ?? REBALANCING on 2023-12-01
+2025-10-31 10:28:22.445 | INFO     | src.backtesting.engine:run:284 -    Portfolio Value: $110,342.65
+2025-10-31 10:28:22.446 | INFO     | src.backtesting.engine:run:285 -    Available Cash: $-0.00
+2025-10-31 10:28:22.446 | INFO     | src.backtesting.engine:run:289 -    Current Positions:
+2025-10-31 10:28:22.447 | INFO     | src.backtesting.engine:run:293 -      DIA: 289.19 shares @ $188.74 (Value: $54,582.92, P&L: $7,870.74)
+2025-10-31 10:28:22.447 | INFO     | src.backtesting.engine:run:293 -      QQQ: 94.50 shares @ $248.74 (Value: $23,507.42, P&L: $48.06)
+2025-10-31 10:28:22.448 | INFO     | src.backtesting.engine:run:293 -      SPY: 167.28 shares @ $192.81 (Value: $32,252.30, P&L: $2,517.92)
+2025-10-31 10:28:22.450 | DEBUG    | src.strategies.dual_momentum:generate_signals:189 - Calculated momentum for 4 assets
+2025-10-31 10:28:22.451 | DEBUG    | src.strategies.dual_momentum:generate_signals:191 -   SPY: 61 momentum values, 1 non-NaN
+2025-10-31 10:28:22.452 | DEBUG    | src.strategies.dual_momentum:generate_signals:191 -   QQQ: 61 momentum values, 1 non-NaN
+2025-10-31 10:28:22.453 | DEBUG    | src.strategies.dual_momentum:generate_signals:191 -   DIA: 61 momentum values, 1 non-NaN
+2025-10-31 10:28:22.453 | DEBUG    | src.strategies.dual_momentum:generate_signals:191 -   IWM: 61 momentum values, 1 non-NaN
+2025-10-31 10:28:22.454 | DEBUG    | src.strategies.dual_momentum:generate_signals:203 -   SPY latest momentum: 0.13145818824275746
+2025-10-31 10:28:22.455 | DEBUG    | src.strategies.dual_momentum:generate_signals:203 -   QQQ latest momentum: 0.0028299795316499843
+2025-10-31 10:28:22.455 | DEBUG    | src.strategies.dual_momentum:generate_signals:203 -   DIA latest momentum: 0.10642118748796281
+2025-10-31 10:28:22.456 | DEBUG    | src.strategies.dual_momentum:generate_signals:203 -   IWM latest momentum: 0.018232201653917368
+2025-10-31 10:28:22.456 | DEBUG    | src.strategies.dual_momentum:generate_signals:211 - Latest momentum scores at 2023-12-01 00:00:00:
+2025-10-31 10:28:22.457 | DEBUG    | src.strategies.dual_momentum:generate_signals:215 -   SPY: 0.1315 (13.15%) - PASS
+2025-10-31 10:28:22.458 | DEBUG    | src.strategies.dual_momentum:generate_signals:215 -   QQQ: 0.0028 (0.28%) - PASS
+2025-10-31 10:28:22.458 | DEBUG    | src.strategies.dual_momentum:generate_signals:215 -   DIA: 0.1064 (10.64%) - PASS
+2025-10-31 10:28:22.459 | DEBUG    | src.strategies.dual_momentum:generate_signals:215 -   IWM: 0.0182 (1.82%) - PASS
+2025-10-31 10:28:22.459 | INFO     | src.strategies.dual_momentum:generate_signals:273 - Generated 3 long signals for: ['SPY', 'DIA', 'IWM']
+2025-10-31 10:28:22.460 | INFO     | src.backtesting.engine:run:309 -    Generated 3 signals:
+2025-10-31 10:28:22.461 | INFO     | src.backtesting.engine:run:312 -      SPY: LONG (strength: 1.00)
+2025-10-31 10:28:22.461 | INFO     | src.backtesting.engine:run:312 -      DIA: LONG (strength: 0.81)
+2025-10-31 10:28:22.462 | INFO     | src.backtesting.engine:run:312 -      IWM: LONG (strength: 0.14)
+2025-10-31 10:28:22.462 | INFO     | src.backtesting.engine:_execute_signals:782 -    Closing positions no longer in signals:
+2025-10-31 10:28:22.463 | INFO     | src.backtesting.engine:_execute_signals:787 -      QQQ: 94.50 shares @ $248.74 (Value: $23,507.42, P&L: $48.06)
+2025-10-31 10:28:22.464 | DEBUG    | src.backtesting.engine:_close_position:1280 - Closed position: QQQ x 94.50 @ $248.62 (P&L: $36.31)
+2025-10-31 10:28:22.464 | INFO     | src.backtesting.engine:_execute_signals:789 -    Proceeds from sales added to cash. New cash: $23,472.18
+2025-10-31 10:28:22.465 | INFO     | src.backtesting.engine:_execute_signals:792 -    Keeping existing positions:
+2025-10-31 10:28:22.465 | INFO     | src.backtesting.engine:_execute_signals:796 -      DIA: 289.19 shares @ $188.74 (Value: $54,582.92)
+2025-10-31 10:28:22.466 | INFO     | src.backtesting.engine:_execute_signals:796 -      SPY: 167.28 shares @ $192.81 (Value: $32,252.30)
+2025-10-31 10:28:22.467 | INFO     | src.backtesting.engine:_execute_signals:923 - [ORDER SIZING] 2023-12-01: PV=$110,342.65, Cash=$23,472.18, Comm=0.1000%, Slip=0.0500%, Scale=0.727317
+2025-10-31 10:28:22.467 | INFO     | src.backtesting.engine:_execute_signals:926 - [ORDER SIZING] Weights: SPY=51.33%, DIA=41.55%, IWM=7.12%
+2025-10-31 10:28:22.468 | INFO     | src.backtesting.engine:_execute_signals:930 - [ORDER SIZING] Keeping 2 existing positions (may adjust sizes)
+2025-10-31 10:28:22.468 | INFO     | src.backtesting.engine:_execute_signals:959 - [EXECUTION ORDER] Sells first: ['DIA'], then buys: ['SPY', 'IWM']
+2025-10-31 10:28:22.469 | DEBUG    | src.backtesting.engine:_execute_signals:998 -       Existing position: 289.19 shares worth $54,582.92
+2025-10-31 10:28:22.470 | INFO     | src.backtesting.engine:_execute_signals:1058 -      ?? REDUCE DIA [relative_top]
+2025-10-31 10:28:22.470 | INFO     | src.backtesting.engine:_execute_signals:1059 -         Price: $188.74 ? $188.84 (slippage: 0.050%)
+2025-10-31 10:28:22.471 | INFO     | src.backtesting.engine:_execute_signals:1060 -         Signal: strength=0.81 confidence=0.76
+2025-10-31 10:28:22.472 | INFO     | src.backtesting.engine:_execute_signals:1061 -         Target Shares: 242.80
+2025-10-31 10:28:22.472 | INFO     | src.backtesting.engine:_execute_signals:1064 -         Current Shares: 289.19
+2025-10-31 10:28:22.473 | INFO     | src.backtesting.engine:_execute_signals:1065 -         Share Change: -46.39
+2025-10-31 10:28:22.473 | INFO     | src.backtesting.engine:_execute_signals:1067 -         Commission: $8.76
+2025-10-31 10:28:22.474 | INFO     | src.backtesting.engine:_execute_signals:1068 -         Total Cost: $-8,751.14
+2025-10-31 10:28:22.474 | DEBUG    | src.backtesting.engine:_adjust_position:1212 - Adjusting DIA: selling 46.39 shares at $188.65 (proceeds: $8,742.39)
+2025-10-31 10:28:22.475 | INFO     | src.backtesting.engine:_execute_signals:1120 -         ? Position adjusted successfully
+2025-10-31 10:28:22.476 | INFO     | src.backtesting.engine:_execute_signals:1133 -         ?? Cash remaining: $32,214.57
+2025-10-31 10:28:22.476 | DEBUG    | src.backtesting.engine:_execute_signals:998 -       Existing position: 167.28 shares worth $32,252.30
+2025-10-31 10:28:22.477 | INFO     | src.backtesting.engine:_execute_signals:1058 -      ?? ADD SPY [relative_top]
+2025-10-31 10:28:22.478 | INFO     | src.backtesting.engine:_execute_signals:1059 -         Price: $192.81 ? $192.90 (slippage: 0.050%)
+2025-10-31 10:28:22.478 | INFO     | src.backtesting.engine:_execute_signals:1060 -         Signal: strength=1.00 confidence=0.76
+2025-10-31 10:28:22.479 | INFO     | src.backtesting.engine:_execute_signals:1061 -         Target Shares: 293.61
+2025-10-31 10:28:22.479 | INFO     | src.backtesting.engine:_execute_signals:1064 -         Current Shares: 167.28
+2025-10-31 10:28:22.480 | INFO     | src.backtesting.engine:_execute_signals:1065 -         Share Change: +126.33
+2025-10-31 10:28:22.480 | INFO     | src.backtesting.engine:_execute_signals:1067 -         Commission: $24.37
+2025-10-31 10:28:22.481 | INFO     | src.backtesting.engine:_execute_signals:1068 -         Total Cost: $24,393.15
+2025-10-31 10:28:22.501 | DEBUG    | src.backtesting.engine:_adjust_position:1207 - Adjusting SPY: buying 126.33 more shares at $192.90 (cost: $24,393.15)
+2025-10-31 10:28:22.501 | INFO     | src.backtesting.engine:_execute_signals:1120 -         ? Position adjusted successfully
+2025-10-31 10:28:22.502 | INFO     | src.backtesting.engine:_execute_signals:1133 -         ?? Cash remaining: $7,821.42
+2025-10-31 10:28:22.503 | INFO     | src.backtesting.engine:_execute_signals:1058 -      ?? BUY IWM [relative_top]
+2025-10-31 10:28:22.510 | INFO     | src.backtesting.engine:_execute_signals:1059 -         Price: $144.38 ? $144.45 (slippage: 0.050%)
+2025-10-31 10:28:22.518 | INFO     | src.backtesting.engine:_execute_signals:1060 -         Signal: strength=0.14 confidence=0.76
+2025-10-31 10:28:22.518 | INFO     | src.backtesting.engine:_execute_signals:1061 -         Target Shares: 54.38
+2025-10-31 10:28:22.519 | INFO     | src.backtesting.engine:_execute_signals:1067 -         Commission: $7.86
+2025-10-31 10:28:22.519 | INFO     | src.backtesting.engine:_execute_signals:1068 -         Total Cost: $7,862.98
+2025-10-31 10:28:22.520 | DEBUG    | src.backtesting.engine:_open_position:1160 - Opened position: IWM x 54.09 @ $144.45
+2025-10-31 10:28:22.521 | INFO     | src.backtesting.engine:_execute_signals:1129 -         ? Position opened successfully
+2025-10-31 10:28:22.521 | INFO     | src.backtesting.engine:_execute_signals:1133 -         ?? Cash remaining: $-0.00
+2025-10-31 10:28:22.522 | INFO     | src.backtesting.engine:_execute_signals:1139 - [ORDER SIZING] Batch total cost=$40,965.71, Cash end=$-0.00
+2025-10-31 10:28:22.528 | INFO     | src.backtesting.engine:_log_position_changes:1305 -    Positions Closed:
+2025-10-31 10:28:22.528 | INFO     | src.backtesting.engine:_log_position_changes:1310 -      QQQ: 94.50 shares @ $248.74 (Value: $23,507.42, P&L: $48.06)
+2025-10-31 10:28:22.529 | INFO     | src.backtesting.engine:_log_position_changes:1316 -    Positions Opened:
+2025-10-31 10:28:22.536 | INFO     | src.backtesting.engine:_log_position_changes:1320 -      IWM: 54.09 shares @ $144.45 (Value: $7,813.61)
+2025-10-31 10:28:22.537 | INFO     | src.backtesting.engine:run:333 -    After Rebalancing:
+2025-10-31 10:28:22.538 | INFO     | src.backtesting.engine:run:334 -      Portfolio Value: $110,249.91
+2025-10-31 10:28:22.538 | INFO     | src.backtesting.engine:run:335 -      Available Cash: $-0.00
+2025-10-31 10:28:22.552 | INFO     | src.backtesting.engine:run:336 -      Change: $-92.74
+2025-10-31 10:28:22.562 | INFO     | src.backtesting.engine:run:342 -    ? Rebalancing complete
+2025-10-31 10:28:22.564 | DEBUG    | src.backtesting.engine:_close_position:1280 - Closed position: DIA x 242.80 @ $181.45 (P&L: $4,836.61)
+2025-10-31 10:28:22.573 | DEBUG    | src.backtesting.engine:_close_position:1280 - Closed position: SPY x 293.61 @ $192.13 (P&L: $4,221.30)
+2025-10-31 10:28:22.574 | DEBUG    | src.backtesting.engine:_close_position:1280 - Closed position: IWM x 54.09 @ $153.90 (P&L: $511.04)
+2025-10-31 10:28:22.575 | INFO     | src.backtesting.engine:_generate_results:1357 - ?? Performance metrics calculated from 2023-03-02 to 2023-12-31
+2025-10-31 10:28:22.577 | INFO     | src.backtesting.engine:_generate_results:1435 - ?? No benchmark data provided for comparison
+2025-10-31 10:28:22.583 | DEBUG    | src.backtesting.engine:_create_positions_dataframe:589 - Creating positions DataFrame from 365 snapshots
+2025-10-31 10:28:22.585 | DEBUG    | src.backtesting.engine:_create_positions_dataframe:594 - Initial DataFrame shape after conversion: (365, 15)
+2025-10-31 10:28:22.585 | DEBUG    | src.backtesting.engine:_create_positions_dataframe:595 - Initial DataFrame columns: ['timestamp', 'portfolio_value', 'cash', 'QQQ_quantity', 'QQQ_price', 'QQQ_value', 'DIA_quantity', 'DIA_price', 'DIA_value', 'SPY_quantity', 'SPY_price', 'SPY_value', 'IWM_quantity', 'IWM_price', 'IWM_value']
+2025-10-31 10:28:22.586 | DEBUG    | src.backtesting.engine:_create_positions_dataframe:606 - Filtered position history from 365 to 305 records (performance period)
+2025-10-31 10:28:22.619 | INFO     | src.backtesting.engine:_generate_results:1451 - ============================================================
+2025-10-31 10:28:22.620 | INFO     | src.backtesting.engine:_generate_results:1452 - POSITION DATA SUMMARY
+2025-10-31 10:28:22.620 | INFO     | src.backtesting.engine:_generate_results:1453 - ============================================================
+2025-10-31 10:28:22.621 | INFO     | src.backtesting.engine:_generate_results:1454 - Total timesteps in backtest: 305
+2025-10-31 10:28:22.622 | INFO     | src.backtesting.engine:_generate_results:1455 - Position history snapshots recorded: 365
+2025-10-31 10:28:22.622 | INFO     | src.backtesting.engine:_generate_results:1456 - Positions DataFrame shape: (305, 22)
+2025-10-31 10:28:22.623 | INFO     | src.backtesting.engine:_generate_results:1459 - Positions DataFrame columns: ['portfolio_value', 'cash', 'cash_pct', 'portfolio_quantity', 'portfolio_price', 'portfolio_pct', 'QQQ_value', 'QQQ_quantity', 'QQQ_price', 'QQQ_pct', 'DIA_value', 'DIA_quantity', 'DIA_price', 'DIA_pct', 'SPY_value', 'SPY_quantity', 'SPY_price', 'SPY_pct', 'IWM_value', 'IWM_quantity', 'IWM_price', 'IWM_pct']
+2025-10-31 10:28:22.623 | INFO     | src.backtesting.engine:_generate_results:1460 - First 3 rows of positions data:
+2025-10-31 10:28:22.636 | INFO     | src.backtesting.engine:_generate_results:1461 - 
+            portfolio_value           cash  ...  IWM_price  IWM_pct
+timestamp                                   ...                    
+2023-03-02    100000.000000  100000.000000  ...        NaN      NaN
+2023-03-03    100162.038573   66633.333333  ...        NaN      NaN
+2023-03-04    100634.890545   66633.333333  ...        NaN      NaN
+
+[3 rows x 22 columns]
+2025-10-31 10:28:22.637 | INFO     | src.backtesting.engine:_generate_results:1462 - Last 3 rows of positions data:
+2025-10-31 10:28:22.649 | INFO     | src.backtesting.engine:_generate_results:1463 - 
+            portfolio_value          cash  ...   IWM_price   IWM_pct
+timestamp                                  ...                      
+2023-12-29    108432.744206 -9.094947e-13  ...  154.352403  7.699974
+2023-12-30    108513.989856 -9.094947e-13  ...  153.144139  7.633979
+2023-12-31    108845.649027 -9.094947e-13  ...  153.973721  7.651945
+
+[3 rows x 22 columns]
+2025-10-31 10:28:22.650 | INFO     | src.backtesting.engine:_generate_results:1471 - ============================================================
+2025-10-31 10:28:22.651 | INFO     | src.backtesting.engine:run:356 - Backtest complete. Final value: $108,845.65 (8.85% return)
+2025-10-31 10:28:22.651 | INFO     | src.backtesting.engine:run:360 - Detailed backtest log saved to: logs/backtest_DualMomentumStrategy_20251031_102822.log
