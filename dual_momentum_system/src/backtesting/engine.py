@@ -23,6 +23,26 @@ from ..core.types import (
     Signal,
     Trade,
 )
+from ..portfolio_optimization.methods import (
+    EqualWeightOptimizer,
+    HierarchicalRiskParityOptimizer,
+    InverseVolatilityOptimizer,
+    MaximumDiversificationOptimizer,
+    MaximumSharpeOptimizer,
+    MinimumVarianceOptimizer,
+    RiskParityOptimizer,
+)
+
+
+OPTIMIZATION_METHOD_CLASSES = {
+    'equal_weight': EqualWeightOptimizer,
+    'inverse_volatility': InverseVolatilityOptimizer,
+    'minimum_variance': MinimumVarianceOptimizer,
+    'maximum_sharpe': MaximumSharpeOptimizer,
+    'risk_parity': RiskParityOptimizer,
+    'maximum_diversification': MaximumDiversificationOptimizer,
+    'hierarchical_risk_parity': HierarchicalRiskParityOptimizer,
+}
 
 
 class BacktestEngine:
@@ -257,10 +277,10 @@ class BacktestEngine:
                 # Track first rebalancing date
                 if first_rebalance_date is None:
                     first_rebalance_date = current_date
-                    logger.info(f"📊 Performance tracking starts from first rebalancing: {current_date.strftime('%Y-%m-%d')}")
+                    logger.info(f"?? Performance tracking starts from first rebalancing: {current_date.strftime('%Y-%m-%d')}")
                 
                 # Log rebalancing start
-                logger.info(f"🔄 REBALANCING on {current_date.strftime('%Y-%m-%d')}")
+                logger.info(f"?? REBALANCING on {current_date.strftime('%Y-%m-%d')}")
                 logger.info(f"   Portfolio Value: ${portfolio_value:,.2f}")
                 logger.info(f"   Available Cash: ${self.cash:,.2f}")
                 
@@ -319,7 +339,7 @@ class BacktestEngine:
                 
                 # Update last rebalance date
                 last_rebalance = current_date
-                logger.info("   ✅ Rebalancing complete")
+                logger.info("   ? Rebalancing complete")
         
         # Close all remaining positions at end
         final_date = date_index[-1]
@@ -374,7 +394,7 @@ class BacktestEngine:
         if safe_asset and safe_asset not in aligned_data:
             error_msg = (
                 f"\n{'='*80}\n"
-                f"❌ CONFIGURATION ERROR: Safe asset '{safe_asset}' configured but no price data available!\n"
+                f"? CONFIGURATION ERROR: Safe asset '{safe_asset}' configured but no price data available!\n"
                 f"\n"
                 f"IMPACT: During bearish markets, defensive signals will fail, leaving portfolio in CASH.\n"
                 f"\n"
@@ -626,6 +646,105 @@ class BacktestEngine:
         
         return result_df
     
+    def _compute_optimized_risk_weights(
+        self,
+        strategy: Optional[BaseStrategy],
+        optimization_config: Dict[str, Any],
+        included_risk_signals: List[Signal],
+        aligned_data: Dict[str, pd.DataFrame],
+        current_date: datetime,
+    ) -> Optional[tuple[Dict[str, float], str, int]]:
+        """Calculate risk asset weights using the configured optimization method."""
+        if strategy is None or not optimization_config or not optimization_config.get('enabled', False):
+            return None
+        if not included_risk_signals:
+            return None
+        method_key = optimization_config.get('method', 'equal_weight')
+        optimizer_cls = OPTIMIZATION_METHOD_CLASSES.get(method_key)
+        if optimizer_cls is None:
+            logger.warning(
+                f"Unknown portfolio optimization method '{method_key}'. Available methods: {list(OPTIMIZATION_METHOD_CLASSES.keys())}"
+            )
+            return None
+        risk_symbols = [signal.symbol for signal in included_risk_signals]
+        primary_symbol = risk_symbols[0]
+        primary_data = aligned_data.get(primary_symbol)
+        if primary_data is None or current_date not in primary_data.index:
+            logger.debug("Primary symbol '%s' missing data at %s", primary_symbol, current_date)
+            return None
+        lookback = int(
+            optimization_config.get(
+                'lookback',
+                optimization_config.get(
+                    'lookback_period',
+                    strategy.get_required_history() if hasattr(strategy, 'get_required_history') else 252,
+                ),
+            )
+        )
+        lookback = max(lookback, 2)
+        loc = primary_data.index.get_loc(current_date)
+        if isinstance(loc, slice):
+            loc = loc.stop - 1
+        start_loc = max(0, loc - lookback)
+        window_index = primary_data.index[start_loc:loc + 1]
+        if len(window_index) < 2:
+            logger.debug("Insufficient price history for optimization window (%d bars)", len(window_index))
+            return None
+        try:
+            price_matrix = pd.DataFrame({
+                symbol: aligned_data[symbol].loc[window_index, 'close']
+                for symbol in risk_symbols
+            })
+        except KeyError as exc:
+            logger.debug("Missing price data for optimization: %s", exc)
+            return None
+        returns_df = (
+            price_matrix.pct_change()
+            .replace([np.inf, -np.inf], np.nan)
+            .dropna(how='any')
+        )
+        history_bars = len(returns_df)
+        min_history = int(
+            optimization_config.get('min_history', max(len(risk_symbols) * 5, 20))
+        )
+        if history_bars < max(2, min_history):
+            logger.debug(
+                "Not enough return history for optimization (have %d, need %d)",
+                history_bars,
+                min_history,
+            )
+            return None
+        optimizer_kwargs = {
+            'min_weight': float(optimization_config.get('min_weight', 0.0)),
+            'max_weight': float(optimization_config.get('max_weight', 1.0)),
+            'risk_free_rate': float(
+                optimization_config.get(
+                    'risk_free_rate',
+                    getattr(strategy, 'config', {}).get('risk_free_rate', self.risk_free_rate),
+                )
+            ),
+        }
+        optimizer = optimizer_cls(**optimizer_kwargs)
+        method_kwargs = optimization_config.get('method_kwargs', {})
+        try:
+            optimization_result = optimizer.optimize(returns_df, **method_kwargs)
+        except Exception as exc:
+            logger.warning(
+                f"Portfolio optimization failed using '{method_key}' on {current_date.date()}: {exc}"
+            )
+            return None
+        weights = {
+            symbol: float(optimization_result.weights.get(symbol, 0.0))
+            for symbol in risk_symbols
+        }
+        total_positive_weight = sum(max(0.0, weight) for weight in weights.values())
+        if total_positive_weight <= 0:
+            logger.debug(
+                "Optimization method '%s' returned non-positive weights; skipping", method_key
+            )
+            return None
+        return weights, method_key, history_bars
+
     def _execute_signals(
         self,
         signals: List[Signal],
@@ -723,6 +842,44 @@ class BacktestEngine:
             normalized_weights[safe_signal.symbol] = safe_share
         
         # If no included assets and safe not available, weights remain empty (cash)
+        if strategy is not None:
+            baseline_weights = dict(normalized_weights)
+            optimization_cfg = getattr(strategy, 'config', {}).get('portfolio_optimization', {})
+            optimization_output = self._compute_optimized_risk_weights(
+                strategy,
+                optimization_cfg,
+                included_risk,
+                aligned_data,
+                current_date,
+            )
+            if optimization_output:
+                optimized_weights, optimized_method, history_bars = optimization_output
+                total_opt_weight = sum(
+                    max(0.0, optimized_weights.get(signal.symbol, 0.0))
+                    for signal in included_risk
+                )
+                if total_opt_weight > 0 and risk_share > 0:
+                    new_weights: Dict[str, float] = {}
+                    for signal in included_risk:
+                        sym = signal.symbol
+                        weight_fraction = max(0.0, optimized_weights.get(sym, 0.0))
+                        new_weights[sym] = risk_share * weight_fraction / total_opt_weight
+                    if safe_share > 0 and safe_signal is not None:
+                        new_weights[safe_signal.symbol] = safe_share
+                    normalized_weights.clear()
+                    normalized_weights.update(new_weights)
+                    logger.info(
+                        "[PORTFOLIO OPT] %s weights (history=%d bars): %s",
+                        optimized_method.replace('_', ' ').title(),
+                        history_bars,
+                        ", ".join(
+                            f"{sym}={normalized_weights[sym]*100:.2f}%"
+                            for sym in new_weights.keys()
+                        ),
+                    )
+                else:
+                    normalized_weights.clear()
+                    normalized_weights.update(baseline_weights)
 
         # Then, open/adjust positions based on weights
         ordered_signals: List[Signal] = []
@@ -810,7 +967,7 @@ class BacktestEngine:
                 # This should not happen now due to fail-fast validation
                 # But keeping as defensive check
                 logger.error(
-                    f"❌ Signal for '{signal.symbol}' cannot be executed - no price data! "
+                    f"? Signal for '{signal.symbol}' cannot be executed - no price data! "
                     f"This should have been caught in validation. "
                     f"Reason: {signal.reason.value if hasattr(signal, 'reason') else 'unknown'}"
                 )
@@ -898,8 +1055,8 @@ class BacktestEngine:
             else:
                 action_str = "BUY"
             
-            logger.info(f"     📈 {action_str} {signal.symbol}{reason_str}{blend_str}")
-            logger.info(f"        Price: ${current_price:.2f} → ${execution_price:.2f} (slippage: {self.slippage:.3%})")
+            logger.info(f"     ?? {action_str} {signal.symbol}{reason_str}{blend_str}")
+            logger.info(f"        Price: ${current_price:.2f} ? ${execution_price:.2f} (slippage: {self.slippage:.3%})")
             logger.info(f"        Signal: strength={signal.strength:.2f}{confidence_str}")
             logger.info(f"        Target Shares: {shares:.2f}")
             
@@ -912,14 +1069,14 @@ class BacktestEngine:
             
             # Skip if no change needed
             if existing_position and abs(shares - existing_shares) < 0.01:
-                logger.info(f"        ✅ No adjustment needed (already at target)")
+                logger.info(f"        ? No adjustment needed (already at target)")
                 continue
             
             # If buying and total cost exceeds available cash, reduce position size
             if total_cost > self.cash and total_cost > 0:
                 if existing_position:
                     # Can't afford the full adjustment
-                    logger.warning(f"     ⚠️  Cannot fully adjust {signal.symbol} - insufficient cash")
+                    logger.warning(f"     ??  Cannot fully adjust {signal.symbol} - insufficient cash")
                     logger.warning(f"        Required: ${total_cost:,.2f}, Available: ${self.cash:,.2f}")
                     # Calculate what we can afford
                     max_additional = self.cash / (1 + self.commission)
@@ -947,7 +1104,7 @@ class BacktestEngine:
             
             # Check if we have enough cash (with small tolerance for floating point precision)
             if total_cost > self.cash + 1e-6 and total_cost > 0:
-                logger.warning(f"     ❌ SKIPPED {action_str} {signal.symbol} - Insufficient cash")
+                logger.warning(f"     ? SKIPPED {action_str} {signal.symbol} - Insufficient cash")
                 logger.warning(f"        Required: ${total_cost:,.2f}, Available: ${self.cash:,.2f}")
                 continue
             
@@ -960,7 +1117,7 @@ class BacktestEngine:
                     current_price,  # Pass current price, not execution price (adjust_position handles slippage)
                     current_date
                 )
-                logger.info(f"        ✅ Position adjusted successfully")
+                logger.info(f"        ? Position adjusted successfully")
             else:
                 # Open new position
                 self._open_position(
@@ -969,11 +1126,11 @@ class BacktestEngine:
                     execution_price,
                     current_date
                 )
-                logger.info(f"        ✅ Position opened successfully")
+                logger.info(f"        ? Position opened successfully")
                 # Deduct cash for new position
                 self.cash -= total_cost
             
-            logger.info(f"        💰 Cash remaining: ${self.cash:,.2f}")
+            logger.info(f"        ?? Cash remaining: ${self.cash:,.2f}")
             
             # Track for batch totals
             remaining_cash = self.cash
@@ -1173,7 +1330,7 @@ class BacktestEngine:
                 action = "Increased" if quantity_change > 0 else "Reduced"
                 logger.info(f"   Position Adjusted:")
                 logger.info(f"     {symbol}: {action} by {abs(quantity_change):.2f} shares "
-                          f"({pos_before.quantity:.2f} → {pos_after.quantity:.2f})")
+                          f"({pos_before.quantity:.2f} ? {pos_after.quantity:.2f})")
         
         # If no changes, log that
         if not closed_positions and not opened_positions and not any(
@@ -1197,9 +1354,9 @@ class BacktestEngine:
         # Filter data to start from the first rebalancing date (performance measurement period)
         if start_date in equity_series.index:
             equity_series = equity_series.loc[start_date:]
-            logger.info(f"📊 Performance metrics calculated from {start_date.strftime('%Y-%m-%d')} to {end_date.strftime('%Y-%m-%d')}")
+            logger.info(f"?? Performance metrics calculated from {start_date.strftime('%Y-%m-%d')} to {end_date.strftime('%Y-%m-%d')}")
         else:
-            logger.warning(f"⚠️ Start date {start_date.strftime('%Y-%m-%d')} not found in equity curve, using full period")
+            logger.warning(f"?? Start date {start_date.strftime('%Y-%m-%d')} not found in equity curve, using full period")
         
         # Calculate returns
         returns = equity_series.pct_change().dropna()
@@ -1248,7 +1405,7 @@ class BacktestEngine:
                     exit_cost_factor = 1.0 - (self.commission + self.slippage)
                     benchmark_indexed.iloc[-1] = benchmark_indexed.iloc[-1] * exit_cost_factor
                     
-                    logger.info(f"📊 Applied transaction costs to benchmark:")
+                    logger.info(f"?? Applied transaction costs to benchmark:")
                     logger.info(f"   Entry cost: {(self.commission + self.slippage):.4%}")
                     logger.info(f"   Exit cost: {(self.commission + self.slippage):.4%}")
                     logger.info(f"   Total impact: ~{2 * (self.commission + self.slippage):.4%}")
@@ -1260,7 +1417,7 @@ class BacktestEngine:
                 benchmark_returns = benchmark_indexed.pct_change().dropna()
                 
                 # Log benchmark alignment and indexing for verification
-                logger.info(f"📊 Benchmark data aligned and indexed to performance period:")
+                logger.info(f"?? Benchmark data aligned and indexed to performance period:")
                 logger.info(f"   Strategy start value: ${strategy_start_value:,.2f}")
                 logger.info(f"   Benchmark start price: ${benchmark_start_price:.2f}")
                 if self.benchmark_include_costs:
@@ -1273,9 +1430,9 @@ class BacktestEngine:
             else:
                 benchmark_returns = benchmark_prices.pct_change().dropna()
                 benchmark_curve = benchmark_prices
-                logger.warning("⚠️ Could not index benchmark - using raw price returns")
+                logger.warning("?? Could not index benchmark - using raw price returns")
         else:
-            logger.info("📊 No benchmark data provided for comparison")
+            logger.info("?? No benchmark data provided for comparison")
         
         # Calculate metrics
         from .performance import PerformanceCalculator
@@ -1305,12 +1462,12 @@ class BacktestEngine:
             logger.info("Last 3 rows of positions data:")
             logger.info(f"\n{positions_df.tail(3)}")
         else:
-            logger.warning("⚠️  Positions DataFrame is EMPTY!")
+            logger.warning("??  Positions DataFrame is EMPTY!")
             logger.warning("This means no position history was recorded during the backtest.")
             if len(self.position_history) == 0:
-                logger.error("❌ position_history list is empty - _record_position_snapshot was never called!")
+                logger.error("? position_history list is empty - _record_position_snapshot was never called!")
             else:
-                logger.error(f"❌ position_history has {len(self.position_history)} entries but DataFrame is empty!")
+                logger.error(f"? position_history has {len(self.position_history)} entries but DataFrame is empty!")
         logger.info("=" * 60)
         
         # Create result object
