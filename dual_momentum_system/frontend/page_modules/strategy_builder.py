@@ -4,11 +4,12 @@ Strategy Builder page for the Streamlit dashboard.
 Allows users to configure and launch backtests with dynamic parameter controls.
 """
 
+import json
 import streamlit as st
 import pandas as pd
 import numpy as np
 from datetime import datetime, timedelta
-from typing import Dict, Any, List
+from typing import Dict, Any, List, Optional
 import sys
 from pathlib import Path
 import time
@@ -32,6 +33,11 @@ from src.backtesting.engine import BacktestEngine
 from src.backtesting.performance import PerformanceCalculator
 from src.core.types import PriceData, AssetMetadata
 from src.core import get_plugin_manager
+from src.portfolio_optimization import (
+    compare_portfolio_methods,
+    get_available_methods,
+    get_method_description,
+)
 
 
 def render():
@@ -278,6 +284,10 @@ def render_strategy_configuration():
         # Display default information
         if not safe_asset:
             st.caption("💡 Default: **Cash** (no safe asset ticker) - Recommended: **AGG** for bond allocation during downturns")
+    else:
+        st.session_state.safe_asset = None
+    
+    render_portfolio_optimization_controls(symbols)
     
     # Benchmark selection
     render_section_divider()
@@ -448,6 +458,346 @@ def render_strategy_configuration():
         st.session_state.slippage = slippage
 
 
+def render_portfolio_optimization_controls(symbols: List[str]) -> None:
+    """Render controls for portfolio optimization selection and comparison."""
+    st.markdown("#### 🧠 Portfolio Optimization")
+    available_methods = get_available_methods()
+    method_display = lambda key: key.replace('_', ' ').title()
+
+    # Initialize defaults in session state if missing
+    if 'portfolio_opt_method' not in st.session_state:
+        st.session_state.portfolio_opt_method = available_methods[0]
+    if 'portfolio_opt_compare_methods' not in st.session_state:
+        st.session_state.portfolio_opt_compare_methods = available_methods
+    if 'portfolio_opt_lookback' not in st.session_state:
+        st.session_state.portfolio_opt_lookback = 126
+    if 'portfolio_opt_min_history' not in st.session_state:
+        st.session_state.portfolio_opt_min_history = 60
+    if 'portfolio_opt_min_weight' not in st.session_state:
+        st.session_state.portfolio_opt_min_weight = 0.0
+    if 'portfolio_opt_max_weight' not in st.session_state:
+        st.session_state.portfolio_opt_max_weight = 1.0
+    if 'portfolio_opt_risk_free_rate' not in st.session_state:
+        st.session_state.portfolio_opt_risk_free_rate = 0.0
+    if 'portfolio_opt_method_kwargs_raw' not in st.session_state:
+        st.session_state.portfolio_opt_method_kwargs_raw = ""
+
+    enable = st.checkbox(
+        "Enable portfolio optimization for backtest rebalancing",
+        value=st.session_state.get('portfolio_opt_enabled', False),
+        help="Use advanced optimizers (e.g., Risk Parity, HRP) to allocate weights instead of signal-strength weighting.",
+    )
+    st.session_state.portfolio_opt_enabled = enable
+
+    if enable:
+        current_method = st.session_state.get('portfolio_opt_method', available_methods[0])
+        if current_method not in available_methods:
+            current_method = available_methods[0]
+        method_index = available_methods.index(current_method)
+        method = st.selectbox(
+            "Optimization method",
+            options=available_methods,
+            index=method_index,
+            format_func=method_display,
+            help="Choose the optimizer used to compute target allocation weights each rebalance.",
+        )
+        st.session_state.portfolio_opt_method = method
+
+        st.caption(get_method_description(method))
+
+        col1, col2, col3 = st.columns(3)
+        with col1:
+            lookback = st.number_input(
+                "Lookback window (days)",
+                min_value=30,
+                max_value=500,
+                value=int(st.session_state.get('portfolio_opt_lookback', 126)),
+                step=5,
+                help="Historical window used to compute optimization inputs (returns/covariances).",
+            )
+            st.session_state.portfolio_opt_lookback = int(lookback)
+        with col2:
+            min_history = st.number_input(
+                "Min history (bars)",
+                min_value=10,
+                max_value=2000,
+                value=int(st.session_state.get('portfolio_opt_min_history', 60)),
+                step=10,
+                help="Minimum number of return observations required before optimization runs.",
+            )
+            st.session_state.portfolio_opt_min_history = int(min_history)
+        with col3:
+            risk_free_pct = st.number_input(
+                "Risk-free rate (%)",
+                min_value=0.0,
+                max_value=10.0,
+                value=float(st.session_state.get('portfolio_opt_risk_free_rate', 0.0) * 100),
+                step=0.10,
+                format="%.2f",
+                help="Annual risk-free rate used for methods that incorporate Sharpe ratio.",
+            )
+            st.session_state.portfolio_opt_risk_free_rate = risk_free_pct / 100.0
+
+        col4, col5 = st.columns(2)
+        with col4:
+            min_weight = st.number_input(
+                "Min asset weight",
+                min_value=0.0,
+                max_value=1.0,
+                value=float(st.session_state.get('portfolio_opt_min_weight', 0.0)),
+                step=0.05,
+                format="%.2f",
+                help="Lower bound for any individual asset weight.",
+            )
+            st.session_state.portfolio_opt_min_weight = float(min_weight)
+        with col5:
+            max_weight_input = st.number_input(
+                "Max asset weight",
+                min_value=0.0,
+                max_value=1.0,
+                value=float(st.session_state.get('portfolio_opt_max_weight', 1.0)),
+                step=0.05,
+                format="%.2f",
+                help="Upper bound for any individual asset weight.",
+            )
+            if max_weight_input < min_weight:
+                st.warning("Max weight must be greater than or equal to min weight. Adjusting automatically.")
+                max_weight_input = min_weight
+            st.session_state.portfolio_opt_max_weight = float(max_weight_input)
+
+        method_kwargs_raw = st.text_area(
+            "Method-specific kwargs (JSON, optional)",
+            value=st.session_state.get('portfolio_opt_method_kwargs_raw', ""),
+            placeholder='e.g., {"linkage_method": "average"}',
+            help="Provide additional arguments for the selected optimizer (JSON object)."
+        )
+        st.session_state.portfolio_opt_method_kwargs_raw = method_kwargs_raw
+        method_kwargs: Optional[Dict[str, Any]] = None
+        if method_kwargs_raw.strip():
+            try:
+                parsed = json.loads(method_kwargs_raw)
+                if not isinstance(parsed, dict):
+                    raise ValueError("JSON must describe an object")
+                method_kwargs = parsed
+                st.session_state.portfolio_opt_method_kwargs_error = None
+            except ValueError as exc:
+                st.session_state.portfolio_opt_method_kwargs_error = str(exc)
+                st.error(f"Invalid method kwargs: {exc}")
+        else:
+            st.session_state.portfolio_opt_method_kwargs_error = None
+        st.session_state.portfolio_opt_method_kwargs = method_kwargs
+
+    # Comparison tools (available even if optimization disabled)
+    st.markdown("##### Compare Optimization Methods")
+    st.caption("Run a quick comparison across optimization methods using your selected assets and date range.")
+
+    compare_default = st.session_state.get('portfolio_opt_compare_methods', available_methods)
+    compare_selection = st.multiselect(
+        "Methods to compare",
+        options=available_methods,
+        default=compare_default,
+        format_func=method_display,
+    )
+    st.session_state.portfolio_opt_compare_methods = compare_selection
+
+    with st.expander("Method descriptions", expanded=False):
+        for key in available_methods:
+            st.markdown(f"**{method_display(key)}** — {get_method_description(key)}")
+
+    compare_disabled = not symbols or not st.session_state.get('portfolio_opt_compare_methods')
+    if compare_disabled:
+        if not symbols:
+            st.info("Select at least one asset to enable method comparison.")
+        elif not st.session_state.get('portfolio_opt_compare_methods'):
+            st.info("Select at least one optimization method to compare.")
+
+    if st.button("🔍 Compare Selected Methods", disabled=compare_disabled):
+        run_portfolio_optimization_comparison(symbols)
+
+    # Display latest comparison results if available
+    comparison_metrics = st.session_state.get('portfolio_opt_comparison_metrics')
+    if comparison_metrics is not None and not comparison_metrics.empty:
+        summary = st.session_state.get('portfolio_opt_comparison_summary', {})
+        sharpe_method = summary.get('best_sharpe_method')
+        sharpe_score = summary.get('best_sharpe_ratio')
+        if sharpe_method and sharpe_score is not None:
+            st.success(
+                f"Sharpe winner: {method_display(sharpe_method)} | Sharpe {sharpe_score:.4f}"
+            )
+        else:
+            st.success("Optimization comparison complete.")
+        if summary.get('lowest_volatility_method'):
+            st.caption(
+                f"Lowest volatility: {method_display(summary['lowest_volatility_method'])} "
+                f"({summary.get('lowest_volatility', float('nan')):.4f})"
+            )
+        if summary.get('best_diversification_method'):
+            st.caption(
+                f"Best diversification: {method_display(summary['best_diversification_method'])} "
+                f"({summary.get('best_diversification_ratio', float('nan')):.4f})"
+            )
+        st.dataframe(comparison_metrics, use_container_width=True, height=240)
+
+        weights_df = st.session_state.get('portfolio_opt_comparison_weights')
+        if weights_df is not None and not weights_df.empty:
+            st.markdown("**Weights by method**")
+            st.dataframe(weights_df, use_container_width=True, height=200)
+
+        if st.button("✅ Apply Best Method to Backtest"):
+            best_method = summary.get('best_sharpe_method')
+            if best_method:
+                st.session_state.portfolio_opt_enabled = True
+                st.session_state.portfolio_opt_method = best_method
+                st.success(f"Using {method_display(best_method)} for the upcoming backtest.")
+
+
+def run_portfolio_optimization_comparison(symbols: List[str]) -> None:
+    """Run portfolio optimization comparison using selected methods."""
+    if not symbols:
+        st.error("❌ Please select at least one asset before running a comparison.")
+        return
+    selected_methods = st.session_state.get('portfolio_opt_compare_methods', [])
+    if not selected_methods:
+        st.error("❌ Please choose at least one optimization method to compare.")
+        return
+
+    progress_bar = st.progress(0)
+    status_text = st.empty()
+
+    try:
+        status_text.text("🔄 Preparing data source...")
+        progress_bar.progress(10)
+
+        from src.data_sources import get_default_data_source  # Local import to avoid circular dependency at startup
+        import os
+
+        api_config = {}
+        if 'ALPHAVANTAGE_API_KEY' in os.environ:
+            api_config['alphavantage_api_key'] = os.environ['ALPHAVANTAGE_API_KEY']
+        if 'TWELVEDATA_API_KEY' in os.environ:
+            api_config['twelvedata_api_key'] = os.environ['TWELVEDATA_API_KEY']
+
+        data_source = get_default_data_source(api_config)
+
+        asset_class_str = st.session_state.get('asset_class', 'equity').lower()
+        asset_class_map = {
+            'equity': EquityAsset,
+            'crypto': CryptoAsset,
+            'commodity': CommodityAsset,
+            'bond': BondAsset,
+            'fx': FXAsset,
+            'multi-strategy': EquityAsset,
+        }
+        AssetClass = asset_class_map.get(asset_class_str, EquityAsset)
+        asset_instance = AssetClass()
+
+        status_text.text("📊 Fetching asset data for comparison...")
+        progress_bar.progress(30)
+
+        price_data_dict = fetch_real_data(
+            symbols,
+            st.session_state.start_date,
+            st.session_state.end_date,
+            data_source,
+            asset_instance,
+            status_text,
+        )
+
+        if not price_data_dict:
+            st.error("❌ Unable to fetch data for comparison. Please verify your symbols and try again.")
+            return
+
+        progress_bar.progress(55)
+        status_text.text("🧮 Calculating asset returns...")
+
+        returns_df = pd.DataFrame({
+            symbol: pdata.data['close'].pct_change()
+            for symbol, pdata in price_data_dict.items()
+        }).dropna()
+
+        if returns_df.empty:
+            st.error("❌ Not enough historical data to compute returns for comparison.")
+            return
+
+        min_weight = float(st.session_state.get('portfolio_opt_min_weight', 0.0))
+        max_weight = float(st.session_state.get('portfolio_opt_max_weight', 1.0))
+        if max_weight < min_weight:
+            max_weight = min_weight
+
+        progress_bar.progress(75)
+        status_text.text("⚖️ Running optimization comparison...")
+
+        comparison = compare_portfolio_methods(
+            returns=returns_df,
+            methods=selected_methods,
+            min_weight=min_weight,
+            max_weight=max_weight,
+            risk_free_rate=float(st.session_state.get('portfolio_opt_risk_free_rate', 0.0)),
+            verbose=False,
+        )
+
+        st.session_state.portfolio_opt_comparison_metrics = comparison.comparison_metrics
+        st.session_state.portfolio_opt_comparison_weights = comparison.get_weights_df()
+        sharpe_method = comparison.best_sharpe_method
+        best_sharpe_result = comparison.results.get(sharpe_method)
+        diversification_method = comparison.best_diversification_method
+        diversification_result = comparison.results.get(diversification_method)
+        low_vol_method = comparison.lowest_volatility_method
+        low_vol_result = comparison.results.get(low_vol_method)
+
+        st.session_state.portfolio_opt_comparison_summary = {
+            'best_sharpe_method': sharpe_method,
+            'best_sharpe_ratio': best_sharpe_result.sharpe_ratio if best_sharpe_result else None,
+            'best_diversification_method': diversification_method,
+            'best_diversification_ratio': diversification_result.diversification_ratio if diversification_result else None,
+            'lowest_volatility_method': low_vol_method,
+            'lowest_volatility': low_vol_result.expected_volatility if low_vol_result else None,
+        }
+
+        progress_bar.progress(100)
+        status_text.text("✅ Comparison complete!")
+
+    except Exception as exc:
+        st.error(f"❌ Comparison failed: {exc}")
+        import traceback
+        with st.expander("Show error details"):
+            st.code(traceback.format_exc())
+    finally:
+        progress_bar.empty()
+        status_text.empty()
+
+
+def get_portfolio_optimization_settings() -> Optional[Dict[str, Any]]:
+    """Return the portfolio optimization configuration derived from session state."""
+    if not st.session_state.get('portfolio_opt_enabled'):
+        return None
+
+    method = st.session_state.get('portfolio_opt_method')
+    if not method:
+        return None
+
+    min_weight = float(st.session_state.get('portfolio_opt_min_weight', 0.0))
+    max_weight = float(st.session_state.get('portfolio_opt_max_weight', 1.0))
+    if max_weight < min_weight:
+        max_weight = min_weight
+
+    config: Dict[str, Any] = {
+        'enabled': True,
+        'method': method,
+        'lookback': int(st.session_state.get('portfolio_opt_lookback', 126)),
+        'min_history': int(st.session_state.get('portfolio_opt_min_history', 60)),
+        'min_weight': min_weight,
+        'max_weight': max_weight,
+        'risk_free_rate': float(st.session_state.get('portfolio_opt_risk_free_rate', 0.0)),
+    }
+
+    method_kwargs = st.session_state.get('portfolio_opt_method_kwargs')
+    if method_kwargs:
+        config['method_kwargs'] = method_kwargs
+
+    return config
+
+
 def render_configuration_summary():
     """Render configuration summary panel."""
     
@@ -469,6 +819,11 @@ def render_configuration_summary():
     benchmark = st.session_state.get('benchmark_symbol')
     safe_asset = st.session_state.get('safe_asset')
     safe_asset_display = safe_asset if safe_asset else 'Cash'
+    opt_config = get_portfolio_optimization_settings()
+    if opt_config:
+        opt_display = opt_config['method'].replace('_', ' ').title()
+    else:
+        opt_display = 'Disabled'
     st.markdown(f"""
     <div class="card">
         <h4>Parameters</h4>
@@ -477,6 +832,7 @@ def render_configuration_summary():
             <li>🎯 <strong>Threshold:</strong> {st.session_state.get('absolute_threshold', 0):.2f}</li>
             <li>📊 <strong>Vol. Adj.:</strong> {'Yes' if st.session_state.get('use_volatility', False) else 'No'}</li>
             <li>🛡️ <strong>Safe Asset:</strong> {safe_asset_display}</li>
+            <li>🧠 <strong>Optimization:</strong> {opt_display}</li>
             <li>📈 <strong>Benchmark:</strong> {benchmark if benchmark else 'None'}</li>
         </ul>
     </div>
@@ -712,6 +1068,13 @@ def run_backtest():
             # Set safe asset in config (None = cash)
             strategy_config['safe_asset'] = safe_asset
         
+        optimization_settings = get_portfolio_optimization_settings()
+        if optimization_settings:
+            if st.session_state.get('portfolio_opt_method_kwargs_error'):
+                warnings.append("⚠️ Portfolio optimization kwargs are invalid JSON and were ignored. Using signal weights instead.")
+            else:
+                strategy_config['portfolio_optimization'] = optimization_settings
+
         # Show warnings before starting backtest
         if warnings:
             with warnings_container:
@@ -931,6 +1294,7 @@ def save_configuration():
         'commission': st.session_state.get('commission'),
         'slippage': st.session_state.get('slippage'),
         'benchmark_symbol': st.session_state.get('benchmark_symbol'),
+        'portfolio_optimization': get_portfolio_optimization_settings(),
     }
     
     st.session_state.current_strategy_config = config
