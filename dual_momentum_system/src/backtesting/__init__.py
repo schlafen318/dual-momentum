@@ -12,6 +12,7 @@ from .hyperparameter_tuner import (
     HyperparameterTuner,
     ParameterSpace,
     OptimizationResult,
+    MethodComparisonResult,
     create_default_param_space,
 )
 
@@ -22,6 +23,7 @@ __all__ = [
     'HyperparameterTuner',
     'ParameterSpace',
     'OptimizationResult',
+    'MethodComparisonResult',
     'create_default_param_space',
 ]
 
