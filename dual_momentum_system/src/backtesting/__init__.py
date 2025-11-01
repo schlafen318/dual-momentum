@@ -15,6 +15,11 @@ from .hyperparameter_tuner import (
     MethodComparisonResult,
     create_default_param_space,
 )
+from .optimization_comparison import (
+    OptimizationBacktestEngine,
+    OptimizationMethodComparisonResult,
+    compare_optimization_methods_in_backtest,
+)
 
 __all__ = [
     'BacktestEngine',
@@ -25,6 +30,9 @@ __all__ = [
     'OptimizationResult',
     'MethodComparisonResult',
     'create_default_param_space',
+    'OptimizationBacktestEngine',
+    'OptimizationMethodComparisonResult',
+    'compare_optimization_methods_in_backtest',
 ]
 
 # Optional advanced analytics (require scipy and vectorbt)

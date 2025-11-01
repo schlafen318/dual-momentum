@@ -36,13 +36,14 @@ def render():
     results = st.session_state.backtest_results
     
     # Tabs for different analyses
-    tab1, tab2, tab3, tab4, tab5, tab6, tab7 = st.tabs([
+    tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab8 = st.tabs([
         "📈 Overview",
         "💹 Charts",
         "📋 Trades",
         "📊 Rolling Metrics",
         "🎯 Allocation",
         "⚡ Quick Tune",
+        "🔄 Method Comparison",
         "💾 Export"
     ])
     
@@ -65,6 +66,9 @@ def render():
         render_quick_tune(results)
     
     with tab7:
+        render_optimization_comparison(results)
+    
+    with tab8:
         render_export_options(results)
 
 
@@ -1636,6 +1640,482 @@ def _rerun_with_new_params(base_params: dict, new_strategy_params: dict):
             import traceback
             with st.expander("Show error details"):
                 st.code(traceback.format_exc())
+
+
+def render_optimization_comparison(results):
+    """Render optimization method comparison tab."""
+    
+    st.markdown("### 🔄 Optimization Method Comparison")
+    
+    st.markdown("""
+    Compare different portfolio optimization methods to see how position sizing affects performance.
+    
+    **What this does:**
+    - Runs the same strategy with different optimization methods
+    - Each method determines how to allocate capital among assets that pass the momentum filter
+    - Shows which optimization approach works best for your strategy
+    """)
+    
+    # Check if comparison has been run
+    if 'optimization_comparison_results' not in st.session_state or st.session_state.optimization_comparison_results is None:
+        render_optimization_comparison_setup(results)
+    else:
+        render_optimization_comparison_results()
+
+
+def render_optimization_comparison_setup(results):
+    """Render setup interface for running optimization comparison."""
+    
+    st.markdown("---")
+    st.markdown("#### 📋 Configuration")
+    
+    # Get current backtest parameters
+    last_params = st.session_state.get('last_backtest_params', {})
+    
+    if not last_params:
+        st.warning("⚠️ No backtest configuration found. Please run a backtest from the Strategy Builder first.")
+        return
+    
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        st.markdown("**Select Optimization Methods to Compare**")
+        
+        # Method selection
+        methods = []
+        
+        st.markdown("*Baseline:*")
+        if st.checkbox("Momentum-Based (Baseline)", value=True, help="Default momentum-strength weighting"):
+            methods.append('momentum_based')
+        
+        st.markdown("*Alternative Methods:*")
+        method_options = [
+            ('equal_weight', 'Equal Weight', 'Simple 1/N allocation'),
+            ('inverse_volatility', 'Inverse Volatility', 'Lower volatility = higher weight'),
+            ('minimum_variance', 'Minimum Variance', 'Lowest possible volatility'),
+            ('maximum_sharpe', 'Maximum Sharpe', 'Best risk-adjusted returns'),
+            ('risk_parity', 'Risk Parity', 'Equal risk contribution'),
+            ('maximum_diversification', 'Max Diversification', 'Highest diversification ratio'),
+            ('hierarchical_risk_parity', 'HRP', 'Machine learning clustering approach'),
+        ]
+        
+        for method_key, method_label, method_desc in method_options:
+            if st.checkbox(method_label, value=True, help=method_desc):
+                methods.append(method_key)
+        
+        if len(methods) < 2:
+            st.warning("⚠️ Please select at least 2 methods to compare")
+        else:
+            st.success(f"✓ Selected {len(methods)} methods")
+    
+    with col2:
+        st.markdown("**Optimization Settings**")
+        
+        optimization_lookback = st.slider(
+            "Optimization Lookback (days)",
+            min_value=20,
+            max_value=252,
+            value=60,
+            step=10,
+            help="Number of historical periods to use for optimization calculations"
+        )
+        
+        st.markdown("**Current Backtest Info**")
+        st.info(f"""
+        - **Strategy**: {last_params.get('strategy_type', 'Unknown')}
+        - **Universe**: {len(last_params.get('universe', []))} assets
+        - **Period**: {last_params.get('start_date', 'N/A')} to {last_params.get('end_date', 'N/A')}
+        - **Initial Capital**: ${last_params.get('initial_capital', 100000):,.0f}
+        """)
+    
+    st.markdown("---")
+    
+    # Run button
+    col1, col2, col3 = st.columns([1, 2, 1])
+    
+    with col2:
+        if st.button("🚀 Run Comparison", type="primary", use_container_width=True, disabled=len(methods) < 2):
+            _run_optimization_comparison(methods, optimization_lookback)
+
+
+def _run_optimization_comparison(methods: List[str], optimization_lookback: int):
+    """Run the optimization method comparison."""
+    
+    try:
+        with st.spinner("Running optimization comparison... This may take a few minutes."):
+            
+            # Progress tracking
+            progress_bar = st.progress(0)
+            status_text = st.empty()
+            
+            # Get backtest configuration
+            last_params = st.session_state.get('last_backtest_params', {})
+            
+            status_text.text("Setting up comparison...")
+            progress_bar.progress(10)
+            
+            # Import required modules
+            from src.backtesting import compare_optimization_methods_in_backtest
+            from src.strategies.dual_momentum import DualMomentumStrategy
+            from src.data_sources import get_default_data_source
+            
+            status_text.text("Loading price data...")
+            progress_bar.progress(20)
+            
+            # Create strategy
+            strategy_config = last_params.get('strategy_config', {})
+            strategy = DualMomentumStrategy(strategy_config)
+            
+            # Get price data (try to use cached data if available)
+            price_data = st.session_state.get('cached_price_data', {})
+            
+            if not price_data:
+                # Need to fetch fresh data
+                data_provider = get_default_data_source()
+                symbols = last_params.get('universe', last_params.get('symbols', []))
+                
+                for i, symbol in enumerate(symbols):
+                    try:
+                        data = data_provider.fetch_data(
+                            symbol,
+                            start_date=last_params.get('start_date'),
+                            end_date=last_params.get('end_date')
+                        )
+                        price_data[symbol] = data
+                        progress = 20 + int(30 * (i + 1) / len(symbols))
+                        progress_bar.progress(progress)
+                    except Exception as e:
+                        st.warning(f"Could not load data for {symbol}: {e}")
+                
+                # Cache the data
+                st.session_state.cached_price_data = price_data
+            
+            status_text.text(f"Running {len(methods)} backtests...")
+            progress_bar.progress(50)
+            
+            # Get benchmark data if available
+            benchmark_data = st.session_state.get('benchmark_data')
+            
+            # Run comparison
+            comparison = compare_optimization_methods_in_backtest(
+                strategy=strategy,
+                price_data=price_data,
+                optimization_methods=methods,
+                initial_capital=last_params.get('initial_capital', 100000),
+                commission=last_params.get('commission', 0.001),
+                slippage=last_params.get('slippage', 0.0005),
+                risk_free_rate=last_params.get('risk_free_rate', 0.0),
+                start_date=pd.to_datetime(last_params.get('start_date')),
+                end_date=pd.to_datetime(last_params.get('end_date')),
+                benchmark_data=benchmark_data,
+                optimization_lookback=optimization_lookback,
+                verbose=False,
+            )
+            
+            progress_bar.progress(90)
+            status_text.text("Processing results...")
+            
+            # Store results in session state
+            st.session_state.optimization_comparison_results = comparison
+            
+            progress_bar.progress(100)
+            status_text.text("Comparison complete!")
+            
+            st.success("✅ Optimization comparison completed successfully!")
+            st.balloons()
+            
+            # Refresh to show results
+            st.rerun()
+    
+    except Exception as e:
+        st.error(f"❌ Error during comparison: {str(e)}")
+        import traceback
+        with st.expander("Show error details"):
+            st.code(traceback.format_exc())
+
+
+def render_optimization_comparison_results():
+    """Render the optimization comparison results."""
+    
+    comparison = st.session_state.optimization_comparison_results
+    
+    # Summary section
+    st.markdown("#### 🏆 Best Methods")
+    
+    col1, col2, col3 = st.columns(3)
+    
+    with col1:
+        st.markdown("**Best Sharpe Ratio**")
+        method = comparison.best_sharpe_method.replace('_', ' ').title()
+        sharpe = comparison.method_results[comparison.best_sharpe_method].metrics.get('sharpe_ratio', 0)
+        st.success(f"**{method}**")
+        st.metric("Sharpe Ratio", f"{sharpe:.3f}")
+    
+    with col2:
+        st.markdown("**Best Total Return**")
+        method = comparison.best_return_method.replace('_', ' ').title()
+        ret = comparison.method_results[comparison.best_return_method].total_return
+        st.success(f"**{method}**")
+        st.metric("Total Return", f"{ret*100:.2f}%")
+    
+    with col3:
+        st.markdown("**Best Risk-Adjusted**")
+        method = comparison.best_risk_adjusted_method.replace('_', ' ').title()
+        st.success(f"**{method}**")
+        sharpe = comparison.method_results[comparison.best_risk_adjusted_method].metrics.get('sharpe_ratio', 0)
+        sortino = comparison.method_results[comparison.best_risk_adjusted_method].metrics.get('sortino_ratio', 0)
+        st.metric("Avg Ratio", f"{(sharpe + sortino)/2:.3f}")
+    
+    render_section_divider()
+    
+    # Comparison table
+    st.markdown("#### 📊 Method Comparison")
+    
+    # Format the comparison dataframe for display
+    display_df = comparison.comparison_metrics.copy()
+    display_df['total_return'] = display_df['total_return'].apply(lambda x: f"{x*100:.2f}%")
+    display_df['annualized_return'] = display_df['annualized_return'].apply(lambda x: f"{x*100:.2f}%")
+    display_df['volatility'] = display_df['volatility'].apply(lambda x: f"{x*100:.2f}%")
+    display_df['max_drawdown'] = display_df['max_drawdown'].apply(lambda x: f"{x*100:.2f}%")
+    display_df['win_rate'] = display_df['win_rate'].apply(lambda x: f"{x*100:.1f}%")
+    display_df['sharpe_ratio'] = display_df['sharpe_ratio'].apply(lambda x: f"{x:.3f}")
+    display_df['sortino_ratio'] = display_df['sortino_ratio'].apply(lambda x: f"{x:.3f}")
+    display_df['calmar_ratio'] = display_df['calmar_ratio'].apply(lambda x: f"{x:.3f}")
+    
+    st.dataframe(display_df, use_container_width=True, hide_index=True)
+    
+    render_section_divider()
+    
+    # Visual comparisons
+    st.markdown("#### 📈 Visual Analysis")
+    
+    viz_tab1, viz_tab2, viz_tab3, viz_tab4 = st.tabs([
+        "Equity Curves",
+        "Return Comparison",
+        "Risk Metrics",
+        "Drawdown Analysis"
+    ])
+    
+    with viz_tab1:
+        plot_optimization_equity_curves(comparison)
+    
+    with viz_tab2:
+        plot_optimization_returns(comparison)
+    
+    with viz_tab3:
+        plot_optimization_risk_metrics(comparison)
+    
+    with viz_tab4:
+        plot_optimization_drawdowns(comparison)
+    
+    render_section_divider()
+    
+    # Action buttons
+    col1, col2, col3 = st.columns(3)
+    
+    with col1:
+        if st.button("🔄 Run New Comparison", use_container_width=True):
+            st.session_state.optimization_comparison_results = None
+            st.rerun()
+    
+    with col2:
+        # Download comparison CSV
+        csv_data = comparison.comparison_metrics.to_csv(index=False)
+        st.download_button(
+            label="📥 Download Comparison (CSV)",
+            data=csv_data,
+            file_name=f"optimization_comparison_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv",
+            mime="text/csv",
+            use_container_width=True
+        )
+    
+    with col3:
+        # Download summary JSON
+        summary_json = json.dumps(comparison.get_summary(), indent=2, default=str)
+        st.download_button(
+            label="📥 Download Summary (JSON)",
+            data=summary_json,
+            file_name=f"optimization_summary_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json",
+            mime="application/json",
+            use_container_width=True
+        )
+
+
+def plot_optimization_equity_curves(comparison):
+    """Plot equity curves for all optimization methods."""
+    
+    fig = go.Figure()
+    
+    for method, result in comparison.method_results.items():
+        equity_curve = result.equity_curve
+        
+        fig.add_trace(go.Scatter(
+            x=equity_curve.index,
+            y=equity_curve.values,
+            mode='lines',
+            name=method.replace('_', ' ').title(),
+            line=dict(width=2),
+        ))
+    
+    # Add initial capital line
+    initial_capital = comparison.metadata.get('initial_capital', 100000)
+    fig.add_hline(
+        y=initial_capital,
+        line_dash="dot",
+        line_color="gray",
+        annotation_text="Initial Capital",
+        annotation_position="right"
+    )
+    
+    fig.update_layout(
+        title="Equity Curves by Optimization Method",
+        xaxis_title="Date",
+        yaxis_title="Portfolio Value ($)",
+        hovermode='x unified',
+        height=500,
+        showlegend=True,
+        legend=dict(
+            orientation="v",
+            yanchor="top",
+            y=1,
+            xanchor="left",
+            x=1.02
+        )
+    )
+    
+    st.plotly_chart(fig, use_container_width=True)
+
+
+def plot_optimization_returns(comparison):
+    """Plot return comparison across methods."""
+    
+    fig = go.Figure()
+    
+    methods = []
+    total_returns = []
+    annualized_returns = []
+    
+    for method, result in comparison.method_results.items():
+        methods.append(method.replace('_', ' ').title())
+        total_returns.append(result.total_return * 100)
+        annualized_returns.append(result.metrics.get('annualized_return', 0) * 100)
+    
+    fig.add_trace(go.Bar(
+        x=methods,
+        y=total_returns,
+        name='Total Return',
+        marker_color='steelblue',
+        text=[f"{r:.1f}%" for r in total_returns],
+        textposition='outside',
+    ))
+    
+    fig.add_trace(go.Bar(
+        x=methods,
+        y=annualized_returns,
+        name='Annualized Return',
+        marker_color='lightblue',
+        text=[f"{r:.1f}%" for r in annualized_returns],
+        textposition='outside',
+    ))
+    
+    fig.update_layout(
+        title="Return Comparison",
+        xaxis_title="Optimization Method",
+        yaxis_title="Return (%)",
+        height=500,
+        showlegend=True,
+        barmode='group'
+    )
+    
+    st.plotly_chart(fig, use_container_width=True)
+
+
+def plot_optimization_risk_metrics(comparison):
+    """Plot risk metrics comparison."""
+    
+    fig = go.Figure()
+    
+    methods = []
+    sharpe_ratios = []
+    sortino_ratios = []
+    volatilities = []
+    
+    for method, result in comparison.method_results.items():
+        methods.append(method.replace('_', ' ').title())
+        sharpe_ratios.append(result.metrics.get('sharpe_ratio', 0))
+        sortino_ratios.append(result.metrics.get('sortino_ratio', 0))
+        volatilities.append(result.metrics.get('volatility', 0) * 100)
+    
+    # Create subplots
+    from plotly.subplots import make_subplots
+    
+    fig = make_subplots(
+        rows=1, cols=2,
+        subplot_titles=("Risk-Adjusted Ratios", "Volatility"),
+        specs=[[{"secondary_y": False}, {"secondary_y": False}]]
+    )
+    
+    # Sharpe and Sortino
+    fig.add_trace(
+        go.Bar(x=methods, y=sharpe_ratios, name='Sharpe', marker_color='green'),
+        row=1, col=1
+    )
+    fig.add_trace(
+        go.Bar(x=methods, y=sortino_ratios, name='Sortino', marker_color='lightgreen'),
+        row=1, col=1
+    )
+    
+    # Volatility
+    fig.add_trace(
+        go.Bar(x=methods, y=volatilities, name='Volatility', marker_color='orange', showlegend=False),
+        row=1, col=2
+    )
+    
+    fig.update_xaxes(title_text="Method", row=1, col=1)
+    fig.update_xaxes(title_text="Method", row=1, col=2)
+    fig.update_yaxes(title_text="Ratio", row=1, col=1)
+    fig.update_yaxes(title_text="Volatility (%)", row=1, col=2)
+    
+    fig.update_layout(height=500, showlegend=True)
+    
+    st.plotly_chart(fig, use_container_width=True)
+
+
+def plot_optimization_drawdowns(comparison):
+    """Plot drawdown analysis for all methods."""
+    
+    fig = go.Figure()
+    
+    for method, result in comparison.method_results.items():
+        equity_curve = result.equity_curve
+        running_max = equity_curve.cummax()
+        drawdown = (equity_curve - running_max) / running_max * 100
+        
+        fig.add_trace(go.Scatter(
+            x=drawdown.index,
+            y=drawdown.values,
+            mode='lines',
+            name=method.replace('_', ' ').title(),
+            line=dict(width=2),
+        ))
+    
+    fig.update_layout(
+        title="Drawdown Comparison",
+        xaxis_title="Date",
+        yaxis_title="Drawdown (%)",
+        hovermode='x unified',
+        height=500,
+        showlegend=True,
+        legend=dict(
+            orientation="v",
+            yanchor="top",
+            y=1,
+            xanchor="left",
+            x=1.02
+        )
+    )
+    
+    st.plotly_chart(fig, use_container_width=True)
 
 
 def render_export_options(results):
