@@ -1774,6 +1774,10 @@ def _run_optimization_comparison(methods: List[str], optimization_lookback: int)
                 data_provider = get_default_data_source()
                 symbols = last_params.get('universe', last_params.get('symbols', []))
                 
+                if not symbols:
+                    st.error("❌ No symbols found in backtest configuration. Please run a backtest first.")
+                    return
+                
                 for i, symbol in enumerate(symbols):
                     try:
                         data = data_provider.fetch_data(
@@ -1789,6 +1793,30 @@ def _run_optimization_comparison(methods: List[str], optimization_lookback: int)
                 
                 # Cache the data
                 st.session_state.cached_price_data = price_data
+            
+            # Validate price data
+            if not price_data:
+                st.error("❌ No price data available. Please run a backtest from Strategy Builder first.")
+                return
+            
+            if len(price_data) < 2:
+                st.error(f"❌ Insufficient assets for optimization comparison. Have {len(price_data)} assets, need at least 2.")
+                return
+            
+            # Debug: Check data type
+            status_text.text(f"Validating price data for {len(price_data)} assets...")
+            
+            # Ensure price_data is in correct format (PriceData objects)
+            from src.core.types import PriceData as PriceDataType
+            validated_price_data = {}
+            
+            for symbol, data in price_data.items():
+                if not isinstance(data, PriceDataType):
+                    st.warning(f"⚠️ Data for {symbol} is not a PriceData object (type: {type(data).__name__}). This may cause errors.")
+                    # Could try to convert here if needed
+                validated_price_data[symbol] = data
+            
+            price_data = validated_price_data
             
             status_text.text(f"Running {len(methods)} backtests...")
             progress_bar.progress(50)
@@ -1809,7 +1837,7 @@ def _run_optimization_comparison(methods: List[str], optimization_lookback: int)
                 end_date=pd.to_datetime(last_params.get('end_date')),
                 benchmark_data=benchmark_data,
                 optimization_lookback=optimization_lookback,
-                verbose=False,
+                verbose=True,  # Enable verbose output for debugging
             )
             
             progress_bar.progress(90)

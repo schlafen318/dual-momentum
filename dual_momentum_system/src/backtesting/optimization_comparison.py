@@ -465,6 +465,27 @@ def compare_optimization_methods_in_backtest(
         print(f"Methods: {', '.join(optimization_methods)}")
         print(f"{'='*80}\n")
     
+    # Validate inputs before running backtests
+    if not price_data:
+        raise ValueError("price_data is empty")
+    
+    if len(price_data) < 1:
+        raise ValueError(f"Need at least 1 asset for backtesting, got {len(price_data)}")
+    
+    # Check that all price_data values are PriceData objects
+    from ..core.types import PriceData as PriceDataType
+    for symbol, data in price_data.items():
+        if not isinstance(data, PriceDataType):
+            raise TypeError(f"price_data['{symbol}'] must be a PriceData object, got {type(data).__name__}")
+        if data.data.empty:
+            raise ValueError(f"price_data['{symbol}'] has empty DataFrame")
+    
+    if verbose:
+        print(f"? Validated {len(price_data)} assets")
+        if start_date and end_date:
+            print(f"? Date range: {start_date.date()} to {end_date.date()}")
+        print()
+    
     method_results = {}
     
     # Run backtest for each optimization method
@@ -506,17 +527,37 @@ def compare_optimization_methods_in_backtest(
             method_results[method] = result
             
             if verbose:
-                print(f"  ✓ Total Return: {result.total_return*100:.2f}%, "
+                print(f"  ? Total Return: {result.total_return*100:.2f}%, "
                       f"Sharpe: {result.metrics.get('sharpe_ratio', 0):.2f}, "
                       f"Max DD: {result.metrics.get('max_drawdown', 0)*100:.2f}%")
         
         except Exception as e:
-            logger.error(f"Error running backtest with {method}: {e}")
+            import traceback
+            error_trace = traceback.format_exc()
+            logger.error(f"Error running backtest with {method}: {e}\n{error_trace}")
             if verbose:
-                print(f"  ✗ Failed: {e}")
+                print(f"  ? Failed: {e}")
+                print(f"  Error details: {error_trace}")
     
     if not method_results:
-        raise RuntimeError("All backtest methods failed")
+        error_msg = (
+            f"All {len(optimization_methods)} backtest methods failed!\n"
+            f"Methods attempted: {', '.join(optimization_methods)}\n"
+            f"Check logs above for specific error details for each method.\n"
+            f"Common issues:\n"
+            f"  - Insufficient price data\n"
+            f"  - Data not in PriceData format\n"
+            f"  - Strategy configuration errors\n"
+            f"  - Start/end date issues"
+        )
+        logger.error(error_msg)
+        if verbose:
+            print(f"\n{'='*80}")
+            print("ERROR SUMMARY")
+            print(f"{'='*80}")
+            print(error_msg)
+            print(f"{'='*80}\n")
+        raise RuntimeError(error_msg)
     
     # Create comparison metrics DataFrame
     comparison_data = []
