@@ -472,18 +472,55 @@ def compare_optimization_methods_in_backtest(
     if len(price_data) < 1:
         raise ValueError(f"Need at least 1 asset for backtesting, got {len(price_data)}")
     
-    # Check that all price_data values are PriceData objects
-    from ..core.types import PriceData as PriceDataType
+    # Check that all price_data values are PriceData objects and convert if needed
+    from ..core.types import PriceData as PriceDataType, AssetMetadata, AssetType
+    validated_data = {}
+    
     for symbol, data in price_data.items():
         if not isinstance(data, PriceDataType):
-            raise TypeError(f"price_data['{symbol}'] must be a PriceData object, got {type(data).__name__}")
+            # Try to convert DataFrame to PriceData
+            if isinstance(data, pd.DataFrame):
+                if verbose:
+                    print(f"Converting {symbol} from DataFrame to PriceData")
+                
+                # Check required columns
+                required_cols = ['open', 'high', 'low', 'close', 'volume']
+                if not all(col in data.columns for col in required_cols):
+                    raise ValueError(
+                        f"price_data['{symbol}'] DataFrame missing required columns. "
+                        f"Has: {list(data.columns)}, needs: {required_cols}"
+                    )
+                
+                # Create PriceData object
+                metadata = AssetMetadata(
+                    symbol=symbol,
+                    name=symbol,
+                    asset_type=AssetType.EQUITY
+                )
+                data = PriceDataType(
+                    symbol=symbol,
+                    data=data,
+                    metadata=metadata
+                )
+            else:
+                raise TypeError(
+                    f"price_data['{symbol}'] must be a PriceData object or DataFrame, "
+                    f"got {type(data).__name__}"
+                )
+        
+        # Validate data is not empty
         if data.data.empty:
             raise ValueError(f"price_data['{symbol}'] has empty DataFrame")
+        
+        validated_data[symbol] = data
+    
+    # Replace with validated data
+    price_data = validated_data
     
     if verbose:
-        print(f"? Validated {len(price_data)} assets")
+        print(f"Validated {len(price_data)} assets")
         if start_date and end_date:
-            print(f"? Date range: {start_date.date()} to {end_date.date()}")
+            print(f"Date range: {start_date.date()} to {end_date.date()}")
         print()
     
     method_results = {}

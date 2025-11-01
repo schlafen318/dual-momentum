@@ -1803,20 +1803,43 @@ def _run_optimization_comparison(methods: List[str], optimization_lookback: int)
                 st.error(f"❌ Insufficient assets for optimization comparison. Have {len(price_data)} assets, need at least 2.")
                 return
             
-            # Debug: Check data type
+            # Debug: Check data type and convert to PriceData if needed
             status_text.text(f"Validating price data for {len(price_data)} assets...")
             
             # Ensure price_data is in correct format (PriceData objects)
-            from src.core.types import PriceData as PriceDataType
+            from src.core.types import PriceData as PriceDataType, AssetMetadata, AssetType
             validated_price_data = {}
             
             for symbol, data in price_data.items():
                 if not isinstance(data, PriceDataType):
-                    st.warning(f"⚠️ Data for {symbol} is not a PriceData object (type: {type(data).__name__}). This may cause errors.")
-                    # Could try to convert here if needed
+                    # Convert DataFrame to PriceData object
+                    if isinstance(data, pd.DataFrame):
+                        # Check if it has required columns
+                        required_cols = ['open', 'high', 'low', 'close', 'volume']
+                        if all(col in data.columns for col in required_cols):
+                            # Create metadata
+                            metadata = AssetMetadata(
+                                symbol=symbol,
+                                name=symbol,
+                                asset_type=AssetType.EQUITY
+                            )
+                            # Wrap in PriceData
+                            data = PriceDataType(
+                                symbol=symbol,
+                                data=data,
+                                metadata=metadata
+                            )
+                            status_text.text(f"✓ Converted {symbol} DataFrame to PriceData")
+                        else:
+                            st.error(f"❌ Data for {symbol} missing required columns. Has: {list(data.columns)}")
+                            return
+                    else:
+                        st.error(f"❌ Data for {symbol} is not a PriceData object or DataFrame (type: {type(data).__name__})")
+                        return
                 validated_price_data[symbol] = data
             
             price_data = validated_price_data
+            status_text.text(f"✓ Validated {len(price_data)} assets as PriceData objects")
             
             status_text.text(f"Running {len(methods)} backtests...")
             progress_bar.progress(50)
