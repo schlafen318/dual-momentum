@@ -9,14 +9,14 @@ import pandas as pd
 import numpy as np
 import plotly.graph_objects as go
 import plotly.express as px
-from datetime import datetime
+from datetime import datetime, timedelta
+from typing import List
 import json
 
 from frontend.utils.styling import (
     render_page_header, render_metric_card, render_info_box, render_section_divider
 )
 from frontend.utils.state import add_to_comparison
-from datetime import timedelta
 
 
 def render():
