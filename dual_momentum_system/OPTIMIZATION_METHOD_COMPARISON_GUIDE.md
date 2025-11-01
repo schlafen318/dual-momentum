@@ -1,364 +1,254 @@
-# Optimization Method Comparison Guide
-
-This guide explains how to use and compare multiple optimization methods for backtesting strategy parameters in the Dual Momentum System.
+# Optimization Method Comparison in Backtesting
 
 ## Overview
 
-The system now supports comparing multiple optimization methods to find which works best for your specific problem. Three methods are available:
+This feature allows you to compare different portfolio optimization methods directly within your backtesting framework. Instead of using a single position sizing approach, you can now run multiple backtests with different optimization methods and see which works best for your strategy.
 
-1. **Grid Search** - Exhaustive search over all parameter combinations
-2. **Random Search** - Random sampling from the parameter space
-3. **Bayesian Optimization** - Smart search using probabilistic models (requires Optuna)
+## What It Does
 
-## Why Compare Methods?
+The optimization method comparison feature:
 
-Different optimization methods have different strengths and weaknesses:
+1. **Runs multiple backtests** - Same strategy, same data, but different position sizing methods
+2. **Compares performance** - Shows which optimization method produces the best risk-adjusted returns
+3. **Visualizes results** - Side-by-side comparison of equity curves, returns, risk metrics, and drawdowns
+4. **Helps decision-making** - Identifies the optimal position sizing approach for your strategy
 
-- **Grid Search**
-  - ✅ Guarantees finding the best solution in the search space
-  - ✅ Systematic and reproducible
-  - ❌ Computationally expensive for large search spaces
-  - ❌ Doesn't scale well with number of parameters
+## Available Optimization Methods
 
-- **Random Search**
-  - ✅ Good for large search spaces
-  - ✅ Simple and fast
-  - ✅ Often finds near-optimal solutions quickly
-  - ❌ No guarantee of finding the best solution
-  - ❌ Doesn't learn from previous trials
+### 1. **Momentum-Based (Baseline)**
+- **What it does**: Uses signal strength from momentum calculations to weight positions
+- **Best for**: Strategies where momentum strength is a good predictor
+- **Pros**: Natural fit for momentum strategies, no additional calculations needed
+- **Cons**: May not account for risk differences between assets
 
-- **Bayesian Optimization**
-  - ✅ Most sample-efficient for expensive evaluations
-  - ✅ Learns from previous trials
-  - ✅ Balances exploration and exploitation
-  - ❌ Requires Optuna dependency
-  - ❌ Can get stuck in local optima
+### 2. **Equal Weight**
+- **What it does**: Allocates equal capital to each selected asset (1/N)
+- **Best for**: Simple, robust allocation when you have no strong priors
+- **Pros**: Simple, well-diversified, often surprisingly effective
+- **Cons**: Ignores risk characteristics and expected returns
 
-## Using the Frontend (Streamlit Dashboard)
+### 3. **Inverse Volatility**
+- **What it does**: Assets with lower volatility get higher allocation
+- **Best for**: Risk-conscious investors who want to reduce portfolio volatility
+- **Pros**: Automatically reduces exposure to volatile assets
+- **Cons**: May underweight high-return assets
 
-### Step 1: Configure Parameters
+### 4. **Minimum Variance**
+- **What it does**: Finds the portfolio with the lowest possible volatility
+- **Best for**: Very risk-averse investors prioritizing stability
+- **Pros**: Minimizes portfolio risk
+- **Cons**: Ignores returns, may have concentration risk
 
-Navigate to the **Hyperparameter Tuning** page and configure:
+### 5. **Maximum Sharpe**
+- **What it does**: Optimizes for the best risk-adjusted return
+- **Best for**: Investors seeking optimal risk/reward balance
+- **Pros**: Theoretically optimal portfolio
+- **Cons**: Sensitive to estimation errors, can be unstable
 
-1. **Backtest Settings** (Configuration tab)
-   - Date range
-   - Initial capital
-   - Transaction costs
-   - Benchmark
+### 6. **Risk Parity**
+- **What it does**: Equalizes risk contribution from each asset
+- **Best for**: Balanced portfolios where each asset contributes equally to risk
+- **Pros**: Well-diversified from a risk perspective
+- **Cons**: Computationally intensive, sensitive to correlation estimates
 
-2. **Parameter Space**
-   - Define parameters to optimize (e.g., lookback_period, position_count)
-   - Specify value ranges or discrete values
-   - Add/remove parameters as needed
+### 7. **Maximum Diversification**
+- **What it does**: Maximizes the diversification ratio
+- **Best for**: Maximizing the benefit of diversification
+- **Pros**: Explicitly targets diversification
+- **Cons**: May underweight correlated assets even if they have good returns
 
-### Step 2: Run Method Comparison
+### 8. **Hierarchical Risk Parity (HRP)**
+- **What it does**: Uses machine learning clustering to build portfolios
+- **Best for**: Complex portfolios with many assets
+- **Pros**: Robust to estimation errors, uses modern techniques
+- **Cons**: More complex, harder to interpret
 
-1. Go to the **Compare Methods** tab
-2. Select which methods to compare (check one or more):
-   - ☑️ Grid Search
-   - ☑️ Random Search
-   - ☑️ Bayesian Optimization
+## Usage
 
-3. Review configuration summary
-4. Click **🔬 Start Method Comparison**
+### From the Streamlit Dashboard
 
-### Step 3: Analyze Results
+1. **Run a backtest** from the Strategy Builder page
+2. **Go to Backtest Results** and click on the **"🔄 Method Comparison"** tab
+3. **Select methods** you want to compare (at least 2)
+4. **Set optimization lookback** (default: 60 days)
+5. **Click "Run Comparison"**
+6. **View results** with interactive charts and metrics
 
-The comparison results include:
-
-- **Overall Winner**: Best performing method
-- **Performance Table**: Score, time, and efficiency metrics for each method
-- **Visual Comparisons**:
-  - Best score by method (bar chart)
-  - Total optimization time (bar chart)
-  - Time per trial (bar chart)
-  - Convergence comparison (line chart showing all trials)
-- **Best Parameters**: From each method
-- **Export Options**: Download results as CSV or JSON
-
-## Using the API (Python Code)
-
-### Basic Example
+### Programmatic Usage
 
 ```python
-from src.backtesting import (
-    HyperparameterTuner,
-    ParameterSpace,
-    BacktestEngine,
-)
+from src.backtesting import compare_optimization_methods_in_backtest
 from src.strategies.dual_momentum import DualMomentumStrategy
 from src.data_sources import get_default_data_source
+
+# Create strategy
+strategy = DualMomentumStrategy({
+    'lookback_period': 252,
+    'position_count': 3,
+    'safe_asset': 'AGG',
+})
 
 # Load data
 data_provider = get_default_data_source()
 price_data = {
-    symbol: data_provider.fetch_data(symbol, start_date='2015-01-01', end_date='2023-12-31')
-    for symbol in ['SPY', 'EFA', 'EEM', 'AGG']
+    symbol: data_provider.fetch_data(symbol, start_date, end_date)
+    for symbol in ['SPY', 'EFA', 'EEM', 'AGG', 'TLT', 'GLD']
 }
 
-# Create backtest engine
-engine = BacktestEngine(
-    initial_capital=100000,
-    commission=0.001,
-    slippage=0.0005,
-)
-
-# Define parameter space
-param_space = [
-    ParameterSpace(
-        name='lookback_period',
-        param_type='int',
-        values=[126, 189, 252, 315]  # 6, 9, 12, 15 months
-    ),
-    ParameterSpace(
-        name='position_count',
-        param_type='int',
-        values=[1, 2, 3]
-    ),
-    ParameterSpace(
-        name='absolute_threshold',
-        param_type='float',
-        values=[0.0, 0.01, 0.02]
-    ),
-]
-
-# Create tuner
-tuner = HyperparameterTuner(
-    strategy_class=DualMomentumStrategy,
-    backtest_engine=engine,
+# Run comparison
+comparison = compare_optimization_methods_in_backtest(
+    strategy=strategy,
     price_data=price_data,
-    base_config={'safe_asset': 'AGG'},
-    start_date='2020-01-01',
-    end_date='2023-12-31',
-)
-
-# Compare all methods
-comparison = tuner.compare_optimization_methods(
-    param_space=param_space,
-    methods=None,  # None = compare all methods
-    n_trials=30,  # For random search and Bayesian optimization
-    metric='sharpe_ratio',
-    higher_is_better=True,
-    random_state=42,
+    optimization_methods=[
+        'momentum_based',
+        'equal_weight',
+        'risk_parity',
+        'maximum_sharpe',
+    ],
+    initial_capital=100000,
+    start_date=datetime(2018, 1, 1),
+    end_date=datetime(2023, 12, 31),
+    optimization_lookback=60,
     verbose=True,
 )
 
 # View results
-print(f"Best method: {comparison.best_method}")
-print(f"Best score: {comparison.best_overall_score:.4f}")
-print(f"Best parameters: {comparison.best_overall_params}")
-print("\nComparison metrics:")
 print(comparison.comparison_metrics)
-
-# Access individual method results
-for method, result in comparison.results.items():
-    print(f"\n{method}:")
-    print(f"  Best score: {result.best_score:.4f}")
-    print(f"  Time: {result.optimization_time:.2f}s")
-    print(f"  Trials: {result.n_trials}")
+print(f"Best Sharpe: {comparison.best_sharpe_method}")
+print(f"Best Return: {comparison.best_return_method}")
 ```
 
-### Compare Specific Methods
+## Key Features
 
-```python
-# Compare only Grid Search and Random Search
-comparison = tuner.compare_optimization_methods(
-    param_space=param_space,
-    methods=['grid_search', 'random_search'],
-    n_trials=50,
-    metric='sharpe_ratio',
-    higher_is_better=True,
-    verbose=True,
-)
-```
+### Performance Metrics Compared
 
-### Save Comparison Results
+- **Total Return**: Overall percentage gain/loss
+- **Annualized Return**: Compound annual growth rate
+- **Sharpe Ratio**: Risk-adjusted return measure
+- **Sortino Ratio**: Downside risk-adjusted return
+- **Max Drawdown**: Largest peak-to-trough decline
+- **Calmar Ratio**: Return vs. max drawdown
+- **Win Rate**: Percentage of profitable trades
+- **Volatility**: Annualized standard deviation of returns
 
-```python
-# Save all results to disk
-saved_files = tuner.save_comparison_results(
-    comparison=comparison,
-    output_dir='./optimization_results',
-    prefix='method_comparison'
-)
+### Visualizations
 
-print("Saved files:")
-for file_type, file_path in saved_files.items():
-    print(f"  {file_type}: {file_path}")
-```
+1. **Equity Curves**: Compare portfolio values over time
+2. **Return Comparison**: Bar charts of total and annualized returns
+3. **Risk Metrics**: Sharpe, Sortino ratios and volatility
+4. **Drawdown Analysis**: Compare drawdown periods across methods
 
-Files saved:
-- `method_comparison_<timestamp>_comparison.csv` - Comparison metrics
-- `method_comparison_<timestamp>_grid_search_results.csv` - Grid search trials
-- `method_comparison_<timestamp>_random_search_results.csv` - Random search trials
-- `method_comparison_<timestamp>_bayesian_optimization_results.csv` - Bayesian trials
-- `method_comparison_<timestamp>_summary.json` - Summary with best method and parameters
-- `method_comparison_<timestamp>_full_comparison.pkl` - Full MethodComparisonResult object
+### Export Options
 
-## Understanding Comparison Metrics
-
-### Key Metrics
-
-| Metric | Description |
-|--------|-------------|
-| `best_score` | Best metric value found by the method |
-| `optimization_time` | Total time taken (seconds) |
-| `n_trials` | Number of trials evaluated |
-| `time_per_trial` | Average time per trial (seconds) |
-| `is_best` | Whether this method found the overall best score |
-
-### Interpreting Results
-
-1. **Best Score**: Higher is better for metrics like Sharpe ratio, lower for metrics like max drawdown
-2. **Optimization Time**: Consider the trade-off between time and solution quality
-3. **Time per Trial**: Grid search is usually fastest per trial, Bayesian slowest but more efficient overall
-4. **Convergence**: Look at convergence plots to see how quickly methods improve
+- **CSV**: Comparison metrics and individual results
+- **JSON**: Summary and detailed results
+- **Charts**: Interactive Plotly visualizations
 
 ## Best Practices
 
-### When to Use Each Method
+### 1. Start with Baseline
+Always include `'momentum_based'` as your baseline to see if alternative methods actually improve performance.
 
-**Use Grid Search when:**
-- Search space is small (< 100 combinations)
-- You need guaranteed optimal solution
-- Computation time is not a concern
-- Parameters have discrete values
+### 2. Use Sufficient Data
+The optimization lookback period should be:
+- **Minimum**: 20 days
+- **Recommended**: 60 days
+- **Maximum**: 252 days (1 year)
 
-**Use Random Search when:**
-- Search space is large
-- You need quick results
-- Parameters are continuous or have many discrete values
-- Computation time is limited
+### 3. Consider Estimation Error
+Methods like `maximum_sharpe` and `minimum_variance` are sensitive to estimation errors. Use longer lookback periods or consider simpler methods like `equal_weight` or `risk_parity`.
 
-**Use Bayesian Optimization when:**
-- Evaluations are expensive (long backtests)
-- Search space is moderate to large
-- You want most sample-efficient method
-- You can install Optuna dependency
+### 4. Match Method to Strategy
+- **High turnover strategies**: Use `equal_weight` or `risk_parity` to reduce complexity
+- **Low turnover strategies**: Can use more sophisticated methods like `maximum_sharpe`
+- **Risk-focused strategies**: Use `risk_parity` or `minimum_variance`
 
-### Optimization Tips
+### 5. Validate Results
+- Check if results are stable across different time periods
+- Ensure the "winner" has a meaningful advantage (>0.5 Sharpe improvement)
+- Consider transaction costs - more complex methods may not justify additional trading
 
-1. **Start Small**: Test with a small parameter space first
-2. **Use Appropriate Trials**: 
-   - Random Search: 50-200 trials typically sufficient
-   - Bayesian: 30-100 trials often enough
-3. **Set Random Seeds**: For reproducibility
-4. **Monitor Progress**: Use `verbose=True` to track progress
-5. **Compare Results**: Run comparison to validate method choice
-6. **Consider Time Constraints**: Balance accuracy vs. computation time
+## Example Results Interpretation
 
-## Advanced Usage
-
-### Custom Metrics
-
-You can optimize for any metric calculated by the backtesting engine:
-
-```python
-comparison = tuner.compare_optimization_methods(
-    param_space=param_space,
-    methods=['random_search', 'bayesian_optimization'],
-    n_trials=50,
-    metric='sortino_ratio',  # Or 'calmar_ratio', 'annual_return', etc.
-    higher_is_better=True,
-)
+```
+Method                   | Total Return | Sharpe | Max DD  | Volatility
+-------------------------|--------------|--------|---------|------------
+Momentum Based (Baseline)|   45.2%     |  1.15  | -18.3%  |   12.1%
+Equal Weight             |   52.8%     |  1.28  | -15.2%  |   11.8%
+Risk Parity              |   48.3%     |  1.35  | -12.7%  |   10.2%
+Maximum Sharpe           |   56.1%     |  1.42  | -14.1%  |   11.3%
 ```
 
-### Minimize Metrics
+**Interpretation**:
+- **Maximum Sharpe** achieved the best risk-adjusted returns (1.42 Sharpe)
+- **Risk Parity** had the lowest drawdown (-12.7%)
+- **Equal Weight** provided solid improvement over baseline with simplicity
+- All methods outperformed the baseline, suggesting optimization adds value
 
-For metrics where lower is better (e.g., max drawdown):
+## Technical Details
 
-```python
-comparison = tuner.compare_optimization_methods(
-    param_space=param_space,
-    methods=['grid_search', 'random_search'],
-    metric='max_drawdown',
-    higher_is_better=False,  # Minimize drawdown
-)
+### How It Works
+
+1. **Momentum Filter**: Strategy generates signals based on momentum criteria
+2. **Asset Selection**: Top N assets pass the filter
+3. **Optimization**: For each method, calculate optimal weights for selected assets
+4. **Execution**: Execute trades based on optimized weights
+5. **Rebalancing**: Repeat at each rebalancing period
+
+### Architecture
+
+```
+Strategy (generates signals)
+    ↓
+Momentum Filter (selects assets)
+    ↓
+Portfolio Optimizer (sizes positions)
+    ↓
+Backtest Engine (executes trades)
+    ↓
+Performance Metrics (evaluates results)
 ```
 
-### Access Detailed Trial Data
+### Key Classes
 
-```python
-# Get all trials from a specific method
-grid_results = comparison.results['grid_search']
-all_trials = grid_results.all_results
-
-# Analyze parameter importance
-import pandas as pd
-param_cols = [col for col in all_trials.columns if col.startswith('param_')]
-correlations = all_trials[param_cols + ['score']].corr()['score']
-print("Parameter correlations with score:")
-print(correlations.sort_values(ascending=False))
-```
+- `OptimizationBacktestEngine`: Extended backtest engine with optimization support
+- `OptimizationMethodComparisonResult`: Stores comparison results
+- `compare_optimization_methods_in_backtest()`: Main comparison function
 
 ## Troubleshooting
 
-### Issue: Bayesian Optimization Not Available
+### "Insufficient data for optimization"
+- **Solution**: Increase the data buffer before your backtest start date
+- **Calculation**: Add `optimization_lookback + strategy_lookback` days
 
-**Solution**: Install Optuna
-```bash
-pip install optuna
-```
+### "Optimization failed"
+- **Solution**: Some methods require at least 2-3 assets. Check your momentum filter isn't too strict
+- **Fallback**: System automatically falls back to equal weights on failure
 
-### Issue: Comparison Takes Too Long
+### "All methods give similar results"
+- **Interpretation**: The momentum filter is dominant; position sizing matters less
+- **Consider**: Loosen the momentum filter to include more assets
 
-**Solutions**:
-- Reduce parameter space size
-- Decrease `n_trials` for random/Bayesian methods
-- Use Random Search instead of Grid Search for large spaces
-- Run comparison on a shorter date range first
+### "Results are unstable"
+- **Solution**: Increase `optimization_lookback` period
+- **Alternative**: Use simpler methods like `equal_weight` or `inverse_volatility`
 
-### Issue: All Methods Find Different Parameters
+## Performance Considerations
 
-**This is normal!** Different methods explore the search space differently. Consider:
-- Are the scores similar? If yes, parameter sensitivity may be low
-- Check convergence plots to see if methods stabilized
-- Try increasing `n_trials` for random/Bayesian methods
-- Validate results with out-of-sample testing
+- **Runtime**: Comparison takes N times longer (N = number of methods)
+- **Memory**: Each backtest stores full results
+- **Recommended**: Start with 3-4 methods, then expand if needed
 
-## API Reference
+## Related Documentation
 
-### MethodComparisonResult
+- **Hyperparameter Tuning**: See `HYPERPARAMETER_TUNING_GUIDE.md`
+- **Portfolio Optimization**: See `PORTFOLIO_OPTIMIZATION_QUICK_REFERENCE.md`
+- **Backtesting**: See `HOW_TO_RUN_PORTFOLIO_OPTIMIZATION.md`
 
-```python
-@dataclass
-class MethodComparisonResult:
-    results: Dict[str, OptimizationResult]  # Results from each method
-    best_method: str                        # Name of best method
-    best_overall_score: float               # Best score across all methods
-    best_overall_params: Dict[str, Any]     # Parameters achieving best score
-    comparison_metrics: pd.DataFrame        # Comparison table
-    metric_name: str                        # Metric optimized
-    higher_is_better: bool                  # Direction of optimization
-    metadata: Dict[str, Any]                # Additional metadata
-```
+## Example Script
 
-### HyperparameterTuner.compare_optimization_methods()
+See `examples/optimization_comparison_backtest_demo.py` for a complete working example.
 
-```python
-def compare_optimization_methods(
-    self,
-    param_space: List[ParameterSpace],      # Parameters to optimize
-    methods: Optional[List[str]] = None,    # Methods to compare (None = all)
-    n_trials: int = 50,                     # Trials for random/Bayesian
-    n_initial_points: int = 10,             # Initial random points for Bayesian
-    metric: str = 'sharpe_ratio',           # Metric to optimize
-    higher_is_better: bool = True,          # Maximize or minimize
-    random_state: Optional[int] = None,     # Random seed
-    verbose: bool = True,                   # Print progress
-) -> MethodComparisonResult:
-```
+## Questions?
 
-## Examples
-
-See the `examples/` directory for complete examples:
-- `examples/hyperparameter_tuning_demo.py` - Basic optimization
-- `examples/optimization_method_comparison_demo.py` - Method comparison (new)
-
-## Further Reading
-
-- [Hyperparameter Tuning Guide](HYPERPARAMETER_TUNING_GUIDE.md)
-- [Parameter Tuning Integration](PARAMETER_TUNING_INTEGRATION_GUIDE.md)
-- [Quick Start Guide](QUICK_START_PARAMETER_TUNING.md)
-- [Bayesian Optimization Paper](https://arxiv.org/abs/1807.02811)
-- [Random Search Paper](http://www.jmlr.org/papers/volume13/bergstra12a/bergstra12a.pdf)
+This feature integrates portfolio optimization theory directly into your backtesting workflow, helping you make data-driven decisions about position sizing. The results can guide you in choosing the most effective optimization method for your specific strategy and market conditions.
