@@ -10,6 +10,7 @@ Streamlit-based optimisation UI, and supporting utilities.
 - `frontend/` - Streamlit dashboards and interactive tooling for exploring
   optimisation results.
 - `config/` - strategy and risk configuration templates.
+- `src/agents/` - autonomous orchestration utilities for hands-free backtesting.
 - `tests/` & `test_*.py` - automated coverage for the plugin framework and key
   behaviours.
 - `run_tests.sh`, `run_portfolio_comparison.sh` - helper scripts for CI-parity
@@ -41,3 +42,17 @@ Streamlit-based optimisation UI, and supporting utilities.
 
 Refer to the documentation hub at `../docs/README.md` for additional context
 and contribution guidelines.
+
+## Autonomous Backtesting Agent
+
+The `AutonomousBacktestAgent` provides an end-to-end workflow that prepares
+data, searches for robust Dual Momentum parameters, validates risk constraints,
+and emits a user-facing report. Run it via the CLI:
+
+```bash
+cd dual_momentum_system
+python run_autonomous_agent.py --config path/to/agent_config.json
+```
+
+See `docs/dual-momentum-system/guides/autonomous-backtesting-agent.md` for the
+full design and configuration reference.
