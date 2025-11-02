@@ -7,6 +7,7 @@ from datetime import date
 from typing import Dict, Optional
 
 import pandas as pd
+import plotly.express as px
 import streamlit as st
 
 from src.agents import AgentConfig, AutonomousBacktestAgent
@@ -251,11 +252,48 @@ def render() -> None:
         st.markdown("### Method Comparison")
         comparison_df = result.method_comparison.comparison_metrics
         st.dataframe(comparison_df, use_container_width=True)
+        if not comparison_df.empty and "best_score" in comparison_df.columns:
+            score_fig = px.bar(
+                comparison_df,
+                x="method",
+                y="best_score",
+                title="Best Score by Optimisation Method",
+                text="best_score",
+            )
+            score_fig.update_traces(texttemplate="%{text:.4f}", textposition="outside")
+            score_fig.update_layout(yaxis_title=result.optimisation_result.metric_name)
+            st.plotly_chart(score_fig, use_container_width=True)
 
         st.markdown("### Trial Results")
         trials_df = result.optimisation_result.all_results
         if not trials_df.empty:
             st.dataframe(trials_df, use_container_width=True)
+
+        st.markdown("### Performance Charts")
+        equity_curve = result.backtest_result.equity_curve
+        if equity_curve is not None and not equity_curve.empty:
+            equity_df = equity_curve.reset_index()
+            equity_df.columns = ["timestamp", "equity"]
+            equity_fig = px.line(
+                equity_df,
+                x="timestamp",
+                y="equity",
+                title="Equity Curve",
+            )
+            equity_fig.update_layout(yaxis_title="Portfolio Value")
+            st.plotly_chart(equity_fig, use_container_width=True)
+
+            drawdown = (equity_curve / equity_curve.cummax()) - 1
+            drawdown_df = drawdown.reset_index()
+            drawdown_df.columns = ["timestamp", "drawdown"]
+            drawdown_fig = px.area(
+                drawdown_df,
+                x="timestamp",
+                y="drawdown",
+                title="Drawdown",
+            )
+            drawdown_fig.update_layout(yaxis_title="Drawdown", yaxis_tickformat=".0%")
+            st.plotly_chart(drawdown_fig, use_container_width=True)
 
         st.markdown("### Downloads")
         config_json = json.dumps(config_dict, indent=2)
