@@ -1,0 +1,38 @@
+# Dual Momentum Fix Summaries
+
+Detailed investigations and fixes specific to the dual momentum system. Use these references when similar regressions appear again.
+
+## Documents
+
+- [✅ ALL BUGS FIXED - Portfolio Optimization Complete](ALL_BUGS_FIXED_FINAL.md)
+- [🎉 ALL ERRORS FIXED - OPTIMIZATION COMPLETE](ALL_ERRORS_FIXED_COMPLETE.md)
+- [✅ All Portfolio Optimization Bugs Fixed](ALL_PORTFOLIO_BUGS_FIXED.md)
+- [Automatic Safe Asset Fetching - Feature Summary](AUTO_FETCH_FEATURE_SUMMARY.md)
+- [Cash Allocation Investigation Report](CASH_ALLOCATION_INVESTIGATION.md)
+- [🐛→✅ Column Name Fix - Complete Report](COLUMN_NAME_FIX.md)
+- [Configuration System - Implementation Summary](CONFIG_SYSTEM_SUMMARY.md)
+- [📊 Dual Momentum Backtesting Dashboard - Complete Implementation](DASHBOARD_SUMMARY.md)
+- [✅ Data Loading Issue Fixed](DATA_LOADING_FIXED.md)
+- [Debug Zero Metrics Reporting - Fix Summary](DEBUG_ZERO_METRICS_FIX.md)
+- [FINAL SUMMARY](FINAL_SUMMARY.txt)
+- [✅ FINAL VERIFICATION - All Issues Fixed](FINAL_VERIFICATION.md)
+- [Vectorized Multi-Asset Backtesting Engine - Implementation Summary](IMPLEMENTATION_SUMMARY.md)
+- [IMPLEMENTATION SUMMARY](IMPLEMENTATION_SUMMARY.txt)
+- [Import Error - FIXED ✅](IMPORT_ERROR_FIXED.md)
+- [Import Fix Verification](IMPORT_FIX_VERIFICATION.md)
+- [High Cash Allocation Investigation - COMPLETE ✅](INVESTIGATION_COMPLETE.md)
+- [🔍 High Cash Allocation Investigation - Summary](INVESTIGATION_SUMMARY.md)
+- [Metrics Calculation Fix Summary](METRICS_FIX_SUMMARY.md)
+- [Momentum Filter Fix Summary](MOMENTUM_FILTER_FIX_SUMMARY.md)
+- [✅ Portfolio Optimization Bug Fixed](PORTFOLIO_OPT_BUG_FIXED.md)
+- [Price Data Verification Report](PRICE_DATA_VERIFICATION_REPORT.md)
+- [QUICK FIX](QUICK_FIX.txt)
+- [Railway Deployment Compatibility Report](RAILWAY_COMPATIBILITY_REPORT.md)
+- [🐛→✅ Sharpe Ratio Bug Fix - Complete Report](SHARPE_RATIO_BUG_FIXED.md)
+- [✅ State Management Fixed - Portfolio Optimization Integration](STATE_MANAGEMENT_FIX.md)
+- [Stock Data Fetch Fix - SPY, QQQ, IWM Issue](STOCK_FETCH_FIX_SUMMARY.md)
+- [Testing Complete - Portfolio Optimization Feature](TESTING_COMPLETE_REPORT.md)
+- [🔧 Fix Vercel 404 Error](VERCEL_FIX.md)
+- [Price Data Verification Summary](VERIFICATION_SUMMARY.md)
+- [🐛→✅ WebSocket Error Fix - Complete Report](WEBSOCKET_ERROR_FIX.md)
+- [yfinance Streamlit Cloud Fix - Complete Solution](YFINANCE_STREAMLIT_CLOUD_FIX.md)
