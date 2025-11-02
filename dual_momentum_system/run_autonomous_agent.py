@@ -5,7 +5,7 @@ from __future__ import annotations
 import argparse
 import json
 from pathlib import Path
-from typing import Any, Dict
+from typing import Any
 
 from loguru import logger
 
@@ -14,10 +14,22 @@ from src.agents import AgentConfig, AutonomousBacktestAgent
 
 def _load_config(path: Path) -> AgentConfig:
     raw = json.loads(path.read_text())
-    if "custom_parameter_space" in raw:
-        # convert nested dicts with missing param_type keys will raise early during AgentConfig init
-        raw["custom_parameter_space"] = raw["custom_parameter_space"]
     return AgentConfig(**raw)
+
+
+def _apply_overrides(config: AgentConfig, args: argparse.Namespace) -> AgentConfig:
+    data = config.to_dict()
+
+    if args.output_dir is not None:
+        data["output_dir"] = str(args.output_dir)
+    if args.run_name is not None:
+        data["run_name"] = args.run_name
+    if args.no_write:
+        data["write_outputs"] = False
+    if args.random_seed is not None:
+        data["random_seed"] = args.random_seed
+
+    return AgentConfig(**data)
 
 
 def _print_summary(result) -> None:
@@ -50,6 +62,26 @@ def main() -> None:
         action="store_true",
         help="Enable verbose logging",
     )
+    parser.add_argument(
+        "--output-dir",
+        type=Path,
+        help="Override the output directory for reports",
+    )
+    parser.add_argument(
+        "--run-name",
+        type=str,
+        help="Optional run name to use for report subdirectories",
+    )
+    parser.add_argument(
+        "--no-write",
+        action="store_true",
+        help="Disable writing reports to disk (overrides config)",
+    )
+    parser.add_argument(
+        "--random-seed",
+        type=int,
+        help="Override the random seed used by optimisation",
+    )
 
     args = parser.parse_args()
 
@@ -58,6 +90,7 @@ def main() -> None:
         logger.add(lambda msg: print(msg, end=""))
 
     config = _load_config(args.config)
+    config = _apply_overrides(config, args)
     agent = AutonomousBacktestAgent(config)
     result = agent.run()
     _print_summary(result)

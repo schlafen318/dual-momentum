@@ -51,8 +51,7 @@ and emits a user-facing report. Run it via the CLI:
 
 ```bash
 cd dual_momentum_system
-python run_autonomous_agent.py --config path/to/agent_config.json
+python run_autonomous_agent.py --config config/agent_config_example.json --output-dir runs --run-name demo
 ```
 
-See `docs/dual-momentum-system/guides/autonomous-backtesting-agent.md` for the
-full design and configuration reference.
+Use `--no-write` for dry runs and `--random-seed` to override the optimisation seed at execution time. See `docs/dual-momentum-system/guides/autonomous-backtesting-agent.md` for the full design and configuration reference.

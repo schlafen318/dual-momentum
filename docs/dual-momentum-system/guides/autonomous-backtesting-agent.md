@@ -63,6 +63,19 @@ Each sub-component will live under `src/agents/autonomous_backtest_agent.py` (or
 
 Configuration can be provided via dict/JSON for CLI/automation or directly via keyword args in code.
 
+## CLI Usage
+
+Execute the agent from the project root with a JSON configuration:
+
+```
+python run_autonomous_agent.py --config config/agent_config_example.json
+```
+
+Optional overrides include `--output-dir`, `--run-name`, `--random-seed`, and
+`--no-write` for dry runs that skip writing artefacts. The template configuration
+`config/agent_config_example.json` illustrates the recommended fields and can be
+used as a starting point for real runs.
+
 ## Parameter Planning Strategy
 
 1. **Lookback Periods**
