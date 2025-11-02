@@ -76,6 +76,9 @@ Optional overrides include `--output-dir`, `--run-name`, `--random-seed`, and
 `config/agent_config_example.json` illustrates the recommended fields and can be
 used as a starting point for real runs.
 
+The Streamlit dashboard also exposes these controls under the **"?? Autonomous
+Agent"** navigation item for an interactive execution experience.
+
 ## Parameter Planning Strategy
 
 1. **Lookback Periods**

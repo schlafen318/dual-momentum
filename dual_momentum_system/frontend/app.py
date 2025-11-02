@@ -82,6 +82,7 @@ def main():
             "📊 Backtest Results",
             "🔄 Compare Strategies",
             "🎯 Hyperparameter Tuning",
+            "🤖 Autonomous Agent",
             "💼 Portfolio Optimization",
             "🗂️ Asset Universe Manager"
         ]
@@ -156,6 +157,9 @@ def main():
     elif page == "🎯 Hyperparameter Tuning":
         from frontend.page_modules import hyperparameter_tuning
         hyperparameter_tuning.render()
+    elif page == "🤖 Autonomous Agent":
+        from frontend.page_modules import autonomous_agent
+        autonomous_agent.render()
     elif page == "💼 Portfolio Optimization":
         from frontend.page_modules import portfolio_optimization
         portfolio_optimization.render()

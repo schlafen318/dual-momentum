@@ -55,3 +55,5 @@ python run_autonomous_agent.py --config config/agent_config_example.json --outpu
 ```
 
 Use `--no-write` for dry runs and `--random-seed` to override the optimisation seed at execution time. See `docs/dual-momentum-system/guides/autonomous-backtesting-agent.md` for the full design and configuration reference.
+
+You can also run the agent directly from the Streamlit dashboard via the nav item **"?? Autonomous Agent"** for an interactive experience.
