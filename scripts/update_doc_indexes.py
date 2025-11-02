@@ -29,6 +29,7 @@ class IndexSpec:
 
     title: str
     intro: str
+    extra_links: Sequence[tuple[str, str]] | None = None
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -78,6 +79,12 @@ DIRECTORY_CONFIG = {
     Path("docs/dual-momentum-system/reference"): IndexSpec(
         "Dual Momentum: Reference",
         "Reference materials for dual momentum internals.",
+        extra_links=[
+            (
+                "Constraints file to force specific versions during pip resolution",
+                "../../../dual_momentum_system/constraints.txt",
+            )
+        ],
     ),
     Path("docs/dual-momentum-system/troubleshooting"): IndexSpec(
         "Dual Momentum: Troubleshooting",
@@ -133,12 +140,17 @@ def build_index(directory: Path, spec: IndexSpec) -> None:
 
     lines: List[str] = [f"# {spec.title}", "", spec.intro.strip(), ""]
 
-    if files:
-        lines.extend(["## Documents", ""])
-        for file_path in files:
-            label = heading_for_file(file_path)
-            lines.append(f"- [{label}]({file_path.name})")
-        lines.append("")
+    document_lines: List[str] = []
+    for file_path in files:
+        label = heading_for_file(file_path)
+        document_lines.append(f"- [{label}]({file_path.name})")
+
+    if spec.extra_links:
+        for label, target in spec.extra_links:
+            document_lines.append(f"- [{label}]({target})")
+
+    if document_lines:
+        lines.extend(["## Documents", "", *document_lines, ""])
 
     if subdirs:
         lines.extend(["## Collections", ""])
