@@ -10,7 +10,6 @@ Reference materials for dual momentum internals.
 - [Alternative Data Sources - Complete Guide](ALTERNATIVE_DATA_SOURCES.md)
 - [Architecture Documentation](ARCHITECTURE.md)
 - [CHANGES](CHANGES.txt)
-- [Constraints file to force specific versions during pip resolution](constraints.txt)
 - [Setting Up API Key with GitHub Secrets](GITHUB_SECRETS_SETUP.md)
 - [Dual Momentum Backtesting Framework](project-overview.md)
 - [Does the code run in Railway?](QUICK_ANSWER.md)
@@ -20,3 +19,4 @@ Reference materials for dual momentum internals.
 - [Streamlit-Compatible Data Source](STREAMLIT_COMPATIBLE_DATA_SOURCE.md)
 - [Vectorized Multi-Asset Backtesting Engine](VECTORIZED_BACKTESTING.md)
 - [Yahoo Finance Alternative for Streamlit](YAHOO_FINANCE_ALTERNATIVE.md)
+- [Constraints file to force specific versions during pip resolution](../../../dual_momentum_system/constraints.txt)
