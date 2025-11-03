@@ -6,7 +6,7 @@ import json
 from dataclasses import asdict, dataclass, field
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Sequence, Tuple, Union
+from typing import Any, Callable, Dict, List, Optional, Sequence, Tuple, Union
 
 import pandas as pd
 from loguru import logger
@@ -203,6 +203,7 @@ class AutonomousBacktestAgent:
         *,
         price_data: Optional[Dict[str, PriceData]] = None,
         benchmark_data: Optional[PriceData] = None,
+        progress_callback: Optional[Callable[[Dict[str, Any]], None]] = None,
     ) -> AutonomousRunResult:
         """Execute the full autonomous workflow."""
 
@@ -224,7 +225,7 @@ class AutonomousBacktestAgent:
             benchmark_data=benchmark_data,
         )
 
-        comparison = self._run_optimisation(tuner, parameter_space)
+        comparison = self._run_optimisation(tuner, parameter_space, progress_callback=progress_callback)
 
         optimisation_result = comparison.results[comparison.best_method]
 
@@ -405,6 +406,7 @@ class AutonomousBacktestAgent:
         self,
         tuner: HyperparameterTuner,
         parameter_space: List[ParameterSpace],
+        progress_callback: Optional[Callable[[Dict[str, Any]], None]] = None,
     ) -> MethodComparisonResult:
         methods = [m for m in self.config.optimisation_methods if m in DEFAULT_METHODS]
         comparison = tuner.compare_optimization_methods(
@@ -416,6 +418,7 @@ class AutonomousBacktestAgent:
             higher_is_better=bool(self.config.higher_is_better),
             random_state=self.config.random_seed,
             verbose=False,
+            progress_callback=progress_callback,
         )
         return comparison
 

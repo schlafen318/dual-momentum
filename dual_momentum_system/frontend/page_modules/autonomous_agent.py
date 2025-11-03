@@ -165,16 +165,39 @@ def render() -> None:
         submitted = st.form_submit_button("Run Autonomous Agent", type="primary")
 
     if submitted:
+        progress_bar = st.progress(0.0)
+        status_placeholder = st.empty()
+        progress_state = {'total_steps': None}
+
+        def streamlit_progress(event: Dict[str, Any]) -> None:
+            method = event.get('method', 'optimisation')
+            method_pretty = method.replace('_', ' ').title()
+            trial = event.get('trial')
+            method_total = event.get('method_total')
+            total_steps = event.get('total_steps') or progress_state.get('total_steps') or 1
+            progress_state['total_steps'] = total_steps
+            completed_steps = event.get('completed_steps', trial or 0)
+            if total_steps:
+                progress_bar.progress(min(1.0, completed_steps / total_steps))
+            status_text = f"Running {method_pretty}"
+            if method_total and trial:
+                status_text += f" (trial {trial}/{method_total})"
+            status_placeholder.info(status_text)
+
         try:
             symbols = _parse_symbols(symbols_input)
             if not symbols:
                 st.error("Please provide at least one risk asset symbol.")
+                progress_bar.empty()
+                status_placeholder.empty()
                 st.stop()
 
             start_ts = _to_timestamp(start_date)
             end_ts = _to_timestamp(end_date)
             if start_ts and end_ts and end_ts <= start_ts:
                 st.error("End date must be after start date.")
+                progress_bar.empty()
+                status_placeholder.empty()
                 st.stop()
 
             config_kwargs = {
@@ -208,7 +231,7 @@ def render() -> None:
             agent = AutonomousBacktestAgent(config)
 
             with st.spinner("Running autonomous optimisation..."):
-                result = agent.run()
+                result = agent.run(progress_callback=streamlit_progress)
 
             st.session_state["autonomous_agent_result"] = result
             st.session_state["autonomous_agent_config"] = config.to_dict()
@@ -218,9 +241,13 @@ def render() -> None:
                 "optimization_source": "autonomous_agent",
                 "timestamp": pd.Timestamp.utcnow().isoformat(),
             }
+            progress_bar.progress(1.0)
+            status_placeholder.success("Optimisation complete.")
             st.success("Autonomous agent run completed successfully.")
 
         except Exception as exc:  # pylint: disable=broad-except
+            progress_bar.empty()
+            status_placeholder.empty()
             st.exception(exc)
             st.stop()
 

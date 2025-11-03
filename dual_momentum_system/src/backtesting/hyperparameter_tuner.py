@@ -187,6 +187,7 @@ class HyperparameterTuner:
         higher_is_better: bool = True,
         n_jobs: int = 1,
         verbose: bool = True,
+        progress_callback: Optional[Callable[[Dict[str, Any]], None]] = None,
     ) -> OptimizationResult:
         """
         Perform grid search over parameter space.
@@ -261,7 +262,7 @@ class HyperparameterTuner:
                     best_backtest = backtest_result
                     
                     if verbose:
-                        print(f"✓ New best! Score: {score:.4f}")
+                        print(f"[OK] New best! Score: {score:.4f}")
                 else:
                     if verbose:
                         print(f"  Score: {score:.4f}")
@@ -269,7 +270,7 @@ class HyperparameterTuner:
             except Exception as e:
                 logger.error(f"Error evaluating params {params}: {e}")
                 if verbose:
-                    print(f"✗ Error: {e}")
+                    print(f"[ERROR] {e}")
                 
                 # Track failed trial
                 self.trial_results.append({
@@ -279,6 +280,13 @@ class HyperparameterTuner:
                     'error': str(e),
                 })
         
+            if progress_callback:
+                progress_callback({
+                    'method': 'grid_search',
+                    'trial': idx,
+                    'total': n_combinations,
+                })
+
         end_time = pd.Timestamp.now()
         optimization_time = (end_time - start_time).total_seconds()
         
@@ -317,6 +325,7 @@ class HyperparameterTuner:
         higher_is_better: bool = True,
         random_state: Optional[int] = None,
         verbose: bool = True,
+        progress_callback: Optional[Callable[[Dict[str, Any]], None]] = None,
     ) -> OptimizationResult:
         """
         Perform random search over parameter space.
@@ -393,7 +402,7 @@ class HyperparameterTuner:
                     best_backtest = backtest_result
                     
                     if verbose:
-                        print(f"✓ New best! Score: {score:.4f}")
+                        print(f"[OK] New best! Score: {score:.4f}")
                 else:
                     if verbose:
                         print(f"  Score: {score:.4f}")
@@ -401,7 +410,7 @@ class HyperparameterTuner:
             except Exception as e:
                 logger.error(f"Error evaluating params {params}: {e}")
                 if verbose:
-                    print(f"✗ Error: {e}")
+                    print(f"[ERROR] {e}")
                 
                 self.trial_results.append({
                     'trial': idx,
@@ -409,7 +418,13 @@ class HyperparameterTuner:
                     'score': np.nan,
                     'error': str(e),
                 })
-        
+            if progress_callback:
+                progress_callback({
+                    'method': 'random_search',
+                    'trial': idx,
+                    'total': n_trials,
+                })
+
         end_time = pd.Timestamp.now()
         optimization_time = (end_time - start_time).total_seconds()
         
@@ -449,6 +464,7 @@ class HyperparameterTuner:
         higher_is_better: bool = True,
         random_state: Optional[int] = None,
         verbose: bool = True,
+        progress_callback: Optional[Callable[[Dict[str, Any]], None]] = None,
     ) -> OptimizationResult:
         """
         Perform Bayesian optimization using Optuna.
@@ -537,13 +553,19 @@ class HyperparameterTuner:
                 
                 if verbose:
                     print(f"  Score: {score:.4f}")
+                if progress_callback:
+                    progress_callback({
+                        'method': 'bayesian_optimization',
+                        'trial': trial.number + 1,
+                        'total': n_trials,
+                    })
                 
                 return score
             
             except Exception as e:
                 logger.error(f"Error in trial {trial.number}: {e}")
                 if verbose:
-                    print(f"✗ Error: {e}")
+                    print(f"[ERROR] {e}")
                 
                 self.trial_results.append({
                     'trial': trial.number + 1,
@@ -551,6 +573,12 @@ class HyperparameterTuner:
                     'score': np.nan,
                     'error': str(e),
                 })
+                if progress_callback:
+                    progress_callback({
+                        'method': 'bayesian_optimization',
+                        'trial': trial.number + 1,
+                        'total': n_trials,
+                    })
                 
                 # Return worst possible value
                 return -np.inf if higher_is_better else np.inf
@@ -762,6 +790,7 @@ class HyperparameterTuner:
         higher_is_better: bool = True,
         random_state: Optional[int] = None,
         verbose: bool = True,
+        progress_callback: Optional[Callable[[Dict[str, Any]], None]] = None,
     ) -> MethodComparisonResult:
         """
         Compare multiple optimization methods on the same problem.
@@ -824,6 +853,33 @@ class HyperparameterTuner:
             print(f"{'='*80}\n")
         
         results = {}
+        method_totals: Dict[str, int] = {}
+        for method in methods:
+            if method == 'grid_search':
+                method_totals[method] = max(1, len(self._generate_grid_combinations(param_space)))
+            else:
+                method_totals[method] = max(1, n_trials)
+        total_steps = sum(method_totals.values()) or len(methods)
+        completed_steps = 0
+        method_progress: Dict[str, int] = {method: 0 for method in methods}
+
+        def make_progress_callback(method_name: str) -> Callable[[Dict[str, Any]], None]:
+            def _callback(event: Dict[str, Any]) -> None:
+                nonlocal completed_steps
+                trial = event.get('trial', 0)
+                prev = method_progress.get(method_name, 0)
+                delta = max(0, trial - prev)
+                method_progress[method_name] = max(prev, trial)
+                completed_steps += delta
+                if progress_callback:
+                    progress_callback({
+                        'method': method_name,
+                        'trial': trial,
+                        'method_total': method_totals.get(method_name, event.get('total')),
+                        'completed_steps': completed_steps,
+                        'total_steps': total_steps,
+                    })
+            return _callback
         
         # Run each optimization method
         for method in methods:
@@ -839,6 +895,7 @@ class HyperparameterTuner:
                         metric=metric,
                         higher_is_better=higher_is_better,
                         verbose=verbose,
+                        progress_callback=make_progress_callback('grid_search'),
                     )
                 elif method == 'random_search':
                     result = self.random_search(
@@ -848,6 +905,7 @@ class HyperparameterTuner:
                         higher_is_better=higher_is_better,
                         random_state=random_state,
                         verbose=verbose,
+                        progress_callback=make_progress_callback('random_search'),
                     )
                 elif method == 'bayesian_optimization':
                     result = self.bayesian_optimization(
@@ -858,12 +916,26 @@ class HyperparameterTuner:
                         higher_is_better=higher_is_better,
                         random_state=random_state,
                         verbose=verbose,
+                        progress_callback=make_progress_callback('bayesian_optimization'),
                     )
                 
                 results[method] = result
-                
+
+                if method_progress[method] < method_totals[method]:
+                    missing = method_totals[method] - method_progress[method]
+                    completed_steps += missing
+                    method_progress[method] = method_totals[method]
+                    if progress_callback:
+                        progress_callback({
+                            'method': method,
+                            'trial': method_totals[method],
+                            'method_total': method_totals[method],
+                            'completed_steps': completed_steps,
+                            'total_steps': total_steps,
+                        })
+
                 if verbose:
-                    print(f"\n✓ {method} completed:")
+                    print(f"\n[INFO] {method} completed:")
                     print(f"  Best score: {result.best_score:.4f}")
                     print(f"  Time: {result.optimization_time:.2f}s")
                     print(f"  Trials: {result.n_trials}")
@@ -871,7 +943,7 @@ class HyperparameterTuner:
             except Exception as e:
                 logger.error(f"Error running {method}: {e}")
                 if verbose:
-                    print(f"\n✗ {method} failed: {e}")
+                    print(f"\n[ERROR] {method} failed: {e}")
         
         if not results:
             raise RuntimeError("All optimization methods failed")
