@@ -1,0 +1,31 @@
+{
+  "symbols": ["SPY", "EFA", "EEM"],
+  "safe_asset": "AGG",
+  "start_date": "2015-01-01",
+  "end_date": "2024-12-31",
+  "initial_capital": 100000,
+  "commission": 0.001,
+  "slippage": 0.0005,
+  "risk_free_rate": 0.0,
+  "optimisation_metric": "sharpe_ratio",
+  "higher_is_better": true,
+  "optimisation_methods": [
+    "grid_search",
+    "random_search",
+    "bayesian_optimization"
+  ],
+  "max_trials": 30,
+  "n_initial_points": 10,
+  "random_seed": 42,
+  "risk_constraints": {
+    "max_drawdown": 0.25,
+    "max_volatility": 0.20,
+    "min_sharpe": 1.0
+  },
+  "allow_weekly_rebalance": false,
+  "output_dir": "autonomy_runs",
+  "report_options": {
+    "include_benchmark": true,
+    "include_monte_carlo": false
+  }
+}
