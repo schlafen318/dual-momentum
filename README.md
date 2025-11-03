@@ -21,6 +21,9 @@ supporting tools, automation scripts, and a comprehensive documentation hub.
 2. Install dependencies with `pip install -r requirements.txt` (or use the
    project-specific requirements inside `dual_momentum_system/`).
 3. Execute `dual_momentum_system/run_tests.sh` to validate the environment.
+4. Launch the autonomous optimisation workflow via
+   `python dual_momentum_system/run_autonomous_agent.py --config dual_momentum_system/config/agent_config_example.json`
+   for a fully automated backtest.
 
 ## Documentation Map
 
