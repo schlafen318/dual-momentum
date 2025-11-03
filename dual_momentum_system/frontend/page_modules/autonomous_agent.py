@@ -179,10 +179,26 @@ def render() -> None:
             completed_steps = event.get('completed_steps', trial or 0)
             if total_steps:
                 progress_bar.progress(min(1.0, completed_steps / total_steps))
-            status_text = f"Running {method_pretty}"
+            status = event.get('status', 'running')
+            status_text = method_pretty
             if method_total and trial:
-                status_text += f" (trial {trial}/{method_total})"
-            status_placeholder.info(status_text)
+                status_text += f" | trial {trial}/{method_total}"
+            score = event.get('score')
+            if isinstance(score, (int, float)) and not pd.isna(score):
+                status_text += f" | score {score:.4f}"
+            best_score = event.get('best_score')
+            if isinstance(best_score, (int, float)) and not pd.isna(best_score):
+                status_text += f" | best {best_score:.4f}"
+            elapsed = event.get('elapsed_seconds')
+            if isinstance(elapsed, (int, float)) and elapsed >= 0:
+                status_text += f" | {elapsed:.1f}s"
+
+            if status == 'completed':
+                status_placeholder.success(f"{status_text} | done")
+            elif status == 'error':
+                status_placeholder.error(f"{status_text} | error")
+            else:
+                status_placeholder.info(f"Running {status_text}")
 
         try:
             symbols = _parse_symbols(symbols_input)

@@ -237,11 +237,16 @@ class HyperparameterTuner:
             if verbose:
                 print(f"\nTrial {idx}/{n_combinations}")
                 print(f"Parameters: {params}")
-            
+
+            trial_score: Optional[float] = None
+            status = 'running'
+
             # Run backtest
             try:
                 score, backtest_result = self._evaluate_params(params, metric)
-                
+                trial_score = score
+                status = 'ok'
+
                 # Track result
                 self.trial_results.append({
                     'trial': idx,
@@ -249,29 +254,30 @@ class HyperparameterTuner:
                     'score': score,
                     'backtest': backtest_result,
                 })
-                
+
                 # Update best
                 is_better = (
                     (higher_is_better and score > best_score) or
                     (not higher_is_better and score < best_score)
                 )
-                
+
                 if is_better:
                     best_score = score
                     best_params = params
                     best_backtest = backtest_result
-                    
+
                     if verbose:
                         print(f"[OK] New best! Score: {score:.4f}")
                 else:
                     if verbose:
                         print(f"  Score: {score:.4f}")
-            
+
             except Exception as e:
+                status = 'error'
                 logger.error(f"Error evaluating params {params}: {e}")
                 if verbose:
                     print(f"[ERROR] {e}")
-                
+
                 # Track failed trial
                 self.trial_results.append({
                     'trial': idx,
@@ -279,12 +285,17 @@ class HyperparameterTuner:
                     'score': np.nan,
                     'error': str(e),
                 })
-        
+
             if progress_callback:
+                elapsed_seconds = (pd.Timestamp.now() - start_time).total_seconds()
                 progress_callback({
                     'method': 'grid_search',
                     'trial': idx,
                     'total': n_combinations,
+                    'score': trial_score,
+                    'best_score': None if best_params is None else best_score,
+                    'status': status,
+                    'elapsed_seconds': elapsed_seconds,
                 })
 
         end_time = pd.Timestamp.now()
@@ -373,15 +384,20 @@ class HyperparameterTuner:
         for idx in range(1, n_trials + 1):
             # Sample random parameters
             params = self._sample_random_params(param_space)
-            
+
             if verbose:
                 print(f"\nTrial {idx}/{n_trials}")
                 print(f"Parameters: {params}")
-            
+
+            trial_score: Optional[float] = None
+            status = 'running'
+
             # Run backtest
             try:
                 score, backtest_result = self._evaluate_params(params, metric)
-                
+                trial_score = score
+                status = 'ok'
+
                 # Track result
                 self.trial_results.append({
                     'trial': idx,
@@ -389,40 +405,47 @@ class HyperparameterTuner:
                     'score': score,
                     'backtest': backtest_result,
                 })
-                
+
                 # Update best
                 is_better = (
                     (higher_is_better and score > best_score) or
                     (not higher_is_better and score < best_score)
                 )
-                
+
                 if is_better:
                     best_score = score
                     best_params = params
                     best_backtest = backtest_result
-                    
+
                     if verbose:
                         print(f"[OK] New best! Score: {score:.4f}")
                 else:
                     if verbose:
                         print(f"  Score: {score:.4f}")
-            
+
             except Exception as e:
+                status = 'error'
                 logger.error(f"Error evaluating params {params}: {e}")
                 if verbose:
                     print(f"[ERROR] {e}")
-                
+
                 self.trial_results.append({
                     'trial': idx,
                     'params': params,
                     'score': np.nan,
                     'error': str(e),
                 })
+
             if progress_callback:
+                elapsed_seconds = (pd.Timestamp.now() - start_time).total_seconds()
                 progress_callback({
                     'method': 'random_search',
                     'trial': idx,
                     'total': n_trials,
+                    'score': trial_score,
+                    'best_score': None if best_params is None else best_score,
+                    'status': status,
+                    'elapsed_seconds': elapsed_seconds,
                 })
 
         end_time = pd.Timestamp.now()
@@ -510,9 +533,12 @@ class HyperparameterTuner:
         # Reset trial results
         self.trial_results = []
         start_time = pd.Timestamp.now()
-        
+        best_score_value = -np.inf if higher_is_better else np.inf
+        best_params_candidate: Optional[Dict[str, Any]] = None
+
         # Create objective function
         def objective(trial):
+            nonlocal best_score_value, best_params_candidate
             # Sample parameters
             params = {}
             for ps in param_space:
@@ -551,13 +577,26 @@ class HyperparameterTuner:
                     'backtest': backtest_result,
                 })
                 
+                is_better = (
+                    (higher_is_better and score > best_score_value) or
+                    (not higher_is_better and score < best_score_value)
+                )
+                if is_better:
+                    best_score_value = score
+                    best_params_candidate = params
+                
                 if verbose:
                     print(f"  Score: {score:.4f}")
                 if progress_callback:
+                    elapsed_seconds = (pd.Timestamp.now() - start_time).total_seconds()
                     progress_callback({
                         'method': 'bayesian_optimization',
                         'trial': trial.number + 1,
                         'total': n_trials,
+                        'score': score,
+                        'best_score': None if best_params_candidate is None else best_score_value,
+                        'status': 'ok',
+                        'elapsed_seconds': elapsed_seconds,
                     })
                 
                 return score
@@ -574,10 +613,15 @@ class HyperparameterTuner:
                     'error': str(e),
                 })
                 if progress_callback:
+                    elapsed_seconds = (pd.Timestamp.now() - start_time).total_seconds()
                     progress_callback({
                         'method': 'bayesian_optimization',
                         'trial': trial.number + 1,
                         'total': n_trials,
+                        'score': None,
+                        'best_score': None if best_params_candidate is None else best_score_value,
+                        'status': 'error',
+                        'elapsed_seconds': elapsed_seconds,
                     })
                 
                 # Return worst possible value
@@ -866,19 +910,20 @@ class HyperparameterTuner:
         def make_progress_callback(method_name: str) -> Callable[[Dict[str, Any]], None]:
             def _callback(event: Dict[str, Any]) -> None:
                 nonlocal completed_steps
-                trial = event.get('trial', 0)
+                trial = event.get('trial') or 0
                 prev = method_progress.get(method_name, 0)
                 delta = max(0, trial - prev)
                 method_progress[method_name] = max(prev, trial)
                 completed_steps += delta
                 if progress_callback:
-                    progress_callback({
-                        'method': method_name,
-                        'trial': trial,
-                        'method_total': method_totals.get(method_name, event.get('total')),
-                        'completed_steps': completed_steps,
-                        'total_steps': total_steps,
-                    })
+                    payload = dict(event)
+                    payload['method'] = method_name
+                    payload['trial'] = trial
+                    payload['method_total'] = method_totals.get(method_name, event.get('total'))
+                    payload['completed_steps'] = completed_steps
+                    payload['total_steps'] = total_steps
+                    payload.setdefault('status', 'running')
+                    progress_callback(payload)
             return _callback
         
         # Run each optimization method
@@ -921,18 +966,22 @@ class HyperparameterTuner:
                 
                 results[method] = result
 
-                if method_progress[method] < method_totals[method]:
-                    missing = method_totals[method] - method_progress[method]
-                    completed_steps += missing
+                remaining = method_totals[method] - method_progress[method]
+                if remaining > 0:
+                    completed_steps += remaining
                     method_progress[method] = method_totals[method]
-                    if progress_callback:
-                        progress_callback({
-                            'method': method,
-                            'trial': method_totals[method],
-                            'method_total': method_totals[method],
-                            'completed_steps': completed_steps,
-                            'total_steps': total_steps,
-                        })
+                if progress_callback:
+                    progress_callback({
+                        'method': method,
+                        'trial': method_totals[method],
+                        'method_total': method_totals[method],
+                        'completed_steps': completed_steps,
+                        'total_steps': total_steps,
+                        'status': 'completed',
+                        'score': result.best_score,
+                        'best_score': result.best_score,
+                        'elapsed_seconds': result.optimization_time,
+                    })
 
                 if verbose:
                     print(f"\n[INFO] {method} completed:")
