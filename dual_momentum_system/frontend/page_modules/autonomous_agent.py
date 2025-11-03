@@ -212,6 +212,12 @@ def render() -> None:
 
             st.session_state["autonomous_agent_result"] = result
             st.session_state["autonomous_agent_config"] = config.to_dict()
+            st.session_state.backtest_results = result.backtest_result
+            st.session_state.last_backtest_params = {
+                "strategy_config": result.best_params,
+                "optimization_source": "autonomous_agent",
+                "timestamp": pd.Timestamp.utcnow().isoformat(),
+            }
             st.success("Autonomous agent run completed successfully.")
 
         except Exception as exc:  # pylint: disable=broad-except
@@ -324,3 +330,8 @@ def render() -> None:
             st.info(f"Report artefacts written to `{result.report.root_dir}`")
         else:
             st.caption("Reports were not written to disk (write outputs disabled).")
+
+        view_results = st.button("View Full Backtest Results", type="secondary")
+        if view_results:
+            st.session_state.navigate_to = "?? Backtest Results"
+            st.rerun()
