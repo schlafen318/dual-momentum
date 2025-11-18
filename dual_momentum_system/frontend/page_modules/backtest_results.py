@@ -19,6 +19,122 @@ from frontend.utils.state import add_to_comparison
 from datetime import timedelta
 
 
+_DEFAULT_PERIODS_PER_YEAR = 252
+
+
+def _infer_periods_per_year_from_index(index) -> int:
+    """Best-effort inference of periods per year from an index frequency."""
+    if index is None or len(index) < 2:
+        return _DEFAULT_PERIODS_PER_YEAR
+    
+    try:
+        freq = pd.infer_freq(index)
+    except Exception:
+        freq = None
+    
+    if not freq:
+        return _DEFAULT_PERIODS_PER_YEAR
+    
+    freq = freq.upper()
+    
+    if freq.startswith('W'):
+        return 52
+    if freq.startswith('M'):
+        return 12
+    if freq.startswith('Q'):
+        return 4
+    if freq.startswith('A') or freq.startswith('Y'):
+        return 1
+    if freq.startswith('H'):
+        return int(252 * 6.5)
+    if freq.startswith('T'):
+        return int(252 * 6.5 * 60)
+    if freq.startswith('S'):
+        return int(252 * 6.5 * 60 * 60)
+    
+    # Default for business/daily frequency
+    return _DEFAULT_PERIODS_PER_YEAR
+
+
+def _calculate_benchmark_risk_metrics(results, metrics):
+    """
+    Calculate benchmark risk metrics for comparison when benchmark data exists.
+    
+    Returns dict with sharpe_ratio, sortino_ratio, calmar_ratio, max_drawdown or None.
+    """
+    benchmark_curve = getattr(results, 'benchmark_curve', None)
+    
+    if benchmark_curve is None or len(benchmark_curve) < 2:
+        return None
+    
+    try:
+        benchmark_curve = benchmark_curve.dropna()
+    except AttributeError:
+        return None
+    
+    if len(benchmark_curve) < 2:
+        return None
+    
+    benchmark_returns = benchmark_curve.pct_change().dropna()
+    
+    if len(benchmark_returns) < 2:
+        return None
+    
+    risk_free_rate = metrics.get('risk_free_rate', 0.0) if isinstance(metrics, dict) else 0.0
+    periods_per_year = metrics.get('periods_per_year') if isinstance(metrics, dict) else None
+    if not periods_per_year or periods_per_year <= 0:
+        periods_per_year = _infer_periods_per_year_from_index(benchmark_returns.index)
+    
+    try:
+        period_rf = (1 + risk_free_rate) ** (1 / periods_per_year) - 1
+    except Exception:
+        period_rf = 0.0
+    
+    excess_returns = benchmark_returns - period_rf
+    excess_std = excess_returns.std()
+    if excess_std is None or np.isnan(excess_std) or excess_std == 0:
+        sharpe = 0.0
+    else:
+        sharpe = float(excess_returns.mean() / excess_std * np.sqrt(periods_per_year))
+    
+    downside = excess_returns[excess_returns < 0]
+    downside_std = downside.std()
+    if len(downside) == 0 or downside_std is None or np.isnan(downside_std) or downside_std == 0:
+        sortino = 0.0
+    else:
+        sortino = float(excess_returns.mean() / downside_std * np.sqrt(periods_per_year))
+    
+    equity = (1 + benchmark_returns).cumprod()
+    if len(equity) < 2:
+        return None
+    
+    running_max = equity.cummax()
+    drawdowns = (equity - running_max) / running_max
+    max_drawdown = float(drawdowns.min())
+    
+    start_value = equity.iloc[0]
+    end_value = equity.iloc[-1]
+    if start_value <= 0 or len(benchmark_returns) == 0:
+        cagr = 0.0
+    else:
+        try:
+            cagr = (end_value / start_value) ** (periods_per_year / len(benchmark_returns)) - 1
+        except Exception:
+            cagr = 0.0
+    
+    if max_drawdown is None or np.isnan(max_drawdown) or max_drawdown == 0:
+        calmar = 0.0
+    else:
+        calmar = float(cagr / abs(max_drawdown))
+    
+    return {
+        'sharpe_ratio': sharpe,
+        'sortino_ratio': sortino,
+        'calmar_ratio': calmar,
+        'max_drawdown': max_drawdown
+    }
+
+
 def render():
     """Render the backtest results page."""
     
@@ -185,6 +301,7 @@ def render_overview(results):
     
     # Extract metrics
     metrics = results.metrics
+    benchmark_risk_metrics = _calculate_benchmark_risk_metrics(results, metrics) if has_benchmark else None
     
     # Top-level metrics in cards
     col1, col2, col3, col4 = st.columns(4)
@@ -272,6 +389,44 @@ def render_overview(results):
             ]
         })
         st.dataframe(risk_df, hide_index=True, width='stretch')
+        
+        if benchmark_risk_metrics:
+            st.markdown("##### Strategy vs Benchmark (Risk)")
+            comparison_rows = []
+            comparison_config = [
+                ("Sharpe Ratio", 'sharpe_ratio', False),
+                ("Sortino Ratio", 'sortino_ratio', False),
+                ("Calmar Ratio", 'calmar_ratio', False),
+                ("Max Drawdown", 'max_drawdown', True),
+            ]
+            
+            for label, key, as_percent in comparison_config:
+                strategy_value = metrics.get(key, 0.0)
+                benchmark_value = benchmark_risk_metrics.get(key, 0.0)
+                edge_value = strategy_value - benchmark_value
+                
+                if as_percent:
+                    strategy_display = f"{strategy_value*100:.2f}%"
+                    benchmark_display = f"{benchmark_value*100:.2f}%"
+                    edge_display = f"{edge_value*100:+.2f}%"
+                else:
+                    strategy_display = f"{strategy_value:.2f}"
+                    benchmark_display = f"{benchmark_value:.2f}"
+                    edge_display = f"{edge_value:+.2f}"
+                
+                comparison_rows.append({
+                    'Metric': label,
+                    'Strategy': strategy_display,
+                    'Benchmark': benchmark_display,
+                    'Edge': edge_display
+                })
+            
+            comparison_df = pd.DataFrame(comparison_rows)
+            st.dataframe(
+                comparison_df,
+                hide_index=True,
+                use_container_width=True
+            )
     
     render_section_divider()
     
