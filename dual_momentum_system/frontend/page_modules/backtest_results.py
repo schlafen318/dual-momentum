@@ -56,11 +56,30 @@ def _infer_periods_per_year_from_index(index) -> int:
     return _DEFAULT_PERIODS_PER_YEAR
 
 
-def _calculate_benchmark_risk_metrics(results, metrics):
-    """
-    Calculate benchmark risk metrics for comparison when benchmark data exists.
+def _format_comparison_values(strategy_value: float, benchmark_value: float, value_type: str = 'raw'):
+    """Format strategy/benchmark values plus edge for display."""
+    strategy_value = strategy_value if strategy_value is not None else 0.0
+    benchmark_value = benchmark_value if benchmark_value is not None else 0.0
     
-    Returns dict with sharpe_ratio, sortino_ratio, calmar_ratio, max_drawdown or None.
+    if value_type == 'pct':
+        strategy_display = f"{strategy_value * 100:.2f}%"
+        benchmark_display = f"{benchmark_value * 100:.2f}%"
+        edge_display = f"{(strategy_value - benchmark_value) * 100:+.2f}%"
+    elif value_type == 'pct_direct':
+        strategy_display = f"{strategy_value:.0f}%"
+        benchmark_display = f"{benchmark_value:.0f}%"
+        edge_display = f"{(strategy_value - benchmark_value):+.0f}%"
+    else:
+        strategy_display = f"{strategy_value:.2f}"
+        benchmark_display = f"{benchmark_value:.2f}"
+        edge_display = f"{(strategy_value - benchmark_value):+.2f}"
+    
+    return strategy_display, benchmark_display, edge_display
+
+
+def _calculate_benchmark_comparison_metrics(results, metrics):
+    """
+    Calculate benchmark performance and risk metrics for comparison.
     """
     benchmark_curve = getattr(results, 'benchmark_curve', None)
     
@@ -104,6 +123,8 @@ def _calculate_benchmark_risk_metrics(results, metrics):
     else:
         sortino = float(excess_returns.mean() / downside_std * np.sqrt(periods_per_year))
     
+    volatility = float(benchmark_returns.std() * np.sqrt(periods_per_year)) if len(benchmark_returns) > 1 else 0.0
+    
     equity = (1 + benchmark_returns).cumprod()
     if len(equity) < 2:
         return None
@@ -111,27 +132,66 @@ def _calculate_benchmark_risk_metrics(results, metrics):
     running_max = equity.cummax()
     drawdowns = (equity - running_max) / running_max
     max_drawdown = float(drawdowns.min())
+    avg_drawdown = float(drawdowns[drawdowns < 0].mean()) if (drawdowns < 0).any() else 0.0
     
     start_value = equity.iloc[0]
     end_value = equity.iloc[-1]
+    
     if start_value <= 0 or len(benchmark_returns) == 0:
         cagr = 0.0
     else:
-        try:
-            cagr = (end_value / start_value) ** (periods_per_year / len(benchmark_returns)) - 1
-        except Exception:
-            cagr = 0.0
+        if isinstance(benchmark_curve.index, pd.DatetimeIndex):
+            total_seconds = (benchmark_curve.index[-1] - benchmark_curve.index[0]).total_seconds()
+            years = total_seconds / (365.25 * 24 * 3600)
+            if years > 0:
+                cagr = (end_value / start_value) ** (1 / years) - 1
+            else:
+                cagr = 0.0
+        else:
+            try:
+                cagr = (end_value / start_value) ** (periods_per_year / len(benchmark_returns)) - 1
+            except Exception:
+                cagr = 0.0
     
     if max_drawdown is None or np.isnan(max_drawdown) or max_drawdown == 0:
         calmar = 0.0
     else:
         calmar = float(cagr / abs(max_drawdown))
     
+    if len(benchmark_returns) > 0:
+        try:
+            annualized_return = (1 + benchmark_returns).prod() ** (periods_per_year / len(benchmark_returns)) - 1
+        except Exception:
+            annualized_return = 0.0
+    else:
+        annualized_return = 0.0
+    
+    total_return = float(end_value / start_value - 1) if start_value != 0 else 0.0
+    
+    best_month = 0.0
+    worst_month = 0.0
+    positive_months_pct = 0.0
+    if isinstance(benchmark_returns.index, pd.DatetimeIndex):
+        monthly_returns = benchmark_returns.resample('ME').apply(lambda x: (1 + x).prod() - 1 if len(x) > 0 else 0)
+        if len(monthly_returns) > 0:
+            best_month = float(monthly_returns.max())
+            worst_month = float(monthly_returns.min())
+            positive_months_count = int((monthly_returns > 0).sum())
+            positive_months_pct = (positive_months_count / len(monthly_returns) * 100) if len(monthly_returns) > 0 else 0.0
+    
     return {
         'sharpe_ratio': sharpe,
         'sortino_ratio': sortino,
         'calmar_ratio': calmar,
-        'max_drawdown': max_drawdown
+        'max_drawdown': max_drawdown,
+        'avg_drawdown': avg_drawdown,
+        'volatility': volatility,
+        'total_return': total_return,
+        'annualized_return': annualized_return,
+        'cagr': cagr,
+        'best_month': best_month,
+        'worst_month': worst_month,
+        'positive_months': positive_months_pct
     }
 
 
@@ -301,7 +361,7 @@ def render_overview(results):
     
     # Extract metrics
     metrics = results.metrics
-    benchmark_risk_metrics = _calculate_benchmark_risk_metrics(results, metrics) if has_benchmark else None
+    benchmark_comparison_metrics = _calculate_benchmark_comparison_metrics(results, metrics) if has_benchmark else None
     
     # Top-level metrics in cards
     col1, col2, col3, col4 = st.columns(4)
@@ -348,85 +408,101 @@ def render_overview(results):
     
     with col1:
         st.markdown("#### 📈 Return Metrics")
-        metrics_df = pd.DataFrame({
-            'Metric': [
-                'Total Return',
-                'Annualized Return',
-                'CAGR',
-                'Best Month',
-                'Worst Month',
-                'Positive Months'
-            ],
-            'Value': [
-                f"{metrics.get('total_return', 0)*100:.2f}%",
-                f"{metrics.get('annualized_return', 0)*100:.2f}%",
-                f"{metrics.get('cagr', 0)*100:.2f}%",
-                f"{metrics.get('best_month', 0)*100:.2f}%",
-                f"{metrics.get('worst_month', 0)*100:.2f}%",
-                f"{metrics.get('positive_months', 0):.0f}%"
+        if benchmark_comparison_metrics:
+            return_comparison_config = [
+                ("Total Return", 'total_return', 'pct'),
+                ("Annualized Return", 'annualized_return', 'pct'),
+                ("CAGR", 'cagr', 'pct'),
+                ("Best Month", 'best_month', 'pct'),
+                ("Worst Month", 'worst_month', 'pct'),
+                ("Positive Months", 'positive_months', 'pct_direct'),
             ]
-        })
-        st.dataframe(metrics_df, hide_index=True, width='stretch')
-    
-    with col2:
-        st.markdown("#### ⚖️ Risk Metrics")
-        risk_df = pd.DataFrame({
-            'Metric': [
-                'Volatility (Ann.)',
-                'Sharpe Ratio',
-                'Sortino Ratio',
-                'Calmar Ratio',
-                'Max Drawdown',
-                'Avg Drawdown'
-            ],
-            'Value': [
-                f"{metrics.get('volatility', 0)*100:.2f}%",
-                f"{metrics.get('sharpe_ratio', 0):.2f}",
-                f"{metrics.get('sortino_ratio', 0):.2f}",
-                f"{metrics.get('calmar_ratio', 0):.2f}",
-                f"{metrics.get('max_drawdown', 0)*100:.2f}%",
-                f"{metrics.get('avg_drawdown', 0)*100:.2f}%"
-            ]
-        })
-        st.dataframe(risk_df, hide_index=True, width='stretch')
-        
-        if benchmark_risk_metrics:
-            st.markdown("##### Strategy vs Benchmark (Risk)")
             comparison_rows = []
-            comparison_config = [
-                ("Sharpe Ratio", 'sharpe_ratio', False),
-                ("Sortino Ratio", 'sortino_ratio', False),
-                ("Calmar Ratio", 'calmar_ratio', False),
-                ("Max Drawdown", 'max_drawdown', True),
-            ]
-            
-            for label, key, as_percent in comparison_config:
+            for label, key, value_type in return_comparison_config:
                 strategy_value = metrics.get(key, 0.0)
-                benchmark_value = benchmark_risk_metrics.get(key, 0.0)
-                edge_value = strategy_value - benchmark_value
-                
-                if as_percent:
-                    strategy_display = f"{strategy_value*100:.2f}%"
-                    benchmark_display = f"{benchmark_value*100:.2f}%"
-                    edge_display = f"{edge_value*100:+.2f}%"
-                else:
-                    strategy_display = f"{strategy_value:.2f}"
-                    benchmark_display = f"{benchmark_value:.2f}"
-                    edge_display = f"{edge_value:+.2f}"
-                
+                benchmark_value = benchmark_comparison_metrics.get(key, 0.0)
+                strat_disp, bench_disp, edge_disp = _format_comparison_values(strategy_value, benchmark_value, value_type)
                 comparison_rows.append({
                     'Metric': label,
-                    'Strategy': strategy_display,
-                    'Benchmark': benchmark_display,
-                    'Edge': edge_display
+                    'Strategy': strat_disp,
+                    'Benchmark': bench_disp,
+                    'Edge': edge_disp
                 })
-            
             comparison_df = pd.DataFrame(comparison_rows)
             st.dataframe(
                 comparison_df,
                 hide_index=True,
                 use_container_width=True
             )
+        else:
+            metrics_df = pd.DataFrame({
+                'Metric': [
+                    'Total Return',
+                    'Annualized Return',
+                    'CAGR',
+                    'Best Month',
+                    'Worst Month',
+                    'Positive Months'
+                ],
+                'Value': [
+                    f"{metrics.get('total_return', 0)*100:.2f}%",
+                    f"{metrics.get('annualized_return', 0)*100:.2f}%",
+                    f"{metrics.get('cagr', 0)*100:.2f}%",
+                    f"{metrics.get('best_month', 0)*100:.2f}%",
+                    f"{metrics.get('worst_month', 0)*100:.2f}%",
+                    f"{metrics.get('positive_months', 0):.0f}%"
+                ]
+            })
+            st.dataframe(metrics_df, hide_index=True, width='stretch')
+    
+    with col2:
+        st.markdown("#### ⚖️ Risk Metrics")
+        if benchmark_comparison_metrics:
+            risk_comparison_config = [
+                ("Volatility (Ann.)", 'volatility', 'pct'),
+                ("Sharpe Ratio", 'sharpe_ratio', 'raw'),
+                ("Sortino Ratio", 'sortino_ratio', 'raw'),
+                ("Calmar Ratio", 'calmar_ratio', 'raw'),
+                ("Max Drawdown", 'max_drawdown', 'pct'),
+                ("Avg Drawdown", 'avg_drawdown', 'pct'),
+            ]
+            comparison_rows = []
+            for label, key, value_type in risk_comparison_config:
+                strategy_value = metrics.get(key, 0.0)
+                benchmark_value = benchmark_comparison_metrics.get(key, 0.0)
+                strat_disp, bench_disp, edge_disp = _format_comparison_values(strategy_value, benchmark_value, value_type)
+                comparison_rows.append({
+                    'Metric': label,
+                    'Strategy': strat_disp,
+                    'Benchmark': bench_disp,
+                    'Edge': edge_disp
+                })
+            comparison_df = pd.DataFrame(comparison_rows)
+            st.dataframe(
+                comparison_df,
+                hide_index=True,
+                use_container_width=True
+            )
+        else:
+            risk_df = pd.DataFrame({
+                'Metric': [
+                    'Volatility (Ann.)',
+                    'Sharpe Ratio',
+                    'Sortino Ratio',
+                    'Calmar Ratio',
+                    'Max Drawdown',
+                    'Avg Drawdown'
+                ],
+                'Value': [
+                    f"{metrics.get('volatility', 0)*100:.2f}%",
+                    f"{metrics.get('sharpe_ratio', 0):.2f}",
+                    f"{metrics.get('sortino_ratio', 0):.2f}",
+                    f"{metrics.get('calmar_ratio', 0):.2f}",
+                    f"{metrics.get('max_drawdown', 0)*100:.2f}%",
+                    f"{metrics.get('avg_drawdown', 0)*100:.2f}%"
+                ]
+            })
+            st.dataframe(risk_df, hide_index=True, width='stretch')
     
     render_section_divider()
     
