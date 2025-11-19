@@ -5,19 +5,19 @@
 # ============================================================================
 # GLOBAL EQUITY MOMENTUM (GEM) - Classic Antonacci Configuration
 # ============================================================================
-gem_classic:
-  name: "Global Equity Momentum - Classic"
-  description: "Classic GEM portfolio as described by Gary Antonacci"
-  asset_class: equity
-  benchmark: SPY
-  symbols:
-    - SPY      # S&P 500 (US Stocks)
-    - VEU      # FTSE All-World ex-US (International Developed + Emerging)
-    - BND      # Vanguard Total Bond Market (Safe Asset)
-  metadata:
-    source: "Gary Antonacci - Dual Momentum Investing"
-    rebalance_recommended: monthly
-    min_history_days: 252
+# gem_classic:
+#   name: "Global Equity Momentum - Classic"
+#   description: "Classic GEM portfolio as described by Gary Antonacci"
+#   asset_class: equity
+#   benchmark: SPY
+#   symbols:
+#     - SPY      # S&P 500 (US Stocks)
+#     - VEU      # FTSE All-World ex-US (International Developed + Emerging)
+#     - BND      # Vanguard Total Bond Market (Safe Asset)
+#   metadata:
+#     source: "Gary Antonacci - Dual Momentum Investing"
+#     rebalance_recommended: monthly
+#     min_history_days: 252
 
 gem_extended:
   name: "Global Equity Momentum - Extended"
@@ -62,48 +62,6 @@ us_sectors:
     strategy_type: "Sector Rotation"
     rebalance_recommended: monthly
     note: "Ideal for tactical sector rotation and momentum strategies"
-
-global_sectors_us:
-  name: "US Market Sectors (11 GICS Sectors)"
-  description: "Complete US market sector coverage via SPDR Select Sector ETFs"
-  asset_class: equity
-  benchmark: SPY
-  symbols:
-    - XLE      # Energy
-    - XLF      # Financials
-    - XLU      # Utilities
-    - XLI      # Industrials
-    - XLV      # Health Care
-    - XLK      # Technology
-    - XLB      # Materials
-    - XLP      # Consumer Staples
-    - XLY      # Consumer Discretionary
-    - XLRE     # Real Estate
-    - XLC      # Communication Services
-  metadata:
-    provider: "State Street SPDR"
-    sector_classification: "GICS"
-    rebalance_recommended: monthly
-
-global_sectors_intl:
-  name: "Global Sector Rotation"
-  description: "Global sector exposure including US, developed, and emerging markets"
-  asset_class: equity
-  benchmark: VT
-  symbols:
-    - XLE      # US Energy
-    - XLF      # US Financials
-    - XLK      # US Technology
-    - XLV      # US Healthcare
-    - XLI      # US Industrials
-    - VGK      # European Stocks
-    - VPL      # Pacific Stocks
-    - EEM      # Emerging Markets
-    - GLD      # Gold
-    - DBC      # Commodities
-  metadata:
-    geographic_exposure: "Global"
-    rebalance_recommended: monthly
 
 # ============================================================================
 # CRYPTOCURRENCY UNIVERSES
@@ -251,61 +209,57 @@ us_equity_factors:
     - QUAL     # iShares MSCI USA Quality Factor
     - SIZE     # iShares MSCI USA Size Factor
     - USMV     # iShares MSCI USA Min Volatility
-    - SPHQ     # Invesco S&P 500 Quality
-    - VTV      # Vanguard Value ETF
-    - VUG      # Vanguard Growth ETF
-    - SPHD     # Invesco S&P 500 High Dividend Low Volatility
-    - DFAS     # Dimensional US Small Cap
+    - IWF      # Growth
   metadata:
-    factors: ["momentum", "value", "quality", "size", "low_volatility", "growth", "dividend"]
+    factors: ["momentum", "value", "quality", "size", "low_volatility", "growth"]
     geographic_focus: "United States"
     rebalance_recommended: monthly
     note: "Multi-factor strategy combining various academic factors"
 
-factor_momentum:
-  name: "Factor - Momentum"
-  description: "Pure momentum factor exposure across asset classes"
-  asset_class: multi_asset
-  benchmark: MTUM  # iShares MSCI USA Momentum Factor ETF
-  symbols:
-    - MTUM     # US Momentum
-    - IMTM     # International Momentum
-    - EEM      # Emerging Markets (for momentum signals)
-    - GLD      # Gold (for momentum signals)
-    - DBC      # Commodities (for momentum signals)
-    - TLT      # Treasuries (defensive)
-  metadata:
-    factor: "Momentum"
-    rebalance_recommended: monthly
+# factor_momentum:
+#   name: "Factor - Momentum"
+#   description: "Pure momentum factor exposure across asset classes"
+#   asset_class: multi_asset
+#   benchmark: MTUM  # iShares MSCI USA Momentum Factor ETF
+#   symbols:
+#     - MTUM     # US Momentum
+#     - IMTM     # International Momentum
+#     - EEM      # Emerging Markets (for momentum signals)
+#     - GLD      # Gold (for momentum signals)
+#     - DBC      # Commodities (for momentum signals)
+#     - TLT      # Treasuries (defensive)
+#   metadata:
+#     factor: "Momentum"
+#     rebalance_recommended: monthly
 
-factor_value:
-  name: "Factor - Value"
-  description: "Value factor exposure across markets"
-  asset_class: equity
-  benchmark: VTV  # Vanguard Value ETF
-  symbols:
-    - VTV      # US Large Cap Value
-    - VBR      # US Small Cap Value
-    - EFV      # International Value
-    - IVAL     # International Small Cap Value
-    - DEM      # Emerging Markets Value
-  metadata:
-    factor: "Value"
-    rebalance_recommended: quarterly
+# factor_value:
+#   name: "Factor - Value"
+#   description: "Value factor exposure across markets"
+#   asset_class: equity
+#   benchmark: VTV  # Vanguard Value ETF
+#   symbols:
+#     - VTV      # US Large Cap Value
+#     - VBR      # US Small Cap Value
+#     - EFV      # International Value
+#     - IVAL     # International Small Cap Value
+#     - DEM      # Emerging Markets Value
+#   metadata:
+#     factor: "Value"
+#     rebalance_recommended: quarterly
 
-factor_quality:
-  name: "Factor - Quality"
-  description: "Quality factor: profitable, growing, well-managed companies"
-  asset_class: equity
-  benchmark: QUAL  # iShares MSCI USA Quality Factor ETF
-  symbols:
-    - QUAL     # US Quality
-    - IQLT     # International Quality
-    - SPHQ     # S&P 500 Quality
-    - JQUA     # JPMorgan US Quality Factor
-  metadata:
-    factor: "Quality"
-    rebalance_recommended: quarterly
+# factor_quality:
+#   name: "Factor - Quality"
+#   description: "Quality factor: profitable, growing, well-managed companies"
+#   asset_class: equity
+#   benchmark: QUAL  # iShares MSCI USA Quality Factor ETF
+#   symbols:
+#     - QUAL     # US Quality
+#     - IQLT     # International Quality
+#     - SPHQ     # S&P 500 Quality
+#     - JQUA     # JPMorgan US Quality Factor
+#   metadata:
+#     factor: "Quality"
+#     rebalance_recommended: quarterly
 
 # ============================================================================
 # COMMODITY & INFLATION HEDGE
@@ -384,103 +338,103 @@ bonds_credit:
 # ============================================================================
 # THEMATIC & SPECIALIZED
 # ============================================================================
-tech_innovation:
-  name: "Technology & Innovation"
-  description: "Cutting-edge technology and disruptive innovation"
-  asset_class: equity
-  benchmark: QQQ
-  symbols:
-    - QQQ      # Nasdaq 100
-    - XLK      # Technology Sector
-    - ARKK     # ARK Innovation
-    - ARKG     # ARK Genomics
-    - ARKF     # ARK Fintech
-    - WCLD     # Cloud Computing
-    - ROBO     # Robotics & AI
-    - FINX     # FinTech
-  metadata:
-    theme: "Innovation & Disruption"
-    risk_level: "High"
-    rebalance_recommended: monthly
+# tech_innovation:
+#   name: "Technology & Innovation"
+#   description: "Cutting-edge technology and disruptive innovation"
+#   asset_class: equity
+#   benchmark: QQQ
+#   symbols:
+#     - QQQ      # Nasdaq 100
+#     - XLK      # Technology Sector
+#     - ARKK     # ARK Innovation
+#     - ARKG     # ARK Genomics
+#     - ARKF     # ARK Fintech
+#     - WCLD     # Cloud Computing
+#     - ROBO     # Robotics & AI
+#     - FINX     # FinTech
+#   metadata:
+#     theme: "Innovation & Disruption"
+#     risk_level: "High"
+#     rebalance_recommended: monthly
 
-clean_energy:
-  name: "Clean Energy & Sustainability"
-  description: "Renewable energy and ESG-focused investments"
-  asset_class: equity
-  benchmark: ICLN
-  symbols:
-    - ICLN     # iShares Global Clean Energy
-    - TAN      # Invesco Solar ETF
-    - QCLN     # First Trust NASDAQ Clean Edge
-    - PBW      # Invesco WilderHill Clean Energy
-    - ACES     # ALPS Clean Energy ETF
-    - LIT      # Lithium & Battery Tech
-  metadata:
-    theme: "ESG & Sustainability"
-    rebalance_recommended: monthly
+# clean_energy:
+#   name: "Clean Energy & Sustainability"
+#   description: "Renewable energy and ESG-focused investments"
+#   asset_class: equity
+#   benchmark: ICLN
+#   symbols:
+#     - ICLN     # iShares Global Clean Energy
+#     - TAN      # Invesco Solar ETF
+#     - QCLN     # First Trust NASDAQ Clean Edge
+#     - PBW      # Invesco WilderHill Clean Energy
+#     - ACES     # ALPS Clean Energy ETF
+#     - LIT      # Lithium & Battery Tech
+#   metadata:
+#     theme: "ESG & Sustainability"
+#     rebalance_recommended: monthly
 
-emerging_markets:
-  name: "Emerging Markets Focus"
-  description: "Diversified emerging market equity exposure"
-  asset_class: equity
-  benchmark: EEM
-  symbols:
-    - EEM      # MSCI Emerging Markets
-    - VWO      # FTSE Emerging Markets
-    - IEMG     # Core MSCI Emerging Markets
-    - EWZ      # Brazil
-    - FXI      # China Large Cap
-    - INDA     # India
-    - RSX      # Russia (check availability)
-    - EWT      # Taiwan
-    - EWY      # South Korea
-    - THD      # Thailand
-  metadata:
-    geographic_focus: "Emerging Markets"
-    risk_level: "High"
-    rebalance_recommended: monthly
+# emerging_markets:
+#   name: "Emerging Markets Focus"
+#   description: "Diversified emerging market equity exposure"
+#   asset_class: equity
+#   benchmark: EEM
+#   symbols:
+#     - EEM      # MSCI Emerging Markets
+#     - VWO      # FTSE Emerging Markets
+#     - IEMG     # Core MSCI Emerging Markets
+#     - EWZ      # Brazil
+#     - FXI      # China Large Cap
+#     - INDA     # India
+#     - RSX      # Russia (check availability)
+#     - EWT      # Taiwan
+#     - EWY      # South Korea
+#     - THD      # Thailand
+#   metadata:
+#     geographic_focus: "Emerging Markets"
+#     risk_level: "High"
+#     rebalance_recommended: monthly
 
-# ============================================================================
-# INCOME-FOCUSED
-# ============================================================================
-dividend_aristocrats:
-  name: "Dividend Aristocrats"
-  description: "High-quality dividend-paying stocks"
-  asset_class: equity
-  benchmark: NOBL
-  symbols:
-    - NOBL     # S&P 500 Dividend Aristocrats
-    - VIG      # Dividend Appreciation
-    - SCHD     # US Dividend Equity
-    - DVY      # Dow Jones Dividend
-    - SDY      # S&P Dividend
-    - VYM      # High Dividend Yield
-  metadata:
-    focus: "Dividend Income"
-    risk_level: "Moderate"
-    rebalance_recommended: quarterly
+# # ============================================================================
+# # INCOME-FOCUSED
+# # ============================================================================
+# dividend_aristocrats:
+#   name: "Dividend Aristocrats"
+#   description: "High-quality dividend-paying stocks"
+#   asset_class: equity
+#   benchmark: NOBL
+#   symbols:
+#     - NOBL     # S&P 500 Dividend Aristocrats
+#     - VIG      # Dividend Appreciation
+#     - SCHD     # US Dividend Equity
+#     - DVY      # Dow Jones Dividend
+#     - SDY      # S&P Dividend
+#     - VYM      # High Dividend Yield
+#   metadata:
+#     focus: "Dividend Income"
+#     risk_level: "Moderate"
+#     rebalance_recommended: quarterly
 
-global_income:
-  name: "Global Income Portfolio"
-  description: "Diversified income across equities, bonds, and REITs"
-  asset_class: multi_asset
-  benchmark: VIG
-  symbols:
-    # Dividend Equities
-    - VIG      # Dividend Appreciation
-    - VYMI     # International High Dividend
-    - SCHD     # US Dividend
-    # Bonds
-    - HYG      # High Yield Bonds
-    - LQD      # Investment Grade Corporate
-    - PFF      # Preferred Stock
-    # REITs
-    - VNQ      # US REITs
-    - VNQI     # International REITs
-    - REM      # Mortgage REITs
-  metadata:
-    focus: "Income Generation"
-    rebalance_recommended: quarterly
+# global_income:
+#   name: "Global Income Portfolio"
+#   description: "Diversified income across equities, bonds, and REITs"
+#   asset_class: multi_asset
+#   benchmark: VIG
+#   symbols:
+#     # Dividend Equities
+#     - VIG      # Dividend Appreciation
+#     - VYMI     # International High Dividend
+#     - SCHD     # US Dividend
+#     # Bonds
+#     - HYG      # High Yield Bonds
+#     - LQD      # Investment Grade Corporate
+#     - PFF      # Preferred Stock
+#     # REITs
+#     - VNQ      # US REITs
+#     - VNQI     # International REITs
+#     - REM      # Mortgage REITs
+#   metadata:
+#     focus: "Income Generation"
+#     rebalance_recommended: quarterly
 
 # ============================================================================
 # GEOGRAPHIC FOCUS
@@ -568,20 +522,20 @@ asia_pacific:
 # ============================================================================
 # VOLATILITY & HEDGING
 # ============================================================================
-low_volatility:
-  name: "Low Volatility Equity"
-  description: "Lower-risk equity exposure"
-  asset_class: equity
-  benchmark: USMV
-  symbols:
-    - USMV     # US Minimum Volatility
-    - EFAV     # International Minimum Volatility
-    - ACWV     # Global Minimum Volatility
-    - SPLV     # S&P 500 Low Volatility
-  metadata:
-    strategy: "Defensive Equity"
-    risk_level: "Low-Moderate"
-    rebalance_recommended: quarterly
+# low_volatility:
+#   name: "Low Volatility Equity"
+#   description: "Lower-risk equity exposure"
+#   asset_class: equity
+#   benchmark: USMV
+#   symbols:
+#     - USMV     # US Minimum Volatility
+#     - EFAV     # International Minimum Volatility
+#     - ACWV     # Global Minimum Volatility
+#     - SPLV     # S&P 500 Low Volatility
+#   metadata:
+#     strategy: "Defensive Equity"
+#     risk_level: "Low-Moderate"
+#     rebalance_recommended: quarterly
 
 all_weather:
   name: "All-Weather Portfolio"
@@ -611,23 +565,23 @@ all_weather:
 # ============================================================================
 # CURRENCY (FX)
 # ============================================================================
-major_currencies:
-  name: "Major Currency Pairs"
-  description: "G7 and major currency pairs vs USD"
-  asset_class: fx
-  benchmark: DXY  # US Dollar Index (for reference)
-  symbols:
-    - EURUSD=X # Euro / US Dollar
-    - GBPUSD=X # British Pound / US Dollar
-    - USDJPY=X # US Dollar / Japanese Yen
-    - USDCHF=X # US Dollar / Swiss Franc
-    - AUDUSD=X # Australian Dollar / US Dollar
-    - NZDUSD=X # New Zealand Dollar / US Dollar
-    - USDCAD=X # US Dollar / Canadian Dollar
-  metadata:
-    market: "Foreign Exchange"
-    rebalance_recommended: weekly
-    note: "FX pairs - check data source compatibility"
+# major_currencies:
+#   name: "Major Currency Pairs"
+#   description: "G7 and major currency pairs vs USD"
+#   asset_class: fx
+#   benchmark: DXY  # US Dollar Index (for reference)
+#   symbols:
+#     - EURUSD=X # Euro / US Dollar
+#     - GBPUSD=X # British Pound / US Dollar
+#     - USDJPY=X # US Dollar / Japanese Yen
+#     - USDCHF=X # US Dollar / Swiss Franc
+#     - AUDUSD=X # Australian Dollar / US Dollar
+#     - NZDUSD=X # New Zealand Dollar / US Dollar
+#     - USDCAD=X # US Dollar / Canadian Dollar
+#   metadata:
+#     market: "Foreign Exchange"
+#     rebalance_recommended: weekly
+#     note: "FX pairs - check data source compatibility"
 
 # ============================================================================
 # CUSTOM TEMPLATE (for users to copy)
