@@ -54,9 +54,9 @@ strategies:
       safe_asset: SHY
       signal_threshold: 0.0
     recommended_universes:
-      - global_sectors_us
-      - global_sectors_intl
+      - us_sectors
       - multi_asset_aggressive
+      - global_equity_markets
     min_assets: 4
     tags:
       - momentum
@@ -80,8 +80,8 @@ strategies:
       signal_threshold: 0.0
     recommended_universes:
       - multi_asset_conservative
-      - low_volatility
       - bonds_treasury_ladder
+      - bonds_credit
     min_assets: 2
     tags:
       - momentum
@@ -135,7 +135,7 @@ strategies:
       signal_threshold: 0.0
     recommended_universes:
       - us_market_cap
-      - global_sectors_us
+      - us_sectors
       - commodities_broad
     min_assets: 1
     tags:
@@ -161,8 +161,8 @@ strategies:
       signal_threshold: 0.0
     recommended_universes:
       - us_market_cap
-      - factor_momentum
-      - tech_innovation
+      - us_equity_factors
+      - us_sectors
     min_assets: 1
     tags:
       - momentum
@@ -187,8 +187,8 @@ strategies:
       signal_threshold: 0.0
     recommended_universes:
       - crypto_major
-      - tech_innovation
-      - global_sectors_us
+      - us_sectors
+      - global_equity_markets
     min_assets: 1
     tags:
       - momentum
@@ -215,8 +215,9 @@ strategies:
       safe_asset: SHY
       signal_threshold: 0.0
     recommended_universes:
-      - global_sectors_us
-      - global_sectors_intl
+      - us_sectors
+      - european_markets
+      - asia_pacific
     min_assets: 6
     tags:
       - sector_rotation
@@ -239,8 +240,8 @@ strategies:
       safe_asset: SHY
       signal_threshold: 0.0
     recommended_universes:
-      - global_sectors_us
-      - low_volatility
+      - us_sectors
+      - us_equity_factors
     min_assets: 6
     tags:
       - sector_rotation
@@ -374,8 +375,8 @@ strategies:
       safe_asset: SHY
       signal_threshold: 0.0
     recommended_universes:
-      - factor_momentum
-      - global_sectors_us
+      - us_equity_factors
+      - us_sectors
     min_assets: 5
     tags:
       - factor
@@ -402,8 +403,8 @@ strategies:
       safe_asset: SHY
       signal_threshold: 0.0
     recommended_universes:
-      - dividend_aristocrats
-      - global_income
+      - us_market_cap
+      - global_equity_markets
     min_assets: 4
     tags:
       - income
@@ -578,7 +579,7 @@ safe_assets:
 metadata:
   version: "1.0.0"
   last_updated: "2025-10-17"
-  total_strategies: 20
+  total_strategies: 16
   categories:
     - momentum
     - sector_rotation

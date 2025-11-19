@@ -5,19 +5,19 @@
 # ============================================================================
 # GLOBAL EQUITY MOMENTUM (GEM) - Classic Antonacci Configuration
 # ============================================================================
-# gem_classic:
-#   name: "Global Equity Momentum - Classic"
-#   description: "Classic GEM portfolio as described by Gary Antonacci"
-#   asset_class: equity
-#   benchmark: SPY
-#   symbols:
-#     - SPY      # S&P 500 (US Stocks)
-#     - VEU      # FTSE All-World ex-US (International Developed + Emerging)
-#     - BND      # Vanguard Total Bond Market (Safe Asset)
-#   metadata:
-#     source: "Gary Antonacci - Dual Momentum Investing"
-#     rebalance_recommended: monthly
-#     min_history_days: 252
+gem_classic:
+  name: "Global Equity Momentum - Classic"
+  description: "Classic GEM portfolio as described by Gary Antonacci"
+  asset_class: equity
+  benchmark: SPY
+  symbols:
+    - SPY      # S&P 500 (US Stocks)
+    - VEU      # FTSE All-World ex-US (International Developed + Emerging)
+    - BND      # Vanguard Total Bond Market (Safe Asset)
+  metadata:
+    source: "Gary Antonacci - Dual Momentum Investing"
+    rebalance_recommended: monthly
+    min_history_days: 252
 
 gem_extended:
   name: "Global Equity Momentum - Extended"
