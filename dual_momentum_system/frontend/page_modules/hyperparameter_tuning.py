@@ -681,6 +681,9 @@ def render_results_tab():
     # Summary metrics
     st.subheader("🏆 Best Configuration")
     
+    has_best_params = bool(results.best_params)
+    has_best_backtest = results.best_backtest is not None
+    
     col1, col2, col3, col4 = st.columns(4)
     
     with col1:
@@ -700,14 +703,20 @@ def render_results_tab():
     # Best parameters
     st.subheader("📋 Best Parameters")
     
-    params_df = pd.DataFrame([
-        {"Parameter": k, "Value": v}
-        for k, v in results.best_params.items()
-    ])
-    st.table(params_df)
+    if has_best_params:
+        params_df = pd.DataFrame([
+            {"Parameter": k, "Value": v}
+            for k, v in results.best_params.items()
+        ])
+        st.table(params_df)
+    else:
+        st.warning(
+            "No successful trials produced a valid parameter set. "
+            "Check the optimization configuration or logs for errors."
+        )
     
     # Best backtest metrics
-    if results.best_backtest:
+    if has_best_backtest:
         st.subheader("📊 Best Backtest Performance")
         
         metrics = results.best_backtest.metrics
@@ -819,7 +828,12 @@ def render_results_tab():
         """)
     
     with col2:
-        if st.button("📊 View in Results Page", use_container_width=True, type="primary"):
+        if st.button(
+            "📊 View in Results Page",
+            use_container_width=True,
+            type="primary",
+            disabled=not (has_best_params and has_best_backtest),
+        ):
             # Store the best backtest in session state
             st.session_state.backtest_results = results.best_backtest
             # Update last backtest params with best parameters
@@ -833,7 +847,11 @@ def render_results_tab():
             st.rerun()
     
     with col3:
-        if st.button("🔄 Re-run with Best Params", use_container_width=True):
+        if st.button(
+            "🔄 Re-run with Best Params",
+            use_container_width=True,
+            disabled=not has_best_params,
+        ):
             # Pre-populate strategy builder with best parameters
             st.session_state.apply_tuned_params = results.best_params
             st.session_state.tuned_params_source = {
@@ -864,7 +882,7 @@ def render_results_tab():
     with col2:
         import json
         params_json = json.dumps({
-            'best_params': results.best_params,
+            'best_params': results.best_params or {},
             'best_score': float(results.best_score),
             'metric': results.metric_name,
             'method': results.method,
@@ -1242,11 +1260,15 @@ def display_comparison_results():
     
     for method, result in comparison.results.items():
         with st.expander(f"{method.replace('_', ' ').title()} - Score: {result.best_score:.4f}"):
-            params_df = pd.DataFrame([
-                {"Parameter": k, "Value": v}
-                for k, v in result.best_params.items()
-            ])
-            st.table(params_df)
+            best_params = result.best_params or {}
+            if best_params:
+                params_df = pd.DataFrame([
+                    {"Parameter": k, "Value": v}
+                    for k, v in best_params.items()
+                ])
+                st.table(params_df)
+            else:
+                st.info("No valid parameters recorded for this method.")
     
     # Download comparison results
     st.markdown("---")
