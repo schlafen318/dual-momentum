@@ -68,6 +68,7 @@ class PerformanceCalculator:
         
         # Risk metrics
         metrics['max_drawdown'] = self.max_drawdown(equity_curve)
+        metrics['avg_drawdown'] = self.average_drawdown(equity_curve)
         metrics['max_drawdown_duration'] = self.max_drawdown_duration(equity_curve)
         
         # Risk-adjusted metrics
@@ -289,6 +290,28 @@ class PerformanceCalculator:
         drawdown = (equity_curve - running_max) / running_max
         
         return float(drawdown.min())
+
+    def average_drawdown(self, equity_curve: pd.Series) -> float:
+        """
+        Calculate average drawdown across all periods in drawdown.
+        
+        Args:
+            equity_curve: Portfolio value over time
+        
+        Returns:
+            Average drawdown as negative decimal. Returns 0 if no drawdowns.
+        """
+        if len(equity_curve) == 0:
+            return 0.0
+        
+        running_max = equity_curve.expanding().max()
+        drawdown = (equity_curve - running_max) / running_max
+        in_drawdown = drawdown < 0
+        
+        if not in_drawdown.any():
+            return 0.0
+        
+        return float(drawdown[in_drawdown].mean())
     
     def max_drawdown_duration(self, equity_curve: pd.Series) -> int:
         """
